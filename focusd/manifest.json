@@ -22,6 +22,7 @@
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
+      "progressBarStyle": "linear",
       "icons": {
         "work": "",
         "work-paused": "󰏤",
@@ -32,6 +33,14 @@
       }
     },
     "schema": [
+      {
+        "key": "progressBarStyle",
+        "type": "enum",
+        "label": "Popup style",
+        "options": ["linear", "circular"],
+        "defaultValue": "linear",
+        "description": "Linear hero with progress bar, or circular timer face."
+      },
       {
         "key": "icons.work",
         "type": "string",

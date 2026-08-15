@@ -15,6 +15,7 @@ Panel {
   readonly property color foreground: Color.popups.text
   readonly property color activeColor: Color.accent
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
+  readonly property string progressBarStyle: setting("progressBarStyle", "linear")
   property int selectedAction: 0
   property bool cursorActive: true
 
@@ -75,7 +76,7 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(330))
+    contentWidth: panel.fittedContentWidth(Style.space(390))
     contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
     PanelKeyCatcher {
@@ -95,42 +96,14 @@ Panel {
         width: parent.width
         spacing: Style.space(18)
 
-        Item {
-          id: timerFace
+        LinearFace {
           width: parent.width
-          implicitHeight: Style.space(180)
+          visible: root.progressBarStyle !== "circular"
+        }
 
-          CircularProgress {
-            anchors.centerIn: parent
-            width: Math.min(parent.width, parent.height)
-            height: width
-            progress: root.timerService ? root.timerService.progress : 0
-            trackColor: Color.muted
-            fillColor: root.activeColor
-            strokeWidth: Math.max(5, Style.spaceReal(7))
-          }
-
-          Column {
-            anchors.centerIn: parent
-            spacing: Style.space(5)
-
-            Text {
-              anchors.horizontalCenter: parent.horizontalCenter
-              text: root.timerService ? root.timerService.remainingText : "25:00"
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Math.round(Style.font.displayLarge * 1.7)
-              font.bold: true
-            }
-
-            Text {
-              anchors.horizontalCenter: parent.horizontalCenter
-              text: root.timerService ? root.timerService.sessionLabel : "Work"
-              color: root.activeColor
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.title
-            }
-          }
+        CircularFace {
+          width: parent.width
+          visible: root.progressBarStyle === "circular"
         }
 
         Column {
@@ -144,15 +117,15 @@ Panel {
             Column {
               width: (parent.width - parent.spacing) / 2
               spacing: Style.spacing.labelGap
-              InfoPair { icon: "󰔟"; label: "Streak"; value: (root.timerService ? root.timerService.currentStreak : 0) + "d" }
-              InfoPair { icon: "󰔟"; label: "Focused today"; value: root.timerService ? root.timerService.focusedToday : "—" }
+              InfoPair { icon: ""; label: "Streak"; value: (root.timerService ? root.timerService.currentStreak : 0) + "d" }
+              InfoPair { icon: "󰓾"; label: "Goal"; value: root.timerService ? root.timerService.dailyGoal : "—" }
             }
 
             Column {
               width: (parent.width - parent.spacing) / 2
               spacing: Style.spacing.labelGap
-              InfoPair { icon: "󰓾"; label: "Goal"; value: root.timerService ? root.timerService.dailyGoal : "—" }
               InfoPair { icon: ""; label: "Sessions today"; value: root.timerService ? String(root.timerService.sessionsToday) : "0" }
+              InfoPair { icon: "󰔟"; label: "Focused today"; value: root.timerService ? root.timerService.focusedToday : "—" }
             }
           }
         }
@@ -263,5 +236,130 @@ Panel {
     color: root.foreground
     font.family: root.fontFamily
     font.pixelSize: Style.font.bodySmall
+  }
+
+  component LinearFace: Column {
+    width: parent.width
+    spacing: Style.space(12)
+
+    Item {
+      width: parent.width
+      implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, heroTime.implicitHeight)
+
+      Text {
+        id: heroIcon
+        text: root.timerService ? root.timerService.icon : ""
+        color: root.foreground
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.display
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+      }
+
+      Column {
+        id: heroLabels
+        anchors.left: heroIcon.right
+        anchors.leftMargin: Style.space(14)
+        anchors.right: heroTime.left
+        anchors.rightMargin: Style.space(10)
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(2)
+
+        Text {
+          text: root.timerService ? root.timerService.sessionLabel : "Work"
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.title
+          font.bold: true
+          elide: Text.ElideRight
+          width: parent.width
+        }
+
+        Text {
+          text: (root.timerService && root.timerService.paused ? "Paused"
+                : root.timerService && root.timerService.running ? "Running"
+                : "Stopped").toUpperCase()
+          color: Qt.darker(root.foreground, 1.4)
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          font.bold: true
+          font.letterSpacing: 1.2
+          elide: Text.ElideRight
+          width: parent.width
+        }
+      }
+
+      Text {
+        id: heroTime
+        text: root.timerService ? root.timerService.remainingText : "25:00"
+        color: root.foreground
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.displayLarge
+        font.bold: true
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+      }
+    }
+
+    Item {
+      width: parent.width
+      implicitHeight: Style.space(8)
+
+      Rectangle {
+        id: progressTrack
+        anchors.fill: parent
+        radius: height / 2
+        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+      }
+
+      Rectangle {
+        id: progressFill
+        anchors.left: progressTrack.left
+        anchors.verticalCenter: progressTrack.verticalCenter
+        height: progressTrack.height
+        radius: progressTrack.radius
+        color: root.foreground
+        width: Math.max(progressTrack.height, progressTrack.width * (root.timerService ? root.timerService.progress : 0))
+
+        Behavior on width { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
+      }
+    }
+  }
+
+  component CircularFace: Item {
+    width: parent.width
+    implicitHeight: Style.space(180)
+
+    CircularProgress {
+      anchors.centerIn: parent
+      width: Math.min(parent.width, parent.height)
+      height: width
+      progress: root.timerService ? root.timerService.progress : 0
+      trackColor: Color.muted
+      fillColor: root.foreground
+      strokeWidth: Math.max(5, Style.spaceReal(7))
+    }
+
+    Column {
+      anchors.centerIn: parent
+      spacing: Style.space(5)
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: root.timerService ? root.timerService.remainingText : "25:00"
+        color: root.foreground
+        font.family: root.fontFamily
+        font.pixelSize: Math.round(Style.font.displayLarge * 1.7)
+        font.bold: true
+      }
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: root.timerService ? root.timerService.sessionLabel : "Work"
+        color: root.activeColor
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.title
+      }
+    }
   }
 }

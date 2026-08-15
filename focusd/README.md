@@ -33,9 +33,25 @@ control panel.
 Start the timer from the bar with `SUPER + P` (or the CLI: `focusd start`),
 or bind the pomodoro popup to a key, e.g. `CTRL + SUPER + T`.
 
-The popup shows three stats under the timer: your current streak (󰈸), sessions
-completed today, and focused time vs. your daily goal (󰀘). The daily-goal line
-only appears when a goal is set in `focusd settings`.
+The popup shows your current session, remaining time, and a stats section with
+your streak (󰔟), focused time today, daily goal (󰓾), and sessions today ().
+The daily-goal value only fills in when a goal is set in `focusd settings`.
+
+## Progress bar style
+
+The popup defaults to a linear hero with a progress bar. You can switch to the
+circular timer face with the `progressBarStyle` setting in
+`~/.config/omarchy/shell.json`:
+
+```json
+"bar": {
+  "layout": {
+    "right": [
+      { "id": "focusd", "progressBarStyle": "circular" }
+    ]
+  }
+}
+```
 
 ## Bar icons
 
