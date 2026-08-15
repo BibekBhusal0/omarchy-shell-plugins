@@ -4,20 +4,16 @@
   "name": "Focusd",
   "version": "1.0.0",
   "author": "Bibek Bhusal",
-  "license": "MIT",
-  "description": "A Focusd pomodoro timer for the bar with live session icons, streak and daily-goal stats, and a keyboard-driven popup.",
+  "description": "A pomodoro timer for the Omarchy bar with awesome features like streak, daily goal,sessions, stats and history.",
   "homepage": "https://github.com/BibekBhusal0/omarchy-focusd",
-  "kinds": [
-    "service",
-    "bar-widget"
-  ],
+  "kinds": ["service", "bar-widget"],
   "entryPoints": {
     "service": "Service.qml",
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
     "displayName": "Focusd",
-    "description": "Pomodoro timer with session icons, streak and daily-goal stats, and keyboard controls.",
+    "description": "Pomodoro timer with awesome features like streak, daily goal, history, and stats.",
     "category": "Time",
     "allowMultiple": false,
     "defaultSection": "right",

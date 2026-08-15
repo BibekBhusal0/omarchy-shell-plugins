@@ -5,8 +5,8 @@ A beautiful [Obsidian](https://obsidian.md/) vault search menu. Type to filter n
 ## Features
 
 - Fuzzy search across your vault, ranked by relevance
-- Create a missing note directly from the menu
 - Support for bases and canvas files as well
+- Create a missing note directly from the menu
 
 ## Requirements
 
