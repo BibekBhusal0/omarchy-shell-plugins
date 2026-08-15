@@ -80,8 +80,11 @@ Item {
       var parts = line.split("\t")
       if (parts.length < 4) continue
       var path = parts[2]
+      var icon = "󰠮"
+      if (parts[1] === "Canvas") icon = "󰇞"
+      else if (parts[1] === "Base") icon = ""
       rows.push({
-        icon: "󰙮",
+        icon: icon,
         label: parts[0],
         detail: parts[1],
         action: parts[3],
@@ -370,7 +373,7 @@ Item {
               visible: displayModel.count === 0 && !searchProc.running
 
               Text {
-                text: "󰙮"
+                text: "󰠮"
                 color: root.selectedText
                 opacity: 0.8
                 font.family: root.fontFamily
