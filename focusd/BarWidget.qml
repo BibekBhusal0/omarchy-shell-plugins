@@ -75,10 +75,11 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.timerService ? root.timerService.remainingText : "25:00"
+    text: root.timerService ? root.timerService.barText : "󰏤 25:00"
     hasVisualContent: text !== ""
+    dimmed: root.timerService ? root.timerService.paused : false
     tooltipText: root.timerService
-      ? root.timerService.phaseLabel + " · " + root.timerService.remainingText
+      ? root.timerService.barTooltip
       : "Focusd"
 
     onPressed: function(buttonCode) {

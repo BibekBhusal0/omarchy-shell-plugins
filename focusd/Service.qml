@@ -9,8 +9,9 @@ Item {
   property var manifest: null
 
   property string status: "stopped"
-  property string phase: "work"
-  property string phaseLabel: "Work"
+  property string session: "work"
+  property string sessionLabel: "Work"
+  property string nextSessionLabel: "Short Break"
   property string remainingText: "25:00"
   property real progress: 0
   property string tooltipText: ""
@@ -18,10 +19,45 @@ Item {
   readonly property bool stopped: status === "stopped"
   readonly property bool running: status === "running"
   readonly property bool paused: status === "paused"
+  // A session has made progress (started or has elapsed time) vs. a fresh,
+  // never-started timer.
+  readonly property bool active: !stopped && (running || progress > 0)
+
+  // Icons shown in the bar, keyed like waybar's format-icons. Customizable
+  // through the plugin settings (see README).
+  property var icons: defaultIcons()
+  function defaultIcons() {
+    return {
+      "work": "",
+      "work-paused": "󰏤",
+      "short-break": "",
+      "short-break-paused": "󰏤",
+      "long-break": "󰒲",
+      "long-break-paused": "󰏤"
+    }
+  }
+
+  // The bar label, e.g. "󰏤 24:45".
+  readonly property string barText: root.icon + (root.remainingText !== "" ? " " + root.remainingText : "")
+  readonly property string barTooltip: root.tooltipText !== ""
+    ? root.tooltipText
+    : root.sessionLabel + " · " + root.remainingText
 
   function configure(settings) {
-    // Focusd keeps its own durations and presets; nothing to configure here.
+    var merged = defaultIcons()
+    if (settings) {
+      var custom = settings.icons || settings["format-icons"] || {}
+      for (var key in custom) if (custom[key] !== undefined) merged[key] = String(custom[key])
+    }
+    icons = merged
   }
+
+  function iconFor(key) {
+    var value = icons[key]
+    return value !== undefined && value !== "" ? value : ""
+  }
+
+  readonly property string icon: root.iconFor(status === "paused" ? session + "-paused" : session)
 
   function playOrStop() {
     if (running) Quickshell.execDetached(["focusd", "reset"])
@@ -36,6 +72,11 @@ Item {
   function skip() {
     if (stopped) return
     Quickshell.execDetached(["focusd", "next"])
+  }
+
+  function stop() {
+    if (stopped) return
+    Quickshell.execDetached(["focusd", "reset"])
   }
 
   function poll() {
@@ -65,17 +106,24 @@ Item {
 
     root.status = classes.indexOf("paused") !== -1 ? "paused" : "running"
 
-    var phaseKey = alt.replace(/-paused$/, "")
-    root.phase = phaseKey
-    root.phaseLabel = phaseLabelFor(phaseKey)
+    var sessionKey = alt.replace(/-paused$/, "")
+    root.session = sessionKey
+    root.sessionLabel = sessionLabelFor(sessionKey)
+    root.nextSessionLabel = String(state.next_session || nextSessionLabelFor(sessionKey))
     root.remainingText = String(state.text || "")
     root.progress = Math.max(0, Math.min(1, (Number(state.percentage) || 0) / 100))
     root.tooltipText = String(state.tooltip || "")
   }
 
-  function phaseLabelFor(key) {
+  function sessionLabelFor(key) {
     if (key === "short-break") return "Short Break"
     if (key === "long-break") return "Long Break"
+    return "Work"
+  }
+
+  function nextSessionLabelFor(key) {
+    if (key === "work") return "Short Break"
+    if (key === "short-break") return "Work"
     return "Work"
   }
 

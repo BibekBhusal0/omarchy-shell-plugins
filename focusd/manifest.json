@@ -21,7 +21,47 @@
     "category": "Time",
     "allowMultiple": false,
     "defaultSection": "right",
-    "defaults": {},
-    "schema": []
+    "defaults": {
+      "icons": {
+        "work": "",
+        "work-paused": "󰏤",
+        "short-break": "",
+        "short-break-paused": "󰏤",
+        "long-break": "󰒲",
+        "long-break-paused": "󰏤"
+      }
+    },
+    "schema": [
+      {
+        "key": "icons.work",
+        "type": "string",
+        "label": "Work icon"
+      },
+      {
+        "key": "icons.work-paused",
+        "type": "string",
+        "label": "Work paused icon"
+      },
+      {
+        "key": "icons.short-break",
+        "type": "string",
+        "label": "Short break icon"
+      },
+      {
+        "key": "icons.short-break-paused",
+        "type": "string",
+        "label": "Short break paused icon"
+      },
+      {
+        "key": "icons.long-break",
+        "type": "string",
+        "label": "Long break icon"
+      },
+      {
+        "key": "icons.long-break-paused",
+        "type": "string",
+        "label": "Long break paused icon"
+      }
+    ]
   }
 }

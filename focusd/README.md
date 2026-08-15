@@ -1,8 +1,8 @@
 # Focusd for Omarchy
 
-A circular Focusd pomodoro timer for the Omarchy bar. Shows the current phase
-and remaining time as a progress ring, and opens a keyboard-driven control
-panel when clicked.
+A Focusd pomodoro timer for the Omarchy bar. Shows the current session and
+remaining time with a state icon, and opens a keyboard-driven control panel
+when clicked. The bar label dims while the timer is paused.
 
 ![Focusd bar widget preview](preview.png)
 
@@ -24,11 +24,38 @@ control panel.
 
 | Button      | Action                          |
 | ----------- | ------------------------------- |
-| `` / ``   | Pause or resume                 |
-| `󰒭`         | Skip to the next phase          |
+| `󰏤` / ``   | Pause or resume the session     |
+| `󰒭`         | Skip to the next session        |
+| `󰛉`         | Stop the session (shown once a session has started) |
 
 Start the timer from the bar with `SUPER + P` (or the CLI: `focusd start`),
 or bind the pomodoro popup to a key, e.g. `CTRL + SUPER + T`.
+
+## Bar icons
+
+The bar label combines a per-state icon with the remaining time. Icons default
+to Focusd's waybar icons:
+
+| State       | Icon | Meaning                     |
+| ----------- | ---- | --------------------------- |
+| `work`      | ``   | Working                     |
+| `work-paused` | `󰏤` | Work session paused       |
+| `short-break` | `` | Short break                |
+| `short-break-paused` | `󰏤` | Short break paused |
+| `long-break` | `󰒲` | Long break                 |
+| `long-break-paused` | `󰏤` | Long break paused  |
+
+Customize them in `~/.config/omarchy/shell.json` under the plugin entry:
+
+```json
+"bar": {
+  "layout": {
+    "right": [
+      { "id": "focusd", "icons": { "work": "󰅐", "long-break": "󰠌" } }
+    ]
+  }
+}
+```
 
 ## Keyboard controls
 

@@ -18,6 +18,8 @@ Panel {
   property int selectedAction: 0
   property bool cursorActive: true
 
+  readonly property bool stopVisible: timerService ? timerService.active : false
+
   function open() {
     selectedAction = 0
     cursorActive = true
@@ -33,19 +35,25 @@ Panel {
     else open()
   }
 
+  function actionCount() {
+    return root.stopVisible ? 3 : 2
+  }
+
   function selectAction(delta) {
     cursorActive = true
     if (!timerService) {
       selectedAction = 0
       return
     }
-    selectedAction = ((selectedAction + delta) % 2 + 2) % 2
+    var count = root.actionCount()
+    selectedAction = ((selectedAction + delta) % count + count) % count
   }
 
   function activateSelected() {
     if (!timerService) return
     if (selectedAction === 0 && !timerService.stopped) timerService.togglePause()
     else if (selectedAction === 1 && !timerService.stopped) timerService.skip()
+    else if (selectedAction === 2 && root.stopVisible) timerService.stop()
   }
 
   function actionHovered(index, hovered) {
@@ -118,7 +126,7 @@ Panel {
 
             Text {
               anchors.horizontalCenter: parent.horizontalCenter
-              text: root.timerService ? root.timerService.phaseLabel : "Work"
+              text: root.timerService ? root.timerService.sessionLabel : "Work"
               color: root.activeColor
               font.family: root.fontFamily
               font.pixelSize: Style.font.title
@@ -140,8 +148,8 @@ Panel {
             height: actions.buttonSize
             iconText: root.timerService && root.timerService.paused ? "" : "󰏤"
             tooltipText: root.timerService && root.timerService.paused
-              ? "Resume current phase"
-              : "Pause current phase"
+              ? "Resume session"
+              : "Pause session"
             foreground: root.foreground
             accent: root.activeColor
             iconSize: Style.font.iconLarge
@@ -161,7 +169,7 @@ Panel {
             width: actions.buttonSize
             height: actions.buttonSize
             iconText: "󰒭"
-            tooltipText: "Skip to next phase"
+            tooltipText: "Skip to " + (root.timerService ? root.timerService.nextSessionLabel : "next session")
             foreground: root.foreground
             accent: root.activeColor
             iconSize: Style.font.iconLarge
@@ -172,6 +180,27 @@ Panel {
             hasCursor: root.cursorActive && root.selectedAction === 1
             onHovered: function(value) { root.actionHovered(1, value) }
             onClicked: if (root.timerService) root.timerService.skip()
+          }
+
+          Button {
+            id: stopButton
+            implicitWidth: actions.buttonSize
+            implicitHeight: actions.buttonSize
+            width: actions.buttonSize
+            height: actions.buttonSize
+            iconText: "󰛉"
+            tooltipText: "Stop session"
+            foreground: root.foreground
+            accent: root.activeColor
+            iconSize: Style.font.iconLarge
+            horizontalPadding: 0
+            verticalPadding: 0
+            visible: root.stopVisible
+            enabled: !!root.timerService && !root.timerService.stopped
+            opacity: enabled ? 1 : 0.35
+            hasCursor: root.cursorActive && root.selectedAction === 2
+            onHovered: function(value) { root.actionHovered(2, value) }
+            onClicked: if (root.timerService) root.timerService.stop()
           }
         }
       }
