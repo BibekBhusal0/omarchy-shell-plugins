@@ -39,14 +39,13 @@ Panel {
       selectedAction = 0
       return
     }
-    selectedAction = ((selectedAction + delta) % 3 + 3) % 3
+    selectedAction = ((selectedAction + delta) % 2 + 2) % 2
   }
 
   function activateSelected() {
     if (!timerService) return
-    if (selectedAction === 0) timerService.playOrStop()
-    else if (selectedAction === 1 && !timerService.stopped) timerService.togglePause()
-    else if (selectedAction === 2 && !timerService.stopped) timerService.skip()
+    if (selectedAction === 0 && !timerService.stopped) timerService.togglePause()
+    else if (selectedAction === 1 && !timerService.stopped) timerService.skip()
   }
 
   function actionHovered(index, hovered) {
@@ -134,28 +133,6 @@ Panel {
           readonly property real buttonSize: Style.space(42)
 
           Button {
-            id: stopButton
-            implicitWidth: actions.buttonSize
-            implicitHeight: actions.buttonSize
-            width: actions.buttonSize
-            height: actions.buttonSize
-            iconText: root.timerService && root.timerService.running ? "" : ""
-            tooltipText: root.timerService && root.timerService.running
-              ? "Stop timer"
-              : "Start timer"
-            foreground: root.foreground
-            accent: root.activeColor
-            iconSize: Style.font.iconLarge
-            horizontalPadding: 0
-            verticalPadding: 0
-            enabled: !!root.timerService
-            opacity: enabled ? 1 : 0.35
-            hasCursor: root.cursorActive && root.selectedAction === 0
-            onHovered: function(value) { root.actionHovered(0, value) }
-            onClicked: if (root.timerService) root.timerService.playOrStop()
-          }
-
-          Button {
             id: pauseButton
             implicitWidth: actions.buttonSize
             implicitHeight: actions.buttonSize
@@ -172,8 +149,8 @@ Panel {
             verticalPadding: 0
             enabled: !!root.timerService && !root.timerService.stopped
             opacity: enabled ? 1 : 0.35
-            hasCursor: root.cursorActive && root.selectedAction === 1
-            onHovered: function(value) { root.actionHovered(1, value) }
+            hasCursor: root.cursorActive && root.selectedAction === 0
+            onHovered: function(value) { root.actionHovered(0, value) }
             onClicked: if (root.timerService) root.timerService.togglePause()
           }
 
@@ -192,8 +169,8 @@ Panel {
             verticalPadding: 0
             enabled: !!root.timerService && !root.timerService.stopped
             opacity: enabled ? 1 : 0.35
-            hasCursor: root.cursorActive && root.selectedAction === 2
-            onHovered: function(value) { root.actionHovered(2, value) }
+            hasCursor: root.cursorActive && root.selectedAction === 1
+            onHovered: function(value) { root.actionHovered(1, value) }
             onClicked: if (root.timerService) root.timerService.skip()
           }
         }

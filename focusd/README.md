@@ -24,9 +24,11 @@ control panel.
 
 | Button      | Action                          |
 | ----------- | ------------------------------- |
-| `` / ``   | Start or stop the current phase |
 | `` / ``   | Pause or resume                 |
-| `󰑒`         | Skip to the next phase          |
+| `󰒭`         | Skip to the next phase          |
+
+Start the timer from the bar with `SUPER + P` (or the CLI: `focusd start`),
+or bind the pomodoro popup to a key, e.g. `CTRL + SUPER + T`.
 
 ## Keyboard controls
 
@@ -37,10 +39,10 @@ With the panel open:
 - Press Escape to close the panel.
 - Press Tab or Shift+Tab to move between bar panels.
 
-You can also control the panel from a terminal or your own keybinding:
+You can also open the popup from a terminal or your own keybinding:
 
 ```bash
-omarchy-shell shell toggle focusd
+omarchy-shell shell summon focusd
 ```
 
 ## Customize
