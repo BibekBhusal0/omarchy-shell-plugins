@@ -4,11 +4,11 @@ Third-party plugins for the [Omarchy](https://omarchy.org/) shell. Each folder i
 
 ## Plugins
 
-| Plugin                                | ID                | Kind          | What it does                                             |
-| ------------------------------------- | ----------------- | ------------- | -------------------------------------------------------- |
-| [`focusd`](focusd/)                   | `focusd`          | bar-widget    | Circular Focusd pomodoro timer in the bar with a control panel |
-| [`obsidian-search`](obsidian-search/) | `obsidian-search` | overlay       | Fuzzy-search Obsidian vault notes, create new notes      |
-| [`readest`](readest/)                 | `readest`         | overlay       | Fuzzy-search the Readest library and open books          |
+| Plugin                                | ID                | Kind       | What it does                                                   |
+| ------------------------------------- | ----------------- | ---------- | -------------------------------------------------------------- |
+| [`focusd`](focusd/)                   | `focusd`          | bar-widget | Circular Focusd pomodoro timer in the bar with a control panel |
+| [`obsidian-search`](obsidian-search/) | `obsidian-search` | overlay    | Fuzzy-search Obsidian vault notes, create new notes            |
+| [`readest`](readest/)                 | `readest`         | overlay    | Fuzzy-search the Readest library and open books                |
 
 Each plugin ships its own `README.md` with install, usage, and credits.
 

@@ -24,11 +24,11 @@ omarchy plugin add https://github.com/BibekBhusal0/omarchy-focusd.git --enable
 The bar widget lands in the right section by default. Click it to open the
 control panel.
 
-| Button      | Action                          |
-| ----------- | ------------------------------- |
-| `󰏤` / ``   | Pause or resume the session     |
-| `󰒭`         | Skip to the next session        |
-| `󰛉`         | Stop the session (shown once a session has started) |
+| Button    | Action                                              |
+| --------- | --------------------------------------------------- |
+| `󰏤` / `` | Pause or resume the session                         |
+| `󰒭`       | Skip to the next session                            |
+| `󰛉`       | Stop the session (shown once a session has started) |
 
 Start the timer from the bar with `SUPER + P` (or the CLI: `focusd start`),
 or bind the pomodoro popup to a key, e.g. `CTRL + SUPER + T`.
@@ -58,14 +58,14 @@ circular timer face with the `progressBarStyle` setting in
 The bar label combines a per-state icon with the remaining time. Icons default
 to Focusd's waybar icons:
 
-| State       | Icon | Meaning                     |
-| ----------- | ---- | --------------------------- |
-| `work`      | ``   | Working                     |
-| `work-paused` | `󰏤` | Work session paused       |
-| `short-break` | `` | Short break                |
-| `short-break-paused` | `󰏤` | Short break paused |
-| `long-break` | `󰒲` | Long break                 |
-| `long-break-paused` | `󰏤` | Long break paused  |
+| State                | Icon | Meaning             |
+| -------------------- | ---- | ------------------- |
+| `work`               | ``  | Working             |
+| `work-paused`        | `󰏤`  | Work session paused |
+| `short-break`        | ``  | Short break         |
+| `short-break-paused` | `󰏤`  | Short break paused  |
+| `long-break`         | `󰒲`  | Long break          |
+| `long-break-paused`  | `󰏤`  | Long break paused   |
 
 Customize them in `~/.config/omarchy/shell.json` under the plugin entry:
 
