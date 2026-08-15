@@ -11,6 +11,18 @@ A keyboard-first overlay for fuzzy-searching your
   `~/.var/app/com.bilingify.readest/data/com.bilingify.readest/Readest/Books`
 - `fd` and `jq`
 
+## Library location
+
+The library is read from the Flatpak data directory above by default. To use a
+different location, add a `libraryPath` setting to the plugin entry in
+`~/.config/omarchy/shell.json`:
+
+```json
+"plugins": [
+  { "id": "readest", "libraryPath": "/path/to/your/books" }
+]
+```
+
 ## Install
 
 ```bash

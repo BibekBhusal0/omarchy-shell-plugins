@@ -11,6 +11,18 @@ a new note that isn't found.
 - Obsidian with a vault configured at `~/.config/obsidian/obsidian.json`
 - `fd` and `jq`
 
+## Vault location
+
+The vault is auto-detected from the first vault in the Obsidian configuration
+above. To use a different vault, add a `vaultPath` setting to the plugin entry
+in `~/.config/omarchy/shell.json`:
+
+```json
+"plugins": [
+  { "id": "obsidian-search", "vaultPath": "/path/to/your/vault" }
+]
+```
+
 ## Install
 
 ```bash

@@ -3,13 +3,19 @@
 # The first line carries the vault name (prefixed with #vault\t), then one
 # tab-delimited row per entry: Name \t Path \t Action.
 # Filtering happens client-side (FuzzySearch.js), so every entry is emitted.
+#
+# Usage: search.sh [VAULT_PATH]
+# The vault path may be given as an argument; otherwise it is auto-detected
+# from the first vault in the Obsidian configuration.
 
 home="$HOME"
 vault_config="$home/.config/obsidian/obsidian.json"
 
-[[ -f "$vault_config" ]] || exit 0
-
-vault_path="$(jq -r '.vaults | to_entries | .[0].value.path' "$vault_config" 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+vault_path="${1:-}"
+if [[ -z "$vault_path" ]]; then
+  [[ -f "$vault_config" ]] || exit 0
+  vault_path="$(jq -r '.vaults | to_entries | .[0].value.path' "$vault_config" 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+fi
 [[ -n "$vault_path" && -d "$vault_path" ]] || exit 0
 
 vault_name="$(basename "$vault_path")"

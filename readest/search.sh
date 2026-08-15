@@ -2,9 +2,16 @@
 # Omarchy readest plugin: list searchable books from the Readest library.
 # Emits one tab-delimited row per book: Title \t Author \t Book path \t Cover path.
 # Filtering happens client-side (FuzzySearch.js), so every book is emitted.
+#
+# Usage: search.sh [LIBRARY_DIR]
+# The library directory may be given as an argument; otherwise the default
+# Flatpak Readest data location is used.
 
 home="$HOME"
-lib_dir="$home/.var/app/com.bilingify.readest/data/com.bilingify.readest/Readest/Books"
+lib_dir="${1:-}"
+if [[ -z "$lib_dir" ]]; then
+  lib_dir="$home/.var/app/com.bilingify.readest/data/com.bilingify.readest/Readest/Books"
+fi
 lib_json="$lib_dir/library.json"
 
 [[ -f "$lib_json" ]] || exit 0

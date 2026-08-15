@@ -62,8 +62,26 @@ Item {
     root.searchSerial += 1
     searchProc.serial = root.searchSerial
     searchProc.collected = ""
-    searchProc.command = [root.searchScript]
+    var args = [root.searchScript]
+    var libPath = root.pluginSetting("libraryPath")
+    if (libPath) args.push(libPath)
+    searchProc.command = args
     searchProc.running = true
+  }
+
+  function pluginSetting(name) {
+    if (!root.shell || !root.shell.shellConfig) return ""
+    var plugins = root.shell.shellConfig.plugins
+    if (!Array.isArray(plugins)) return ""
+    var manifest = root.manifest
+    var id = manifest && manifest.id ? manifest.id : ""
+    for (var i = 0; i < plugins.length; i++) {
+      if (plugins[i] && plugins[i].id === id) {
+        var value = plugins[i][name]
+        return value === undefined || value === null ? "" : String(value)
+      }
+    }
+    return ""
   }
 
   function parseResults(raw) {
