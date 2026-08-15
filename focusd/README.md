@@ -76,11 +76,30 @@ Default configuration:
 "bar": {
   "layout": {
     "right": [
-      { "id": "focusd", "icons": { "work": "󰅐", "long-break": "󰠌" } }
+      {
+        "id": "focusd",
+        "icons": {
+          "work": "🍅",
+          "work-paused": "",
+          "short-break": "☕",
+          "short-break-paused": "",
+          "long-break": "🏖️",
+          "long-break-paused": ""
+        }
+      }
     ]
   }
 }
 ```
+
+Alternatives per state (pick the ones you like; `-paused` variants reuse the same pause icon or keep it same because the opacity is decreased):
+
+| Key           | Suggestions   |
+| ------------- | ------------- |
+| `work`        | 󰅐, 󰀠, 🍅,    |
+| `short-break` | ☕, 🍪, ,   |
+| `long-break`  | 🏖️, ⏳, 🌴, 󰒲 |
+| `paused`      | 󰏦, 󰏥, , 󰏤    |
 
 ## Uninstall
 
