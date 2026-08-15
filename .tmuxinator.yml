@@ -1,0 +1,11 @@
+name: omarchy-plugins
+root: ~/Code/omarchy-shell-plugin/
+
+windows:
+  - editor: nvim :SessionLoad omarchy-plugins
+  - sync:
+      layout: main-vertical
+      panes:
+        -
+        - Sync: ./scripts/watch-sync.sh
+  - misc:
