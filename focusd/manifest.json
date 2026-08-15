@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "focusd",
+  "name": "Focusd",
+  "version": "1.0.0",
+  "author": "Bibek Bhusal",
+  "license": "MIT",
+  "description": "A circular Focusd pomodoro timer for the Omarchy bar.",
+  "homepage": "https://github.com/BibekBhusal0/omarchy-focusd",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Focusd",
+    "description": "A circular Focusd timer with keyboard-driven controls.",
+    "category": "Time",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {},
+    "schema": []
+  }
+}

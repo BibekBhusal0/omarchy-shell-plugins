@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "readest",
+  "name": "Readest",
+  "version": "1.0.0",
+  "author": "Bibek Bhusal",
+  "description": "Search and open books from the Readest library",
+  "homepage": "https://github.com/BibekBhusal0/omarchy-readest",
+  "kinds": [
+    "overlay"
+  ],
+  "entryPoints": {
+    "overlay": "Readest.qml"
+  }
+}
