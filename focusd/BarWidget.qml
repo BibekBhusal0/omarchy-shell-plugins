@@ -17,8 +17,8 @@ BarWidget {
   readonly property bool popoutSwitchClosing: panelLoader.item
     ? panelLoader.item.popoutSwitchClosing === true
     : false
-  readonly property real openPanelIndicatorWidth: Style.bar.iconCanvas
-  readonly property real openPanelIndicatorHeight: Style.bar.iconCanvas
+  readonly property real openPanelIndicatorWidth: button.labelWidth
+  readonly property real openPanelIndicatorHeight: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
 
   function syncService() {
     if (timerService && typeof timerService.configure === "function")
@@ -71,21 +71,16 @@ BarWidget {
     }
   }
 
-  BarIconButton {
+  WidgetButton {
     id: button
     anchors.fill: parent
     bar: root.bar
+    text: root.timerService ? root.timerService.remainingText : "25:00"
+    hasVisualContent: text !== ""
     tooltipText: root.timerService
       ? root.timerService.phaseLabel + " · " + root.timerService.remainingText
       : "Focusd"
-    iconComponent: Component {
-      CircularProgress {
-        progress: root.timerService ? root.timerService.progress : 0
-        trackColor: Color.muted
-        fillColor: Color.accent
-        strokeWidth: Math.max(2, Style.spaceReal(2))
-      }
-    }
+
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.LeftButton) root.toggle()
     }

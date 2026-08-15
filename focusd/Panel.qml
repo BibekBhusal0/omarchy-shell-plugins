@@ -35,7 +35,7 @@ Panel {
 
   function selectAction(delta) {
     cursorActive = true
-    if (!timerService || timerService.stopped) {
+    if (!timerService) {
       selectedAction = 0
       return
     }
@@ -43,10 +43,10 @@ Panel {
   }
 
   function activateSelected() {
-    if (!timerService || timerService.stopped) return
+    if (!timerService) return
     if (selectedAction === 0) timerService.playOrStop()
-    else if (selectedAction === 1) timerService.togglePause()
-    else if (selectedAction === 2) timerService.skip()
+    else if (selectedAction === 1 && !timerService.stopped) timerService.togglePause()
+    else if (selectedAction === 2 && !timerService.stopped) timerService.skip()
   }
 
   function actionHovered(index, hovered) {
@@ -148,7 +148,7 @@ Panel {
             iconSize: Style.font.iconLarge
             horizontalPadding: 0
             verticalPadding: 0
-            enabled: !!root.timerService && !root.timerService.stopped
+            enabled: !!root.timerService
             opacity: enabled ? 1 : 0.35
             hasCursor: root.cursorActive && root.selectedAction === 0
             onHovered: function(value) { root.actionHovered(0, value) }
@@ -183,7 +183,7 @@ Panel {
             implicitHeight: actions.buttonSize
             width: actions.buttonSize
             height: actions.buttonSize
-            iconText: "󰑒"
+            iconText: "󰒭"
             tooltipText: "Skip to next phase"
             foreground: root.foreground
             accent: root.activeColor

@@ -41,7 +41,7 @@ Item {
   function poll() {
     stateProc.running = false
     stateProc.collected = ""
-    stateProc.command = ["focusd", "state"]
+    stateProc.command = ["focusd", "status"]
     stateProc.running = true
   }
 
