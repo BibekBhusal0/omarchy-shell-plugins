@@ -1,17 +1,19 @@
-# Focusd for Omarchy
+# Omarchy Shell Plugin for Focusd
 
-A Focusd pomodoro timer for the Omarchy bar. Shows the current session and
-remaining time with a state icon, and opens a keyboard-driven control panel
-when clicked. The panel also shows your current streak, sessions completed
-today, and progress toward your daily goal — straight from Focusd's history.
-The bar label dims while the timer is paused.
+A beautiful [Focusd](https://github.com/BibekBhusal0/focusd) pomodoro timer for the Omarchy bar. Shows the current session and remaining time with a state icon, and opens a control panel with pause, skip, and stop actions plus your streak, sessions today, and progress toward the daily goal.
 
-![Focusd bar widget preview](preview.png)
+## Features
+
+- Bar widget showing session state and remaining time
+- Control panel with pause, skip, and stop
+- Streak, daily goal, and sessions today from Focusd history
+- Customizable state icons
+- Switchable popup style (linear hero or circular face)
 
 ## Requirements
 
-- [Focusd](https://github.com/BibekBhusal0/focusd) installed and on `$PATH`
-  (the daemon is started automatically by the CLI)
+- Omarchy quattro
+- [Focusd](https://github.com/BibekBhusal0/focusd)
 
 ## Install
 
@@ -19,29 +21,44 @@ The bar label dims while the timer is paused.
 omarchy plugin add https://github.com/BibekBhusal0/omarchy-focusd.git --enable
 ```
 
-## Use
+## Usage
 
-The bar widget lands in the right section by default. Click it to open the
-control panel.
+Click the bar widget to open the control panel, or bind it to a key (`~/.config/hypr/bindings.lua`):
 
-| Button    | Action                                              |
-| --------- | --------------------------------------------------- |
-| `󰏤` / `` | Pause or resume the session                         |
-| `󰒭`       | Skip to the next session                            |
-| `󰛉`       | Stop the session (shown once a session has started) |
+```lua
+o.bind("CTRL", "T", "exec, omarchy-shell shell summon focusd")
+```
 
-Start the timer from the bar with `SUPER + P` (or the CLI: `focusd start`),
-or bind the pomodoro popup to a key, e.g. `CTRL + SUPER + T`.
+Start the timer with `focusd start`.
 
-The popup shows your current session, remaining time, and a stats section with
-your streak (󰔟), focused time today, daily goal (󰓾), and sessions today ().
-The daily-goal value only fills in when a goal is set in `focusd settings`.
+## Configuration
 
-## Progress bar style
+Durations and presets are set in Focusd itself (`focusd settings`). The plugin's options go under its entry in `~/.config/omarchy/shell.json`.
 
-The popup defaults to a linear hero with a progress bar. You can switch to the
-circular timer face with the `progressBarStyle` setting in
-`~/.config/omarchy/shell.json`:
+Default configuration:
+
+```json
+"bar": {
+  "layout": {
+    "right": [
+      {
+        "id": "focusd",
+        "progressBarStyle": "linear",
+        "icons": {
+          "work": "",
+          "work-paused": "󰏤",
+          "short-break": "",
+          "short-break-paused": "󰏤",
+          "long-break": "󰒲",
+          "long-break-paused": "󰏤"
+        }
+      }
+    ]
+  }
+}
+```
+
+`progressBarStyle` switches the popup between the `linear` and `circular`:
 
 ```json
 "bar": {
@@ -53,21 +70,7 @@ circular timer face with the `progressBarStyle` setting in
 }
 ```
 
-## Bar icons
-
-The bar label combines a per-state icon with the remaining time. Icons default
-to Focusd's waybar icons:
-
-| State                | Icon | Meaning             |
-| -------------------- | ---- | ------------------- |
-| `work`               | ``  | Working             |
-| `work-paused`        | `󰏤`  | Work session paused |
-| `short-break`        | ``  | Short break         |
-| `short-break-paused` | `󰏤`  | Short break paused  |
-| `long-break`         | `󰒲`  | Long break          |
-| `long-break-paused`  | `󰏤`  | Long break paused   |
-
-Customize them in `~/.config/omarchy/shell.json` under the plugin entry:
+`icons` overrides the per-state bar icons. Any of the keys above can be replaced:
 
 ```json
 "bar": {
@@ -79,29 +82,6 @@ Customize them in `~/.config/omarchy/shell.json` under the plugin entry:
 }
 ```
 
-## Keyboard controls
-
-With the panel open:
-
-- Use the arrow keys or `h`, `j`, `k`, and `l` to select a button.
-- Press Enter or Space to activate it.
-- Press Escape to close the panel.
-- Press Tab or Shift+Tab to move between bar panels.
-
-You can also open the popup from a terminal or your own keybinding:
-
-```bash
-omarchy-shell shell summon focusd
-```
-
-## Customize
-
-Durations and presets are configured through Focusd itself:
-
-```bash
-focusd settings
-```
-
 ## Uninstall
 
 ```bash
@@ -110,10 +90,6 @@ omarchy plugin remove focusd
 
 ## Credits
 
-The bar widget design, `CircularProgress.qml`, panel, and keyboard-navigation
-layout are adapted from [Omadoro](https://github.com/brianblakely/omadoro) by
-Brian Blakely, licensed under the MIT License.
-
-## License
+Bar widget and panel design adapted from [Omadoro](https://github.com/brianblakely/omadoro) by Brian Blakely, licensed under the MIT License.
 
 This plugin is licensed under the [MIT License](../LICENSE).

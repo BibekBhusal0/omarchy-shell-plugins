@@ -9,8 +9,8 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 | Folder             | Kind                 | Key files                                           |
 | ------------------ | -------------------- | --------------------------------------------------- |
 | `focusd/`          | bar-widget + service | `BarWidget.qml`, `Panel.qml`, `Service.qml`         |
-| `obsidian-search/` | overlay              | `ObsidianSearch.qml`, `search.sh`, `FuzzySearch.js` |
-| `readest/`         | overlay              | `Readest.qml`, `search.sh`, `FuzzySearch.js`        |
+| `obsidian-search/` | menu (overlay)       | `ObsidianSearch.qml`, `search.sh`, `FuzzySearch.js` |
+| `readest/`         | menu (overlay)       | `Readest.qml`, `search.sh`, `FuzzySearch.js`        |
 
 `scripts/publish.sh` + `.github/workflows/publish.yml` push each plugin folder to its standalone repo and cut a `v<version>` release.
 
@@ -28,8 +28,14 @@ QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **
 
 ## Plugin specifics
 
-- **focusd**: `Service.qml` drives the external `focusd` CLI (must be on `$PATH`) via `Quickshell.execDetached(["focusd", "toggle"])`. Timer state flows to the UI from the daemon. Bar icons are Nerd Font codepoints.
-- **obsidian-search / readest**: rely on `fd` + `jq` and `FuzzySearch.js`. Obsidian vault path is resolved from `~/.config/obsidian/obsidian.json`; Readest reads a Flatpak data dir.
+- **focusd**: `Service.qml` drives the external `focusd` CLI (must be on `$PATH`) via `Quickshell.execDetached(["focusd", "toggle"])`. Timer state flows to the UI from the daemon. Bar icons are Nerd Font codepoints. Default config (`progressBarStyle`, `icons`) is in `manifest.json` `barWidget.defaults`; README documents it.
+- **obsidian-search / readest**: rely on `fd` + `jq` and `FuzzySearch.js`. Obsidian vault path defaults to the first vault in `~/.config/obsidian/obsidian.json`; Readest defaults to the Readest data dir under `~/.var/app/com.bilingify.readest/`. Both are overridable via `vaultPath` / `libraryPath` in the plugin entry of `~/.config/omarchy/shell.json`.
+
+## Requirements (documented in each plugin README)
+
+- All plugins require Omarchy quattro.
+- `fd` + `jq` are preinstalled on Omarchy; search plugins list them as preinstalled requirements, not as install steps.
+- focusd requires the `focusd` binary on `$PATH`.
 
 ## Publishing
 
@@ -38,5 +44,4 @@ QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **
 
 ## Environment notes
 
-- Requirements: `fd`, `jq` for search plugins; `focusd` on `$PATH` for the timer plugin.
 - Background daemons/commands can hang interactive tool shells — prefer `systemd-run --user` for long-lived watchers.

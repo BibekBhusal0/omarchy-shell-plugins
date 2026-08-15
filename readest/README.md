@@ -1,27 +1,17 @@
-# Readest for Omarchy
+# Omarchy Shell Plugin for Readest
 
-A keyboard-first overlay for fuzzy-searching your
-[Readest](https://readest.com/) library and opening books with cover previews.
+A beautiful [Readest](https://readest.com/) library search menu. Type to filter books by title or author with fuzzy ranking, and open one with Enter.
 
-![Readest overlay preview](preview.png)
+## Features
+
+- Fuzzy search across your library by title or author, ranked by relevance
+- Open books directly in Readest
 
 ## Requirements
 
-- Readest (Flatpak `com.bilingify.readest`) with a library at
-  `~/.var/app/com.bilingify.readest/data/com.bilingify.readest/Readest/Books`
-- `fd` and `jq`
-
-## Library location
-
-The library is read from the Flatpak data directory above by default. To use a
-different location, add a `libraryPath` setting to the plugin entry in
-`~/.config/omarchy/shell.json`:
-
-```json
-"plugins": [
-  { "id": "readest", "libraryPath": "/path/to/your/books" }
-]
-```
+- Omarchy quattro
+- Readest
+- `fd` and `jq` (preinstalled on Omarchy)
 
 ## Install
 
@@ -29,17 +19,25 @@ different location, add a `libraryPath` setting to the plugin entry in
 omarchy plugin add https://github.com/BibekBhusal0/omarchy-readest.git --enable
 ```
 
-## Use
+## Usage
 
-Bind the overlay to a key (Hyprland `~/.config/hypr/bindings.lua`):
+Bind the menu to a key (`~/.config/hypr/bindings.lua`):
 
 ```lua
 o.bind("SUPER", "R", "exec, omarchy-shell shell summon readest")
 ```
 
-- Type to fuzzy-filter the library by title or author. Results are ranked, not
-  just substring-matched.
-- `Enter` opens the selected book in Readest; `Escape` closes.
+Type to filter, Enter opens the selected book in Readest, Escape closes.
+
+## Configuration
+
+The library is read from `~/.var/app/com.bilingify.readest/data/com.bilingify.readest/Readest/Books` by default. Override it under the plugin entry in `~/.config/omarchy/shell.json`:
+
+```json
+"plugins": [
+  { "id": "readest", "libraryPath": "/path/to/your/books" }
+]
+```
 
 ## Uninstall
 
@@ -49,10 +47,6 @@ omarchy plugin remove readest
 
 ## Credits
 
-Fuzzy matching uses [`FuzzySearch.js`](FuzzySearch.js), adapted from
-[omarchy-raindrop-bookmarks](https://github.com/treramey/omarchy-raindrop-bookmarks)
-by Trevor Ramey, licensed under the MIT License.
-
-## License
+Fuzzy matching uses [`FuzzySearch.js`](FuzzySearch.js), adapted from [omarchy-raindrop-bookmarks](https://github.com/treramey/omarchy-raindrop-bookmarks) by Trevor Ramey, licensed under the MIT License.
 
 This plugin is licensed under the [MIT License](../LICENSE).

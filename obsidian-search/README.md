@@ -1,27 +1,18 @@
-# Obsidian Search for Omarchy
+# Omarchy Shell Plugin for Obsidian Search
 
-A keyboard-first overlay for fuzzy-searching your [Obsidian](https://obsidian.md/)
-vault. Type to filter notes with fuzzy ranking, open one with Enter, or create
-a new note that isn't found.
+A beautiful [Obsidian](https://obsidian.md/) vault search menu. Type to filter notes with fuzzy ranking, open one with Enter, or create a new note when nothing matches.
 
-![Obsidian Search overlay preview](preview.png)
+## Features
+
+- Fuzzy search across your vault, ranked by relevance
+- Create a missing note directly from the menu
+- Support for bases and canvas files as well
 
 ## Requirements
 
-- Obsidian with a vault configured at `~/.config/obsidian/obsidian.json`
-- `fd` and `jq`
-
-## Vault location
-
-The vault is auto-detected from the first vault in the Obsidian configuration
-above. To use a different vault, add a `vaultPath` setting to the plugin entry
-in `~/.config/omarchy/shell.json`:
-
-```json
-"plugins": [
-  { "id": "obsidian-search", "vaultPath": "/path/to/your/vault" }
-]
-```
+- Omarchy quattro
+- Obsidian
+- `fd` and `jq` (preinstalled on Omarchy)
 
 ## Install
 
@@ -29,18 +20,25 @@ in `~/.config/omarchy/shell.json`:
 omarchy plugin add https://github.com/BibekBhusal0/omarchy-obsidian-search.git --enable
 ```
 
-## Use
+## Usage
 
-Bind the overlay to a key (Hyprland `~/.config/hypr/bindings.lua`):
+Bind the menu to a key (`~/.config/hypr/bindings.lua`):
 
 ```lua
 o.bind("SUPER", "O", "exec, omarchy-shell shell summon obsidian-search")
 ```
 
-- Type to fuzzy-filter the vault. Notes are ranked, not just substring-matched.
-- `Enter` opens the selected note; `Escape` closes.
-- When the query doesn't match a note, the first row creates
-  `query.md` in the vault root.
+Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root.
+
+## Configuration
+
+The vault is auto-detected from `~/.config/obsidian/obsidian.json` by default. Override it under the plugin entry in `~/.config/omarchy/shell.json`:
+
+```json
+"plugins": [
+  { "id": "obsidian-search", "vaultPath": "/path/to/your/vault" }
+]
+```
 
 ## Uninstall
 
@@ -50,10 +48,6 @@ omarchy plugin remove obsidian-search
 
 ## Credits
 
-Fuzzy matching uses [`FuzzySearch.js`](FuzzySearch.js), adapted from
-[omarchy-raindrop-bookmarks](https://github.com/treramey/omarchy-raindrop-bookmarks)
-by Trevor Ramey, licensed under the MIT License.
-
-## License
+Fuzzy matching uses [`FuzzySearch.js`](FuzzySearch.js), adapted from [omarchy-raindrop-bookmarks](https://github.com/treramey/omarchy-raindrop-bookmarks) by Trevor Ramey, licensed under the MIT License.
 
 This plugin is licensed under the [MIT License](../LICENSE).
