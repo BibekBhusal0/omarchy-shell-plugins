@@ -4,27 +4,34 @@ Third-party plugins for the [Omarchy](https://omarchy.org/) shell. Each folder i
 
 ## Plugins
 
-| Plugin                                | ID                | What it does                                             |
-| ------------------------------------- | ----------------- | -------------------------------------------------------- |
-| [`focusd`](focusd/)                   | `focusd`          | Control the Focusd pomodoro timer from an overlay picker |
-| [`obsidian-search`](obsidian-search/) | `obsidian-search` | Fuzzy-search Obsidian vault notes, create new notes      |
-| [`readest`](readest/)                 | `readest`         | Search the Readest library and open books                |
+| Plugin                                | ID                | Kind          | What it does                                             |
+| ------------------------------------- | ----------------- | ------------- | -------------------------------------------------------- |
+| [`focusd`](focusd/)                   | `focusd`          | bar-widget    | Circular Focusd pomodoro timer in the bar with a control panel |
+| [`obsidian-search`](obsidian-search/) | `obsidian-search` | overlay       | Fuzzy-search Obsidian vault notes, create new notes      |
+| [`readest`](readest/)                 | `readest`         | overlay       | Fuzzy-search the Readest library and open books          |
+
+Each plugin ships its own `README.md` with install, usage, and credits.
 
 ## Install
 
-Each plugin is self-contained. Copy (or symlink) the folder into the user plugin directory, then rescan:
+Copy (or symlink) a folder into the user plugin directory, then rescan:
 
 ```bash
-# e.g. for the readest plugin
 mkdir -p ~/.config/omarchy/plugins
 cp -r readest ~/.config/omarchy/plugins/
 omarchy-shell shell rescanPlugins
 ```
 
-Or install from git (each folder is a valid plugin repo root, so you can point `omarchy plugin add` at any subfolder URL):
+For a bar widget, enable it so it lands in the bar:
 
 ```bash
-omarchy plugin add https://github.com/bibekbhusal0/omarchy-shell-plugin/tree/main/readest --enable
+omarchy plugin enable focusd
+```
+
+Or install from git (each folder is a valid plugin repo root):
+
+```bash
+omarchy plugin add https://github.com/bibekbhusal0/omarchy-focusd.git --enable
 ```
 
 Enable / disable:
@@ -37,20 +44,19 @@ omarchy plugin list
 
 ## Usage
 
-Summon a plugin's overlay via the shell IPC:
+Bar widgets appear directly in the bar (focusd defaults to the right section).
+Overlays are summoned via the shell IPC:
 
 ```bash
 omarchy-shell shell summon readest
 omarchy-shell shell summon obsidian-search
-omarchy-shell shell summon focusd
 ```
 
-To make them hotkey-accessible, bind them in Hyprland (`~/.config/hypr/bindings.lua`):
+To make overlays hotkey-accessible, bind them in Hyprland (`~/.config/hypr/bindings.lua`):
 
 ```lua
 o.bind("SUPER", "R", "exec, omarchy-shell shell summon readest")
 o.bind("SUPER", "O", "exec, omarchy-shell shell summon obsidian-search")
-o.bind("SUPER", "P", "exec, omarchy-shell shell summon focusd")
 ```
 
 Or add rows pointing at them in `~/.config/omarchy/extensions/omarchy-menu.jsonc`:
@@ -58,7 +64,6 @@ Or add rows pointing at them in `~/.config/omarchy/extensions/omarchy-menu.jsonc
 ```jsonc
 "readest":   {"icon": "󰂚", "label": "Readest",   "action": "omarchy-shell shell summon readest"},
 "obsidian":  {"icon": "󰙮", "label": "Obsidian",  "action": "omarchy-shell shell summon obsidian-search"},
-"focusd":    {"icon": "󰃰", "label": "Focusd",    "action": "omarchy-shell shell summon focusd"},
 ```
 
 ## Requirements
@@ -77,3 +82,19 @@ omarchy plugin validate ./readest
 ```
 
 The QML files run inside the long-lived `omarchy-shell` Quickshell process; edits under `~/.config/omarchy/plugins/` hot-reload on save.
+
+## Publishing each plugin to its own repo
+
+Each plugin also lives in its own standalone repo (listed in its `manifest.json` `homepage`). Pushing a new version of a plugin here publishes it to its own repo and cuts a `v<version>` release automatically.
+
+Add a personal access token (repo scope) as the `PAT_TOKEN` secret, then either push to `main` or run the workflow manually:
+
+```bash
+# locally, to dry-run the logic (requires gh + token):
+GITHUB_TOKEN=... bash scripts/publish.sh
+```
+
+## Credits
+
+- focusd's bar widget design is adapted from [Omadoro](https://github.com/brianblakely/omadoro) (MIT) by Brian Blakely.
+- obsidian-search and readest use [`FuzzySearch.js`](https://github.com/treramey/omarchy-raindrop-bookmarks) (MIT) by Trevor Ramey.

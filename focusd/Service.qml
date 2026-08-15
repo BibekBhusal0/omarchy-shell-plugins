@@ -63,9 +63,7 @@ Item {
     var classes = state.class || []
     var alt = String(state.alt || "work")
 
-    root.paused = classes.indexOf("paused") !== -1
-    root.running = !root.paused
-    root.status = root.running ? "running" : "paused"
+    root.status = classes.indexOf("paused") !== -1 ? "paused" : "running"
 
     var phaseKey = alt.replace(/-paused$/, "")
     root.phase = phaseKey
