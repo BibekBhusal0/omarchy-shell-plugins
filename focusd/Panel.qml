@@ -138,7 +138,7 @@ Panel {
             implicitHeight: actions.buttonSize
             width: actions.buttonSize
             height: actions.buttonSize
-            iconText: root.timerService && root.timerService.paused ? "" : ""
+            iconText: root.timerService && root.timerService.paused ? "" : "󰏤"
             tooltipText: root.timerService && root.timerService.paused
               ? "Resume current phase"
               : "Pause current phase"
