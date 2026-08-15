@@ -2,7 +2,9 @@
 
 A Focusd pomodoro timer for the Omarchy bar. Shows the current session and
 remaining time with a state icon, and opens a keyboard-driven control panel
-when clicked. The bar label dims while the timer is paused.
+when clicked. The panel also shows your current streak, sessions completed
+today, and progress toward your daily goal — straight from Focusd's history.
+The bar label dims while the timer is paused.
 
 ![Focusd bar widget preview](preview.png)
 
@@ -30,6 +32,10 @@ control panel.
 
 Start the timer from the bar with `SUPER + P` (or the CLI: `focusd start`),
 or bind the pomodoro popup to a key, e.g. `CTRL + SUPER + T`.
+
+The popup shows three stats under the timer: your current streak (󰈸), sessions
+completed today, and focused time vs. your daily goal (󰀘). The daily-goal line
+only appears when a goal is set in `focusd settings`.
 
 ## Bar icons
 

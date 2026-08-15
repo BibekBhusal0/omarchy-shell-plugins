@@ -16,6 +16,15 @@ Item {
   property real progress: 0
   property string tooltipText: ""
 
+  property int sessionsToday: 0
+  property string focusedToday: "0s"
+  property string dailyGoal: ""
+  property real dailyGoalProgress: 0
+  property int currentStreak: 0
+  readonly property bool hasDailyGoal: dailyGoalSecs > 0
+
+  property real dailyGoalSecs: 0
+
   readonly property bool stopped: status === "stopped"
   readonly property bool running: status === "running"
   readonly property bool paused: status === "paused"
@@ -113,6 +122,14 @@ Item {
     root.remainingText = String(state.text || "")
     root.progress = Math.max(0, Math.min(1, (Number(state.percentage) || 0) / 100))
     root.tooltipText = String(state.tooltip || "")
+
+    root.sessionsToday = Number(state.sessions_today) || 0
+    root.focusedToday = String(state.focused_today || "")
+    root.dailyGoal = String(state.daily_goal || "")
+    root.currentStreak = Number(state.current_streak) || 0
+    var focusedSecs = Number(state.focused_today_secs) || 0
+    root.dailyGoalSecs = Number(state.daily_goal_secs) || 0
+    root.dailyGoalProgress = root.dailyGoalSecs > 0 ? Math.max(0, Math.min(1, focusedSecs / root.dailyGoalSecs)) : 0
   }
 
   function sessionLabelFor(key) {

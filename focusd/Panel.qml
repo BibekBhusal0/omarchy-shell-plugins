@@ -99,7 +99,7 @@ Panel {
           id: timerFace
           width: parent.width
           height: Math.max(1, panel.contentHeight - panel.verticalContentInset
-                           - content.spacing - actions.implicitHeight)
+                           - content.spacing * 2 - stats.implicitHeight - actions.implicitHeight)
 
           CircularProgress {
             anchors.centerIn: parent
@@ -130,6 +130,63 @@ Panel {
               color: root.activeColor
               font.family: root.fontFamily
               font.pixelSize: Style.font.title
+            }
+          }
+        }
+
+        Column {
+          id: stats
+          width: parent.width
+          spacing: Style.space(6)
+
+          Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Style.space(14)
+
+            Text {
+              text: (root.timerService ? root.timerService.currentStreak : 0) + "d"
+              color: Color.muted
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+              Text {
+                anchors.left: parent.left
+                anchors.bottom: parent.top
+                anchors.leftMargin: -Style.space(2)
+                anchors.bottomMargin: Style.space(1)
+                text: "󰈸"
+                color: Color.muted
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+              }
+            }
+
+            Text {
+              text: (root.timerService ? root.timerService.sessionsToday : 0) + " sessions"
+              color: Color.muted
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+            }
+          }
+
+          Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Style.space(8)
+            visible: root.timerService ? root.timerService.hasDailyGoal : false
+
+            Text {
+              text: "󰀘"
+              color: Color.muted
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+            }
+
+            Text {
+              text: root.timerService
+                ? (root.timerService.focusedToday + " / " + root.timerService.dailyGoal)
+                : ""
+              color: Color.muted
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
             }
           }
         }
