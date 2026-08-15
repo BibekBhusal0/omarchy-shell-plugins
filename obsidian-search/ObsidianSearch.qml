@@ -123,7 +123,7 @@ Item {
     } else {
       shown = FuzzySearch.search(root.filterText, root.allItems)
       shown.unshift({
-        icon: "󰙮",
+        icon: "󱘒",
         label: "Create new note - " + query,
         detail: "Create '" + query + ".md' in " + root.vaultName,
         action: "obsidian \"obsidian://new?vault=" + encodeURIComponent(root.vaultName) + "&name=" + encodeURIComponent(query) + "\"",
