@@ -25,7 +25,7 @@ omarchy plugin add https://github.com/BibekBhusal0/omarchy-obsidian-search.git -
 Bind the menu to a key (`~/.config/hypr/bindings.lua`):
 
 ```lua
-o.bind("SUPER", "O", "exec, omarchy-shell shell summon obsidian-search")
+o.bind("SUPER", "O", "exec, omarchy-shell shell summon bibek.obsidian-search")
 ```
 
 Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root.
@@ -36,14 +36,14 @@ The vault is auto-detected from `~/.config/obsidian/obsidian.json` by default. O
 
 ```json
 "plugins": [
-  { "id": "obsidian-search", "vaultPath": "/path/to/your/vault" }
+  { "id": "bibek.obsidian-search", "vaultPath": "/path/to/your/vault" }
 ]
 ```
 
 ## Uninstall
 
 ```bash
-omarchy plugin remove obsidian-search
+omarchy plugin remove bibek.obsidian-search
 ```
 
 ## Credits

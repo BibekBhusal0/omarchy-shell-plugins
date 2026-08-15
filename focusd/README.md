@@ -30,7 +30,7 @@ omarchy plugin add https://github.com/BibekBhusal0/omarchy-focusd.git --enable
 Click the bar widget to open the control panel, or bind it to a key (`~/.config/hypr/bindings.lua`):
 
 ```lua
-o.bind("CTRL", "T", "exec, omarchy-shell shell summon focusd")
+o.bind("CTRL", "T", "exec, omarchy-shell shell summon bibek.focusd")
 ```
 
 Start the timer with `focusd start`.
@@ -46,7 +46,7 @@ Default configuration:
   "layout": {
     "right": [
       {
-        "id": "focusd",
+        "id": "bibek.focusd",
         "progressBarStyle": "linear",
         "icons": {
           "work": "",
@@ -68,7 +68,7 @@ Default configuration:
 "bar": {
   "layout": {
     "right": [
-      { "id": "focusd", "progressBarStyle": "circular" }
+      { "id": "bibek.focusd", "progressBarStyle": "circular" }
     ]
   }
 }
@@ -81,7 +81,7 @@ Default configuration:
   "layout": {
     "right": [
       {
-        "id": "focusd",
+        "id": "bibek.focusd",
         "icons": {
           "work": "🍅",
           "work-paused": "",
@@ -108,7 +108,7 @@ Alternatives per state (pick the ones you like; `-paused` variants reuse the sam
 ## Uninstall
 
 ```bash
-omarchy plugin remove focusd
+omarchy plugin remove bibek.focusd
 ```
 
 ## Credits

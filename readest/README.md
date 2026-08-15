@@ -24,7 +24,7 @@ omarchy plugin add https://github.com/BibekBhusal0/omarchy-readest.git --enable
 Bind the menu to a key (`~/.config/hypr/bindings.lua`):
 
 ```lua
-o.bind("SUPER", "R", "exec, omarchy-shell shell summon readest")
+o.bind("SUPER", "R", "exec, omarchy-shell shell summon bibek.readest")
 ```
 
 Type to filter, Enter opens the selected book in Readest, Escape closes.
@@ -35,14 +35,14 @@ The library is read from `~/.var/app/com.bilingify.readest/data/com.bilingify.re
 
 ```json
 "plugins": [
-  { "id": "readest", "libraryPath": "/path/to/your/books" }
+  { "id": "bibek.readest", "libraryPath": "/path/to/your/books" }
 ]
 ```
 
 ## Uninstall
 
 ```bash
-omarchy plugin remove readest
+omarchy plugin remove bibek.readest
 ```
 
 ## Credits
