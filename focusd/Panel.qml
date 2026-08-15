@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
@@ -19,12 +21,19 @@ Panel {
   property int selectedAction: 0
   property bool cursorActive: true
 
+  property bool installed: false
+  property bool checkingInstallation: true
+  property bool installing: false
+  property string installError: ""
+  readonly property string installFailurePath: String(Quickshell.env("XDG_RUNTIME_DIR") || "") + "/focusd-panel-install.failed"
+
   readonly property bool stopVisible: timerService ? timerService.active : false
 
   function open() {
     selectedAction = 0
     cursorActive = true
     controller.show()
+    root.checkInstallation()
   }
 
   function close() {
@@ -37,11 +46,16 @@ Panel {
   }
 
   function actionCount() {
+    if (!root.installed) return 1
     return root.stopVisible ? 3 : 2
   }
 
   function selectAction(delta) {
     cursorActive = true
+    if (!root.installed) {
+      selectedAction = 0
+      return
+    }
     if (!timerService) {
       selectedAction = 0
       return
@@ -51,6 +65,10 @@ Panel {
   }
 
   function activateSelected() {
+    if (!root.installed) {
+      root.install()
+      return
+    }
     if (!timerService) return
     if (selectedAction === 0 && !timerService.stopped) timerService.togglePause()
     else if (selectedAction === 1 && !timerService.stopped) timerService.skip()
@@ -68,6 +86,42 @@ Panel {
       return bar.switchPanelFrom(barIdentity, direction)
     return false
   }
+
+  function checkInstallation() {
+    if (whichProcess.running) return
+    root.checkingInstallation = true
+    whichProcess.command = [
+      "sh",
+      "-c",
+      "if command -v focusd >/dev/null 2>&1; then exit 0; elif test -f \"$1\"; then cat \"$1\"; exit 2; else exit 1; fi",
+      "sh",
+      root.installFailurePath
+    ]
+    whichProcess.running = true
+  }
+
+  function installCommand() {
+    return "rm -f \"$XDG_RUNTIME_DIR/focusd-panel-install.failed\"; status=0; " +
+      "mkdir -p \"$HOME/.local/bin\" && " +
+      "url=$(curl -fsSL https://api.github.com/repos/BibekBhusal0/focusd/releases/latest | " +
+      "jq -r '.assets[] | select(.name==\"focusd-linux-x86_64\") | .browser_download_url') && " +
+      "curl -fsSL \"$url\" -o \"$HOME/.local/bin/focusd\" && " +
+      "chmod +x \"$HOME/.local/bin/focusd\" " +
+      "|| status=$?; " +
+      "if (( status != 0 )); then printf '%s\\n' \"$status\" > \"$XDG_RUNTIME_DIR/focusd-panel-install.failed\"; fi; " +
+      "(exit \"$status\")"
+  }
+
+  function install() {
+    root.installing = true
+    root.installError = ""
+    installerProcess.command = ["sh", "-c", root.installCommand()]
+    installerProcess.running = true
+    installPoll.restart()
+    installTimeout.restart()
+  }
+
+  Component.onCompleted: root.checkInstallation()
 
   KeyboardPanel {
     id: panel
@@ -96,17 +150,100 @@ Panel {
         width: parent.width
         spacing: Style.space(18)
 
+        Column {
+          visible: !root.installed && !root.checkingInstallation
+          width: parent.width
+          spacing: Style.space(16)
+
+          Item {
+            width: parent.width
+            implicitHeight: Style.space(64)
+
+            Text {
+              anchors.centerIn: parent
+              text: "󱎫"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.display + Style.space(12)
+            }
+          }
+
+          Column {
+            width: parent.width
+            spacing: Style.space(6)
+
+            Text {
+              width: parent.width
+              text: "Focusd is not installed."
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.title
+              font.bold: true
+              horizontalAlignment: Text.AlignHCenter
+              wrapMode: Text.WordWrap
+            }
+
+            Text {
+              width: parent.width
+              text: "Install the pomodoro daemon this widget controls."
+              color: Qt.darker(root.foreground, 1.4)
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+              horizontalAlignment: Text.AlignHCenter
+              wrapMode: Text.WordWrap
+            }
+          }
+
+          Button {
+            width: parent.width
+            text: root.installing
+              ? "Installing focusd…"
+              : "Install focusd"
+            iconText: root.installing ? "" : "󰏔"
+            iconSpinning: root.installing
+            fontFamily: root.fontFamily
+            fontSize: Style.font.body
+            iconSize: Style.font.icon
+            foreground: root.foreground
+            accent: root.activeColor
+            verticalPadding: Style.space(14)
+            bordered: true
+            selected: true
+            hasCursor: root.cursorActive && root.selectedAction === 0
+            enabled: !root.installing
+            onHovered: function(hovered) {
+              if (hovered) {
+                root.cursorActive = true
+                root.selectedAction = 0
+              }
+            }
+            onClicked: root.install()
+          }
+
+          Text {
+            visible: root.installError !== ""
+            width: parent.width
+            text: root.installError
+            color: Color.urgent
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignHCenter
+          }
+        }
+
         LinearFace {
           width: parent.width
-          visible: root.progressBarStyle !== "circular"
+          visible: root.installed && root.progressBarStyle !== "circular"
         }
 
         CircularFace {
           width: parent.width
-          visible: root.progressBarStyle === "circular"
+          visible: root.installed && root.progressBarStyle === "circular"
         }
 
         Column {
+          visible: root.installed
           width: parent.width
           spacing: Style.space(10)
 
@@ -132,6 +269,7 @@ Panel {
 
         Row {
           id: actions
+          visible: root.installed
           anchors.horizontalCenter: parent.horizontalCenter
           spacing: Style.space(10)
           readonly property real buttonSize: Style.space(42)
@@ -360,6 +498,50 @@ Panel {
         font.family: root.fontFamily
         font.pixelSize: Style.font.title
       }
+    }
+  }
+
+  Process {
+    id: whichProcess
+    stdout: StdioCollector { id: whichOutput; waitForEnd: true }
+    onExited: function(exitCode) {
+      root.checkingInstallation = false
+      root.installed = exitCode === 0
+      if (root.installed) {
+        root.installing = false
+        installPoll.stop()
+        installTimeout.stop()
+      } else if (exitCode === 2 && root.installing) {
+        root.installing = false
+        installPoll.stop()
+        installTimeout.stop()
+        root.installError = String(whichOutput.text || "").trim() === "130"
+          ? "Installation was canceled."
+          : "Installation did not finish. Check the Omarchy terminal and try again."
+      } else {
+        root.installError = ""
+      }
+    }
+  }
+
+  Process { id: installerProcess }
+
+  Timer {
+    id: installPoll
+    interval: 1000
+    repeat: true
+    running: root.installing && !root.installed
+    onTriggered: root.checkInstallation()
+  }
+
+  Timer {
+    id: installTimeout
+    interval: 300000
+    onTriggered: {
+      if (!root.installing) return
+      root.installing = false
+      installPoll.stop()
+      root.installError = "Installation is still waiting. Check the Omarchy terminal and try again."
     }
   }
 }

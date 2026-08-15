@@ -16,6 +16,8 @@ Item {
   property real progress: 0
   property string tooltipText: ""
 
+  property bool installed: true
+
   property int sessionsToday: 0
   property string focusedToday: "0s"
   property string dailyGoal: ""
@@ -158,6 +160,7 @@ Item {
       onRead: function(data) { stateProc.collected += data + "\n" }
     }
     onExited: function(exitCode) {
+      root.installed = exitCode === 0
       if (exitCode === 0 && String(stateProc.collected).trim() !== "") {
         root.parseState(stateProc.collected)
       } else {

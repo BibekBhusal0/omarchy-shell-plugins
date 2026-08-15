@@ -75,12 +75,14 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.timerService ? root.timerService.barText : "󰏤 25:00"
+    text: root.timerService
+      ? (root.timerService.installed ? root.timerService.barText : "󰏔")
+      : "󱎫"
     hasVisualContent: text !== ""
     dimmed: root.timerService ? root.timerService.paused : false
-    tooltipText: root.timerService
+    tooltipText: root.timerService && root.timerService.installed
       ? root.timerService.barTooltip
-      : "Focusd"
+      : "Install Focusd"
 
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.LeftButton) root.toggle()
