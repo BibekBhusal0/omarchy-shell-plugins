@@ -76,7 +76,7 @@ Panel {
     open: root.opened
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(330))
-    contentHeight: contentWidth
+    contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
     PanelKeyCatcher {
       id: keyCatcher
@@ -98,8 +98,7 @@ Panel {
         Item {
           id: timerFace
           width: parent.width
-          height: Math.max(1, panel.contentHeight - panel.verticalContentInset
-                           - content.spacing * 2 - stats.implicitHeight - actions.implicitHeight)
+          implicitHeight: Style.space(180)
 
           CircularProgress {
             anchors.centerIn: parent
@@ -135,58 +134,25 @@ Panel {
         }
 
         Column {
-          id: stats
           width: parent.width
-          spacing: Style.space(6)
+          spacing: Style.space(10)
 
           Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: Style.space(14)
+            width: parent.width
+            spacing: Style.space(20)
 
-            Text {
-              text: (root.timerService ? root.timerService.currentStreak : 0) + "d"
-              color: Color.muted
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
-              Text {
-                anchors.left: parent.left
-                anchors.bottom: parent.top
-                anchors.leftMargin: -Style.space(2)
-                anchors.bottomMargin: Style.space(1)
-                text: "󰈸"
-                color: Color.muted
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-              }
+            Column {
+              width: (parent.width - parent.spacing) / 2
+              spacing: Style.spacing.labelGap
+              InfoPair { icon: "󰔟"; label: "Streak"; value: (root.timerService ? root.timerService.currentStreak : 0) + "d" }
+              InfoPair { icon: "󰔟"; label: "Focused today"; value: root.timerService ? root.timerService.focusedToday : "—" }
             }
 
-            Text {
-              text: (root.timerService ? root.timerService.sessionsToday : 0) + " sessions"
-              color: Color.muted
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
-            }
-          }
-
-          Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: Style.space(8)
-            visible: root.timerService ? root.timerService.hasDailyGoal : false
-
-            Text {
-              text: "󰀘"
-              color: Color.muted
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
-            }
-
-            Text {
-              text: root.timerService
-                ? (root.timerService.focusedToday + " / " + root.timerService.dailyGoal)
-                : ""
-              color: Color.muted
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
+            Column {
+              width: (parent.width - parent.spacing) / 2
+              spacing: Style.spacing.labelGap
+              InfoPair { icon: "󰓾"; label: "Goal"; value: root.timerService ? root.timerService.dailyGoal : "—" }
+              InfoPair { icon: ""; label: "Sessions today"; value: root.timerService ? String(root.timerService.sessionsToday) : "0" }
             }
           }
         }
@@ -262,5 +228,40 @@ Panel {
         }
       }
     }
+  }
+
+  component InfoPair: Row {
+    property string icon: ""
+    property string label: ""
+    property string value: ""
+
+    width: parent.width
+    spacing: Style.space(8)
+
+    Text {
+      id: iconText
+      visible: icon !== ""
+      text: icon
+      color: root.foreground
+      opacity: 0.6
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.bodySmall
+    }
+    InfoLabel { text: label }
+    Item { width: Math.max(0, parent.width - parent.children[0].implicitWidth - parent.children[1].implicitWidth - parent.children[3].implicitWidth - parent.spacing * 3); height: 1 }
+    InfoValue { text: value }
+  }
+
+  component InfoLabel: Text {
+    color: root.foreground
+    opacity: 0.6
+    font.family: root.fontFamily
+    font.pixelSize: Style.font.bodySmall
+  }
+
+  component InfoValue: Text {
+    color: root.foreground
+    font.family: root.fontFamily
+    font.pixelSize: Style.font.bodySmall
   }
 }
