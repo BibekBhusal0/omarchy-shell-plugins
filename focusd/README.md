@@ -62,3 +62,7 @@ omarchy plugin remove focusd
 The bar widget design, `CircularProgress.qml`, panel, and keyboard-navigation
 layout are adapted from [Omadoro](https://github.com/brianblakely/omadoro) by
 Brian Blakely, licensed under the MIT License.
+
+## License
+
+This plugin is licensed under the [MIT License](../LICENSE).

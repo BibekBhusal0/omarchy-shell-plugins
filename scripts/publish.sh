@@ -98,6 +98,15 @@ publish_plugin() {
   (cd "$clone" && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +)
   cp -a "$dir/." "$clone/"
 
+  # Give the standalone repo its own license, and make README license links
+  # that pointed at the parent repo's ../LICENSE point at this local copy.
+  if [[ -f "$ROOT/LICENSE" ]]; then
+    cp "$ROOT/LICENSE" "$clone/LICENSE"
+  fi
+  if [[ -f "$clone/README.md" ]]; then
+    sed -i 's#\.\./LICENSE#LICENSE#g' "$clone/README.md"
+  fi
+
   local changed=0
   (cd "$clone" && git add -A && git diff --cached --quiet) || changed=1
 

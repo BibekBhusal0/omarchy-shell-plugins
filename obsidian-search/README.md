@@ -41,3 +41,7 @@ omarchy plugin remove obsidian-search
 Fuzzy matching uses [`FuzzySearch.js`](FuzzySearch.js), adapted from
 [omarchy-raindrop-bookmarks](https://github.com/treramey/omarchy-raindrop-bookmarks)
 by Trevor Ramey, licensed under the MIT License.
+
+## License
+
+This plugin is licensed under the [MIT License](../LICENSE).
