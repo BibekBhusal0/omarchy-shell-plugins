@@ -27,7 +27,7 @@ omarchy plugin add https://github.com/BibekBhusal0/omarchy-focusd.git --enable
 
 ## Usage
 
-Click the bar widget to open the control panel, or bind it to a key (`~/.config/hypr/bindings.lua`):
+Click the bar widget to open the control panel. Right-click skips to the next session, middle-click stops/resets the current timer. You can also bind it to a key (`~/.config/hypr/bindings.lua`):
 
 ```lua
 o.bind("CTRL", "T", "exec, omarchy-shell shell summon bibek.focusd")
