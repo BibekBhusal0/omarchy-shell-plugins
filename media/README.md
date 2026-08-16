@@ -2,14 +2,18 @@
 
 An MPRIS now-playing widget for the Omarchy bar, cloned from the built-in `omarchy.media`, plus support for the [cliamp](https://github.com/bjarneo/cliamp) headless daemon.
 
-Shows the playing track with a play/pause glyph in the bar, and opens a popup with album art, previous/play-pause/next buttons, and a list of active media sources to switch between.
+Shows the playing track with a play/pause glyph in the bar. Right-clicking opens a popup with album art, a seekable progress bar, transport controls, and a list of active media sources.
 
 ## Features
 
 - Bar widget with play/pause state and "title · artist" (truncated with `…` when too long)
-- Popup with album art, transport controls, and source switching
+- Popup with album art, seekable progress bar with elapsed/total time, transport controls, and source switching
+- Clickable/slidable progress bar for seeking within a track (falls back to border when position is unavailable)
+- Shuffle and repeat toggles in the popup
+- Switching sources pauses the current track and plays the selected one
 - Full MPRIS support for any player (Spotify, browsers, etc.)
 - [cliamp](https://github.com/bjarneo/cliamp) headless daemon support (`cliamp --daemon`, no MPRIS bridge needed)
+- Keyboard navigation in the popup (arrow keys to move, enter to activate, q to close)
 - IPC target `media` for scripts and hotkeys
 
 ## Requirements
@@ -37,6 +41,15 @@ The bar widget appears automatically while something is playing:
 | Middle click | Next track |
 | Right click | Toggle the popup |
 | Scroll up / down | Previous / next track |
+
+### Popup
+
+The popup shows:
+
+- **Album art** with track title, artist, and album
+- **Progress bar** — click or drag to seek; shows elapsed and total time. Hidden when the player doesn't expose position/length
+- **Transport controls** — shuffle, previous, play/pause, next, repeat (shuffle/repeat only shown when supported)
+- **Source list** — click to switch active media source (pauses the previous, plays the selected)
 
 ### IPC
 
