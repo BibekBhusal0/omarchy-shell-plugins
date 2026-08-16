@@ -534,7 +534,11 @@ Panel {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: root.sourceHovered(sourceRow.index, true)
-                onClicked: if (root.mediaService) root.mediaService.selectPlayer(root.mediaService.playerKey(sourceRow.player))
+                onClicked: {
+                  if (root.mediaService) root.mediaService.selectPlayer(root.mediaService.playerKey(sourceRow.player))
+                  root.focusSection = "controls"
+                  root.selectedIndex = root.initialButton()
+                }
               }
             }
           }

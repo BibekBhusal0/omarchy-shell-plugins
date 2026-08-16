@@ -382,7 +382,14 @@ Item {
   function selectPlayer(key) {
     var player = playerForKey(key)
     if (!player || !hasMetadata(player)) return false
+    var previous = activePlayer
     preferredPlayerKey = playerKey(player)
+    if (previous && previous !== player && previous.isPlaying) {
+      pausePlayer(previous)
+    }
+    if (!player.isPlaying) {
+      playPlayer(player)
+    }
     return true
   }
 
