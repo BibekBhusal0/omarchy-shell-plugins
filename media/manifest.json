@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "bibek.media",
+  "name": "Media",
+  "version": "1.0.0",
+  "author": "Bibek Bhusal",
+  "description": "MPRIS media control service",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.media"
+  },
+  "barWidget": {
+    "displayName": "Media",
+    "description": "MPRIS now-playing with playback controls",
+    "category": "Media",
+    "allowMultiple": false
+  }
+}

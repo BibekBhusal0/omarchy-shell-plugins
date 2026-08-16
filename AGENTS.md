@@ -9,6 +9,7 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 | Folder             | Kind                 | Key files                                           |
 | ------------------ | -------------------- | --------------------------------------------------- |
 | `focusd/`          | bar-widget + service | `BarWidget.qml`, `Panel.qml`, `Service.qml`         |
+| `media/`           | bar-widget + service | `BarWidget.qml`, `Service.qml`, `MediaModel.js`     |
 | `obsidian-search/` | menu (overlay)       | `ObsidianSearch.qml`, `search.sh`, `FuzzySearch.js` |
 | `readest/`         | menu (overlay)       | `Readest.qml`, `search.sh`, `FuzzySearch.js`        |
 
@@ -29,6 +30,7 @@ QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **
 ## Plugin specifics
 
 - **focusd**: `Service.qml` drives the external `focusd` CLI (must be on `$PATH`) via `Quickshell.execDetached(["focusd", "toggle"])`. Timer state flows to the UI from the daemon. Bar icons are Nerd Font codepoints. Default config (`progressBarStyle`, `icons`) is in `manifest.json` `barWidget.defaults`; README documents it.
+- **media**: clone of the built-in `omarchy.media` (manifest id `bibek.media`, `omarchy.clonedFrom` set). The built-in is disabled via `disabledPlugins` so its IPC `media` target doesn't collide. `BarWidget.qml` must look up the service by the clone id (`firstPartyServiceFor("bibek.media")`), not the built-in id.
 - **obsidian-search / readest**: rely on `fd` + `jq` and `FuzzySearch.js`. Obsidian vault path defaults to the first vault in `~/.config/obsidian/obsidian.json`; Readest defaults to the Readest data dir under `~/.var/app/com.bilingify.readest/`. Both are overridable via `vaultPath` / `libraryPath` in the plugin entry of `~/.config/omarchy/shell.json`.
 
 ## Requirements (documented in each plugin README)
