@@ -4,7 +4,7 @@
   "name": "Media",
   "version": "1.0.0",
   "author": "Bibek Bhusal",
-  "description": "MPRIS media control service",
+  "description": "MPRIS media control service with cliamp headless support",
   "kinds": [
     "service",
     "bar-widget"
@@ -19,7 +19,7 @@
   },
   "barWidget": {
     "displayName": "Media",
-    "description": "MPRIS now-playing with playback controls",
+    "description": "MPRIS now-playing with playback controls, plus cliamp headless",
     "category": "Media",
     "allowMultiple": false
   }

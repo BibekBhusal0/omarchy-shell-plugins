@@ -44,10 +44,9 @@ BarWidget {
     }
 
     Item {
-      id: scrollClip
+      id: labelClip
       width: Math.min(root.maxLabelWidth, labelText.implicitWidth)
       height: glyph.height
-      clip: true
       anchors.verticalCenter: parent.verticalCenter
       visible: !root.bar.vertical && root.title !== ""
 
@@ -57,19 +56,9 @@ BarWidget {
         color: root.bar.barForeground
         font.family: root.bar.fontFamily
         font.pixelSize: Style.font.body
+        elide: Text.ElideRight
+        width: parent.width
         anchors.verticalCenter: parent.verticalCenter
-
-        property bool needsScroll: implicitWidth > scrollClip.width
-
-        NumberAnimation on x {
-          id: scrollAnim
-          running: labelText.needsScroll && !root.popupOpen && !root.bar.vertical
-          loops: Animation.Infinite
-          duration: Math.max(6000, labelText.implicitWidth * 25)
-          from: scrollClip.width
-          to: -labelText.implicitWidth
-          easing.type: Easing.Linear
-        }
       }
     }
   }

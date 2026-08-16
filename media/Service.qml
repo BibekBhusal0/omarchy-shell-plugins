@@ -24,6 +24,43 @@ Item {
     }
     return list
   }
+  readonly property var cliampPlayer: CliampPlayer {}
+
+  function isCliampMpris(player) {
+    if (!player) return false
+    var dbus = String(player.dbusName || "").toLowerCase()
+    var ident = String(player.identity || "").toLowerCase()
+    var entry = String(player.desktopEntry || "").toLowerCase()
+    return dbus.indexOf("cliamp") !== -1 || ident === "cliamp" || entry.indexOf("cliamp") !== -1
+  }
+
+  function syncCliampPoll() {
+    var hasCliampMpris = false
+    for (var i = 0; i < players.length; i++) {
+      if (isCliampMpris(players[i])) {
+        hasCliampMpris = true
+        break
+      }
+    }
+    cliampPlayer.pollEnabled = !hasCliampMpris
+  }
+
+  // cliamp headless has no MPRIS, so the CLI player stands in as a source.
+  // Skip it while a cliamp MPRIS player is around to avoid duplicate sources.
+  readonly property bool useCliampCli: {
+    if (!cliampPlayer.available) return false
+    for (var i = 0; i < players.length; i++) {
+      if (isCliampMpris(players[i])) return false
+    }
+    return true
+  }
+
+  readonly property var playersWithCliamp: {
+    var list = []
+    for (var i = 0; i < players.length; i++) list.push(players[i])
+    if (useCliampCli) list.push(cliampPlayer)
+    return list
+  }
   readonly property var sourcePlayers: orderedSourcePlayers()
   readonly property var sourceCyclePlayers: orderedCycleSourcePlayers()
   readonly property var activePlayer: selectActivePlayer()
@@ -88,8 +125,8 @@ Item {
 
   function playerForKey(key) {
     if (!key) return null
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
+    for (var i = 0; i < playersWithCliamp.length; i++) {
+      var p = playersWithCliamp[i]
       if (playerKey(p) === key) return p
     }
     return null
@@ -106,8 +143,8 @@ Item {
     var alive = {}
     var serial = playSerial
 
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
+    for (var i = 0; i < playersWithCliamp.length; i++) {
+      var p = playersWithCliamp[i]
       var key = playerKey(p)
       if (!key) continue
 
@@ -130,8 +167,8 @@ Item {
 
   function orderedSourcePlayers() {
     var list = []
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
+    for (var i = 0; i < playersWithCliamp.length; i++) {
+      var p = playersWithCliamp[i]
       if (hasMetadata(p)) list.push(p)
     }
 
@@ -150,8 +187,8 @@ Item {
 
   function orderedCycleSourcePlayers() {
     var list = []
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
+    for (var i = 0; i < playersWithCliamp.length; i++) {
+      var p = playersWithCliamp[i]
       if (canCycleSource(p)) list.push(p)
     }
 
@@ -169,8 +206,8 @@ Item {
     var playingProxy = null
     var proxyOrder = 0
 
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
+    for (var i = 0; i < playersWithCliamp.length; i++) {
+      var p = playersWithCliamp[i]
       if (!p) continue
 
       var proxyPlayer = isProxyPlayer(p)
@@ -202,8 +239,8 @@ Item {
     var identityPlayer = null
     var identityProxy = null
 
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
+    for (var i = 0; i < playersWithCliamp.length; i++) {
+      var p = playersWithCliamp[i]
       if (!p) continue
 
       var proxy = isProxyPlayer(p)
@@ -434,8 +471,8 @@ Item {
   // syncPlayingOrder only depends on the set of players and each player's
   // isPlaying state: onPlayersChanged covers players appearing/disappearing,
   // and the Instantiator wires isPlayingChanged for each live player.
-  Component.onCompleted: root.syncPlayingOrder()
-  onPlayersChanged: root.syncPlayingOrder()
+  Component.onCompleted: root.syncPlayingOrder() && root.syncCliampPoll()
+  onPlayersChanged: root.syncPlayingOrder() && root.syncCliampPoll()
 
   Instantiator {
     model: root.players
@@ -444,6 +481,12 @@ Item {
       target: modelData
       function onIsPlayingChanged() { root.syncPlayingOrder() }
     }
+  }
+
+  Connections {
+    target: root.cliampPlayer
+    function onIsPlayingChanged() { root.syncPlayingOrder() }
+    function onAvailableChanged() { root.syncPlayingOrder() }
   }
 
   Timer {
