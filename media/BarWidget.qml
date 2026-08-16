@@ -76,7 +76,7 @@ BarWidget {
 
     Item {
       id: labelClip
-      width: Math.min(root.maxLabelWidth, labelText.implicitWidth)
+      width: root.title !== "" ? root.maxLabelWidth : 0
       height: glyph.height
       anchors.verticalCenter: parent.verticalCenter
       visible: !root.bar.vertical && root.title !== ""
