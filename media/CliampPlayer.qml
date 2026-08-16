@@ -6,7 +6,7 @@ import Quickshell.Io
 // Headless mode ("cliamp --daemon") exposes no MPRIS bridge, so this polls the
 // IPC socket via `cliamp status --json` and routes playback actions through the
 // `cliamp` CLI, letting the media widget treat cliamp like any other source.
-QtObject {
+Item {
   id: root
 
   property bool available: false

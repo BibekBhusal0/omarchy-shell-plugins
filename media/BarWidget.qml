@@ -52,7 +52,7 @@ BarWidget {
 
       Text {
         id: labelText
-        text: root.title + (root.artist ? "  ·  " + root.artist : "")
+        text: root.title
         color: root.bar.barForeground
         font.family: root.bar.fontFamily
         font.pixelSize: Style.font.body
@@ -84,7 +84,7 @@ BarWidget {
       if (wheel.angleDelta.y > 0 && root.mediaService) root.mediaService.runAction("previous", false)
       else if (wheel.angleDelta.y < 0 && root.mediaService) root.mediaService.runAction("next", false)
     }
-    onEntered: if (root.bar) root.bar.showTooltip(root, root.hasMedia ? (root.title + (root.artist ? " — " + root.artist : "")) : "")
+    onEntered: if (root.bar) root.bar.showTooltip(root, root.hasMedia ? root.title : "")
     onExited: if (root.bar) root.bar.hideTooltip(root)
   }
 
