@@ -1,0 +1,407 @@
+import QtQuick
+import qs.Ui
+import qs.Commons
+
+Panel {
+  id: root
+  moduleName: "bibek.media"
+  manageIpc: false
+
+  property var anchorItem: null
+  property var hostWidget: null
+  readonly property var barIdentity: hostWidget || root
+
+  readonly property var mediaService: bar?.shell?.firstPartyServiceFor("bibek.media")
+  readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
+  readonly property var sourcePlayers: mediaService ? mediaService.sourcePlayers : []
+
+  readonly property string playIcon: activePlayer && activePlayer.isPlaying ? "󰏤" : "󰐊"
+  readonly property string title: activePlayer ? (activePlayer.trackTitle || "") : ""
+  readonly property string artist: activePlayer ? (activePlayer.trackArtist || "") : ""
+  readonly property string album: activePlayer && activePlayer.trackAlbum ? activePlayer.trackAlbum : ""
+
+  readonly property color foreground: bar ? bar.foreground : Color.foreground
+  readonly property color accent: Color.accent
+  readonly property color secondaryText: Qt.darker(foreground, 1.3)
+  readonly property color tertiaryText: Qt.darker(foreground, 1.6)
+  readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
+
+  property bool cursorActive: false
+  property string focusSection: "controls" // "controls" | "sources"
+  property int selectedIndex: 1
+
+  readonly property bool sourcesVisible: sourcePlayers.length > 1
+
+  function open() {
+    cursorActive = true
+    focusSection = "controls"
+    selectedIndex = initialButton()
+    controller.show()
+  }
+
+  function close() {
+    controller.hide()
+  }
+
+  function toggle() {
+    if (opened) close()
+    else open()
+  }
+
+  function sourceCount() {
+    return sourcesVisible ? sourcePlayers.length : 0
+  }
+
+  function buttonEnabled(index) {
+    if (index === 0) return !!activePlayer && !!activePlayer.canGoPrevious
+    if (index === 1) return !!activePlayer
+      && (activePlayer.canTogglePlaying || activePlayer.canPlay || activePlayer.canPause)
+    if (index === 2) return !!activePlayer && !!activePlayer.canGoNext
+    return false
+  }
+
+  function enabledButtonIndices() {
+    var list = []
+    for (var i = 0; i < 3; i++) if (buttonEnabled(i)) list.push(i)
+    return list
+  }
+
+  function firstEnabledButton() {
+    var inds = enabledButtonIndices()
+    return inds.length > 0 ? inds[0] : 1
+  }
+
+  function lastEnabledButton() {
+    var inds = enabledButtonIndices()
+    return inds.length > 0 ? inds[inds.length - 1] : 1
+  }
+
+  function initialButton() {
+    return buttonEnabled(1) ? 1 : firstEnabledButton()
+  }
+
+  function moveCursor(dx, dy) {
+    if (!sourcesVisible && focusSection === "sources") {
+      focusSection = "controls"
+      selectedIndex = initialButton()
+    }
+    if (!cursorActive) {
+      cursorActive = true
+      focusSection = "controls"
+      selectedIndex = initialButton()
+      return
+    }
+    var dir = dx !== 0 ? dx : dy
+    if (dir === 0) return
+    if (focusSection === "controls") {
+      var inds = enabledButtonIndices()
+      if (inds.length === 0) {
+        if (sourcesVisible) {
+          focusSection = "sources"
+          selectedIndex = dir > 0 ? 0 : sourceCount() - 1
+        }
+        return
+      }
+      var first = inds[0]
+      var last = inds[inds.length - 1]
+      if (dir > 0) {
+        if (selectedIndex >= last) {
+          if (sourcesVisible) {
+            focusSection = "sources"
+            selectedIndex = 0
+          } else selectedIndex = first
+        } else {
+          for (var i = 0; i < inds.length; i++) if (inds[i] > selectedIndex) { selectedIndex = inds[i]; break }
+        }
+      } else {
+        if (selectedIndex <= first) {
+          if (sourcesVisible) {
+            focusSection = "sources"
+            selectedIndex = sourceCount() - 1
+          } else selectedIndex = last
+        } else {
+          for (var k = inds.length - 1; k >= 0; k--) if (inds[k] < selectedIndex) { selectedIndex = inds[k]; break }
+        }
+      }
+    } else {
+      var n = sourceCount()
+      if (n <= 0) return
+      if (dir > 0) {
+        if (selectedIndex < n - 1) selectedIndex += 1
+        else {
+          focusSection = "controls"
+          selectedIndex = firstEnabledButton()
+        }
+      } else {
+        if (selectedIndex > 0) selectedIndex -= 1
+        else {
+          focusSection = "controls"
+          selectedIndex = lastEnabledButton()
+        }
+      }
+    }
+  }
+
+  function activateCursor() {
+    if (!cursorActive || !mediaService) return
+    if (focusSection === "controls") {
+      if (!buttonEnabled(selectedIndex)) return
+      var key = mediaService.playerKey(activePlayer)
+      if (selectedIndex === 0) mediaService.runAction("previous", false, key)
+      else if (selectedIndex === 1) mediaService.runAction("playPause", false, key)
+      else if (selectedIndex === 2) mediaService.runAction("next", false, key)
+    } else if (focusSection === "sources") {
+      var player = sourcePlayers[selectedIndex]
+      if (player) mediaService.selectPlayer(mediaService.playerKey(player))
+      focusSection = "controls"
+      selectedIndex = initialButton()
+    }
+  }
+
+  function runAction(action) {
+    if (mediaService) mediaService.runAction(action, false, mediaService.playerKey(activePlayer))
+  }
+
+  function controlHovered(index, hovered) {
+    if (!hovered || !buttonEnabled(index)) return
+    cursorActive = true
+    focusSection = "controls"
+    selectedIndex = index
+  }
+
+  function sourceHovered(index, hovered) {
+    if (!hovered) return
+    cursorActive = true
+    focusSection = "sources"
+    selectedIndex = index
+  }
+
+  KeyboardPanel {
+    id: panel
+    anchorItem: root.anchorItem
+    owner: root.barIdentity
+    bar: root.bar
+    open: root.opened
+    focusTarget: keyCatcher
+    contentWidth: panel.fittedContentWidth(Style.space(320))
+    contentHeight: panel.fittedContentHeight(content.implicitHeight)
+
+    PanelKeyCatcher {
+      id: keyCatcher
+      anchors.fill: parent
+
+      onMoveRequested: function(dx, dy) { root.moveCursor(dx, dy) }
+      onActivateRequested: root.activateCursor()
+      onCloseRequested: root.close()
+      onTabRequested: function(direction) { root.moveCursor(0, direction) }
+      onTextKey: function(t) { if (t === "q") root.close() }
+
+      Column {
+        id: content
+        width: parent.width
+        spacing: Style.space(10)
+
+        Row {
+          spacing: Style.space(10)
+          width: parent.width
+
+          BorderSurface {
+            width: Style.space(64)
+            height: Style.space(64)
+            radius: Style.spacing.labelGap
+            color: Style.normalFillFor(root.foreground, root.accent)
+            borderSpec: Border.controlSpec("normal", root.foreground, root.accent)
+
+            Image {
+              anchors.fill: parent
+              anchors.margins: Style.space(2)
+              fillMode: Image.PreserveAspectCrop
+              asynchronous: true
+              source: root.activePlayer && root.activePlayer.trackArtUrl ? root.activePlayer.trackArtUrl : ""
+              visible: source !== ""
+            }
+
+            Text {
+              anchors.centerIn: parent
+              visible: !root.activePlayer || !root.activePlayer.trackArtUrl
+              text: "󰝚"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.displayLarge
+            }
+          }
+
+          Column {
+            spacing: Style.space(4)
+            width: parent.width - Style.space(74)
+
+            Text {
+              text: root.title || "Nothing playing"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.subtitle
+              font.bold: true
+              elide: Text.ElideRight
+              width: parent.width
+            }
+
+            Text {
+              text: root.artist
+              color: root.secondaryText
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              elide: Text.ElideRight
+              width: parent.width
+              visible: text !== ""
+            }
+
+            Text {
+              text: root.album
+              color: root.tertiaryText
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              elide: Text.ElideRight
+              width: parent.width
+              visible: text !== ""
+            }
+          }
+        }
+
+        Row {
+          anchors.horizontalCenter: parent.horizontalCenter
+          spacing: Style.space(6)
+
+          Button {
+            iconText: "󰒮"
+            foreground: root.foreground
+            horizontalPadding: Style.spacing.controlPaddingX
+            verticalPadding: Style.spacing.controlPaddingY
+            enabled: root.activePlayer && root.activePlayer.canGoPrevious
+            opacity: enabled ? 1.0 : 0.4
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 0
+            onHovered: function(hovered) { root.controlHovered(0, hovered) }
+            onClicked: root.runAction("previous")
+          }
+
+          Button {
+            iconText: root.playIcon
+            foreground: root.foreground
+            horizontalPadding: Style.spacing.panelGap
+            verticalPadding: Style.spacing.controlPaddingY
+            iconSize: Style.font.iconLarge
+            enabled: root.activePlayer && (root.activePlayer.canTogglePlaying || root.activePlayer.canPlay || root.activePlayer.canPause)
+            opacity: enabled ? 1.0 : 0.4
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 1
+            onHovered: function(hovered) { root.controlHovered(1, hovered) }
+            onClicked: root.runAction("playPause")
+          }
+
+          Button {
+            iconText: "󰒭"
+            foreground: root.foreground
+            horizontalPadding: Style.spacing.controlPaddingX
+            verticalPadding: Style.spacing.controlPaddingY
+            enabled: root.activePlayer && root.activePlayer.canGoNext
+            opacity: enabled ? 1.0 : 0.4
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 2
+            onHovered: function(hovered) { root.controlHovered(2, hovered) }
+            onClicked: root.runAction("next")
+          }
+        }
+
+        PanelSeparator {
+          visible: root.sourcesVisible
+          foreground: root.foreground
+        }
+
+        Column {
+          id: sourceList
+          visible: root.sourcesVisible
+          width: parent.width
+          spacing: Style.space(4)
+
+          Repeater {
+            model: root.sourcePlayers
+
+            BorderSurface {
+              id: sourceRow
+              required property var modelData
+              required property int index
+
+              readonly property var player: modelData
+              readonly property bool selected: root.activePlayer && player
+                && root.mediaService.playerKey(root.activePlayer) === root.mediaService.playerKey(player)
+              readonly property bool hasCursor: root.cursorActive && root.focusSection === "sources" && index === root.selectedIndex
+              readonly property string sourceTitle: player ? (player.trackTitle || player.identity || player.desktopEntry || "Media source") : "Media source"
+              readonly property string sourceDetail: player && player.trackArtist ? player.trackArtist : (player && player.identity ? player.identity : "")
+
+              width: sourceList.width
+              height: sourceInner.implicitHeight + Style.space(10)
+              radius: Style.spacing.labelGap
+              color: hasCursor ? Style.hoverFillFor(root.foreground, root.accent)
+                : selected ? Style.selectedFillFor(root.foreground, root.accent)
+                : "transparent"
+              borderSpec: hasCursor ? Border.controlSpec("hover-cursor", root.foreground, root.accent)
+                : selected ? Border.controlSpec("normal", root.foreground, root.accent)
+                : Border.none()
+
+              Row {
+                id: sourceInner
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: sourceRow.borderLeft + Style.space(8)
+                anchors.rightMargin: sourceRow.borderRight + Style.space(8)
+                spacing: Style.space(8)
+
+                Text {
+                  text: sourceRow.player && sourceRow.player.isPlaying ? "󰏤" : "󰐊"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  width: Style.space(18)
+                  horizontalAlignment: Text.AlignHCenter
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Column {
+                  width: parent.width - Style.space(26)
+                  spacing: Style.space(1)
+                  anchors.verticalCenter: parent.verticalCenter
+
+                  Text {
+                    text: sourceRow.sourceTitle
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    font.bold: sourceRow.selected
+                    elide: Text.ElideRight
+                    width: parent.width
+                  }
+
+                  Text {
+                    text: sourceRow.sourceDetail
+                    color: root.secondaryText
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    elide: Text.ElideRight
+                    width: parent.width
+                    visible: text !== ""
+                  }
+                }
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onEntered: root.sourceHovered(sourceRow.index, true)
+                onClicked: if (root.mediaService) root.mediaService.selectPlayer(root.mediaService.playerKey(sourceRow.player))
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
