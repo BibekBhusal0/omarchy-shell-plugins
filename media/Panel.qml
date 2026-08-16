@@ -338,11 +338,8 @@ Panel {
               width: sourceList.width
               height: sourceInner.implicitHeight + Style.space(10)
               radius: Style.spacing.labelGap
-              color: hasCursor ? Style.hoverFillFor(root.foreground, root.accent)
-                : selected ? Style.selectedFillFor(root.foreground, root.accent)
-                : "transparent"
+              color: hasCursor ? Style.hoverFillFor(root.foreground, root.accent) : "transparent"
               borderSpec: hasCursor ? Border.controlSpec("hover-cursor", root.foreground, root.accent)
-                : selected ? Border.controlSpec("normal", root.foreground, root.accent)
                 : Border.none()
 
               Row {
@@ -356,7 +353,7 @@ Panel {
 
                 Text {
                   text: sourceRow.player && sourceRow.player.isPlaying ? "󰏤" : "󰐊"
-                  color: root.foreground
+                  color: sourceRow.selected ? root.accent : root.foreground
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.body
                   width: Style.space(18)
@@ -371,7 +368,7 @@ Panel {
 
                   Text {
                     text: sourceRow.sourceTitle
-                    color: root.foreground
+                    color: sourceRow.selected ? root.accent : root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
                     font.bold: sourceRow.selected
