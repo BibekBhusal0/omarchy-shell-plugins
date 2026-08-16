@@ -20,9 +20,11 @@ Item {
   property real position: 0
   property real duration: 0
   property real volume: 0
+  property bool shuffle: false
+  property string repeat: "off" // "off" | "all" | "one"
 
-  // The Service stops polling while a cliamp MPRIS player is present; the CLI
-  // fallback only matters for cliamp builds without an MPRIS bridge.
+  // Polled even while a cliamp MPRIS player is present: its MPRIS bridge
+  // exposes no Shuffle/LoopStatus, so this feed supplies those toggle states.
   property bool pollEnabled: true
 
   readonly property string identity: "cliamp"
@@ -35,6 +37,8 @@ Item {
   readonly property bool canTogglePlaying: available
   readonly property bool canGoNext: available
   readonly property bool canGoPrevious: available
+  readonly property bool shuffleSupported: available
+  readonly property bool loopSupported: available
 
   function run(cmd) {
     Quickshell.execDetached(["cliamp", cmd])
@@ -45,6 +49,12 @@ Item {
   function togglePlaying() { run("toggle") }
   function next() { run("next") }
   function previous() { run("prev") }
+  function setShuffle(on) {
+    Quickshell.execDetached(["cliamp", "shuffle", on ? "on" : "off"])
+  }
+  function setRepeat(mode) {
+    Quickshell.execDetached(["cliamp", "repeat", mode])
+  }
 
   function poll() {
     statusProc.running = false
@@ -80,6 +90,11 @@ Item {
     position = Number(data.position) || 0
     duration = Number(data.duration) || 0
     volume = Number(data.volume) || 0
+    shuffle = data.shuffle === true
+    var repeatRaw = String(data.repeat || "").toLowerCase()
+    if (repeatRaw.indexOf("one") !== -1) repeat = "one"
+    else if (repeatRaw.indexOf("all") !== -1) repeat = "all"
+    else repeat = "off"
   }
 
   function clear() {
@@ -93,6 +108,8 @@ Item {
     position = 0
     duration = 0
     volume = 0
+    shuffle = false
+    repeat = "off"
   }
 
   Timer {

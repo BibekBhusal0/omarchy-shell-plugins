@@ -28,9 +28,11 @@ Panel {
 
   property bool cursorActive: false
   property string focusSection: "controls" // "controls" | "sources"
-  property int selectedIndex: 1
+  property int selectedIndex: 2
 
   readonly property bool sourcesVisible: sourcePlayers.length > 1
+  readonly property bool shuffleActive: mediaService ? mediaService.playerShuffleActive(activePlayer) : false
+  readonly property string repeatState: mediaService ? mediaService.playerRepeatState(activePlayer) : "off"
 
   function open() {
     cursorActive = true
@@ -53,31 +55,33 @@ Panel {
   }
 
   function buttonEnabled(index) {
-    if (index === 0) return !!activePlayer && !!activePlayer.canGoPrevious
-    if (index === 1) return !!activePlayer
+    if (index === 0) return mediaService ? mediaService.playerShuffleSupported(activePlayer) : false
+    if (index === 1) return !!activePlayer && !!activePlayer.canGoPrevious
+    if (index === 2) return !!activePlayer
       && (activePlayer.canTogglePlaying || activePlayer.canPlay || activePlayer.canPause)
-    if (index === 2) return !!activePlayer && !!activePlayer.canGoNext
+    if (index === 3) return !!activePlayer && !!activePlayer.canGoNext
+    if (index === 4) return mediaService ? mediaService.playerLoopSupported(activePlayer) : false
     return false
   }
 
   function enabledButtonIndices() {
     var list = []
-    for (var i = 0; i < 3; i++) if (buttonEnabled(i)) list.push(i)
+    for (var i = 0; i < 5; i++) if (buttonEnabled(i)) list.push(i)
     return list
   }
 
   function firstEnabledButton() {
     var inds = enabledButtonIndices()
-    return inds.length > 0 ? inds[0] : 1
+    return inds.length > 0 ? inds[0] : 2
   }
 
   function lastEnabledButton() {
     var inds = enabledButtonIndices()
-    return inds.length > 0 ? inds[inds.length - 1] : 1
+    return inds.length > 0 ? inds[inds.length - 1] : 2
   }
 
   function initialButton() {
-    return buttonEnabled(1) ? 1 : firstEnabledButton()
+    return buttonEnabled(2) ? 2 : firstEnabledButton()
   }
 
   function moveCursor(dx, dy) {
@@ -147,9 +151,11 @@ Panel {
     if (focusSection === "controls") {
       if (!buttonEnabled(selectedIndex)) return
       var key = mediaService.playerKey(activePlayer)
-      if (selectedIndex === 0) mediaService.runAction("previous", false, key)
-      else if (selectedIndex === 1) mediaService.runAction("playPause", false, key)
-      else if (selectedIndex === 2) mediaService.runAction("next", false, key)
+      if (selectedIndex === 0) mediaService.toggleShuffle(key)
+      else if (selectedIndex === 1) mediaService.runAction("previous", false, key)
+      else if (selectedIndex === 2) mediaService.runAction("playPause", false, key)
+      else if (selectedIndex === 3) mediaService.runAction("next", false, key)
+      else if (selectedIndex === 4) mediaService.cycleRepeat(key)
     } else if (focusSection === "sources") {
       var player = sourcePlayers[selectedIndex]
       if (player) mediaService.selectPlayer(mediaService.playerKey(player))
@@ -160,6 +166,14 @@ Panel {
 
   function runAction(action) {
     if (mediaService) mediaService.runAction(action, false, mediaService.playerKey(activePlayer))
+  }
+
+  function toggleShuffle() {
+    if (mediaService) mediaService.toggleShuffle(mediaService.playerKey(activePlayer))
+  }
+
+  function cycleRepeat() {
+    if (mediaService) mediaService.cycleRepeat(mediaService.playerKey(activePlayer))
   }
 
   function controlHovered(index, hovered) {
@@ -272,14 +286,26 @@ Panel {
           spacing: Style.space(6)
 
           Button {
+            iconText: "󰒝"
+            foreground: root.shuffleActive ? root.accent : root.foreground
+            horizontalPadding: Style.spacing.controlPaddingX
+            verticalPadding: Style.spacing.controlPaddingY
+            enabled: mediaService ? mediaService.playerShuffleSupported(root.activePlayer) : false
+            visible: enabled
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 0
+            onHovered: function(hovered) { root.controlHovered(0, hovered) }
+            onClicked: root.toggleShuffle()
+          }
+
+          Button {
             iconText: "󰒮"
             foreground: root.foreground
             horizontalPadding: Style.spacing.controlPaddingX
             verticalPadding: Style.spacing.controlPaddingY
             enabled: root.activePlayer && root.activePlayer.canGoPrevious
-            opacity: enabled ? 1.0 : 0.4
-            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 0
-            onHovered: function(hovered) { root.controlHovered(0, hovered) }
+            visible: enabled
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 1
+            onHovered: function(hovered) { root.controlHovered(1, hovered) }
             onClicked: root.runAction("previous")
           }
 
@@ -290,9 +316,9 @@ Panel {
             verticalPadding: Style.spacing.controlPaddingY
             iconSize: Style.font.iconLarge
             enabled: root.activePlayer && (root.activePlayer.canTogglePlaying || root.activePlayer.canPlay || root.activePlayer.canPause)
-            opacity: enabled ? 1.0 : 0.4
-            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 1
-            onHovered: function(hovered) { root.controlHovered(1, hovered) }
+            visible: enabled
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 2
+            onHovered: function(hovered) { root.controlHovered(2, hovered) }
             onClicked: root.runAction("playPause")
           }
 
@@ -302,10 +328,22 @@ Panel {
             horizontalPadding: Style.spacing.controlPaddingX
             verticalPadding: Style.spacing.controlPaddingY
             enabled: root.activePlayer && root.activePlayer.canGoNext
-            opacity: enabled ? 1.0 : 0.4
-            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 2
-            onHovered: function(hovered) { root.controlHovered(2, hovered) }
+            visible: enabled
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 3
+            onHovered: function(hovered) { root.controlHovered(3, hovered) }
             onClicked: root.runAction("next")
+          }
+
+          Button {
+            iconText: root.repeatState === "one" ? "󰑘" : "󰕇"
+            foreground: root.repeatState !== "off" ? root.accent : root.foreground
+            horizontalPadding: Style.spacing.controlPaddingX
+            verticalPadding: Style.spacing.controlPaddingY
+            enabled: mediaService ? mediaService.playerLoopSupported(root.activePlayer) : false
+            visible: enabled
+            hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 4
+            onHovered: function(hovered) { root.controlHovered(4, hovered) }
+            onClicked: root.cycleRepeat()
           }
         }
 

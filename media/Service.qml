@@ -35,14 +35,9 @@ Item {
   }
 
   function syncCliampPoll() {
-    var hasCliampMpris = false
-    for (var i = 0; i < players.length; i++) {
-      if (isCliampMpris(players[i])) {
-        hasCliampMpris = true
-        break
-      }
-    }
-    cliampPlayer.pollEnabled = !hasCliampMpris
+    // Always poll: cliamp's MPRIS bridge exposes no Shuffle/LoopStatus, so the
+    // CLI status is the source of truth for those toggles even when MPRIS is up.
+    cliampPlayer.pollEnabled = true
   }
 
   // cliamp headless has no MPRIS, so the CLI player stands in as a source.
@@ -130,6 +125,69 @@ Item {
       if (playerKey(p) === key) return p
     }
     return null
+  }
+
+  function playerShuffleSupported(player) {
+    if (!player) return false
+    if (isCliampMpris(player)) return cliampPlayer.shuffleSupported
+    return player.shuffleSupported === true
+  }
+
+  function playerLoopSupported(player) {
+    if (!player) return false
+    if (isCliampMpris(player)) return cliampPlayer.loopSupported
+    return player.loopSupported === true
+  }
+
+  function playerShuffleActive(player) {
+    if (!player) return false
+    if (isCliampMpris(player)) return !!cliampPlayer.shuffle
+    return player.shuffle === true
+  }
+
+  function playerRepeatState(player) {
+    if (!player) return "off"
+    if (isCliampMpris(player)) return cliampPlayer.repeat
+    if (player.loopState === MprisLoopState.Track) return "one"
+    if (player.loopState === MprisLoopState.Playlist) return "all"
+    return "off"
+  }
+
+  function targetForToggle(targetKey) {
+    return playerForKey(targetKey) || activePlayer
+  }
+
+  function toggleShuffle(targetKey) {
+    var player = targetForToggle(targetKey)
+    if (!player || !playerShuffleSupported(player)) return false
+    var nextActive = !playerShuffleActive(player)
+    if (isCliampMpris(player)) {
+      cliampPlayer.setShuffle(nextActive)
+    } else {
+      player.shuffle = nextActive
+    }
+    if (playerKey(player)) preferredPlayerKey = playerKey(player)
+    showOsd(nextActive ? "Shuffle on" : "Shuffle off", "󰒝", player)
+    return true
+  }
+
+  function cycleRepeat(targetKey) {
+    var player = targetForToggle(targetKey)
+    if (!player || !playerLoopSupported(player)) return false
+    var state = playerRepeatState(player)
+    var nextState = state === "off" ? "all" : state === "all" ? "one" : "off"
+    if (isCliampMpris(player)) {
+      cliampPlayer.setRepeat(nextState)
+    } else {
+      var nextLoop = MprisLoopState.None
+      if (nextState === "all") nextLoop = MprisLoopState.Playlist
+      else if (nextState === "one") nextLoop = MprisLoopState.Track
+      player.loopState = nextLoop
+    }
+    if (playerKey(player)) preferredPlayerKey = playerKey(player)
+    var label = nextState === "all" ? "Repeat all" : nextState === "one" ? "Repeat one" : "Repeat off"
+    showOsd(label, "󰕇", player)
+    return true
   }
 
   function playerOrder(player, fallback) {
