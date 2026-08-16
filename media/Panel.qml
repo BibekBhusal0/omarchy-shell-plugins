@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Ui
 import qs.Commons
+import Quickshell.Services.Mpris
 
 Panel {
   id: root
@@ -29,6 +30,50 @@ Panel {
   property bool cursorActive: false
   property string focusSection: "controls" // "controls" | "sources"
   property int selectedIndex: 2
+
+  readonly property bool isMprisPlayer: activePlayer && typeof activePlayer.seek === "function" && !mediaService.isCliampMpris(activePlayer)
+  readonly property bool isCliamp: activePlayer && mediaService && mediaService.isCliampMpris(activePlayer)
+
+  readonly property real positionSeconds: {
+    if (!activePlayer) return 0
+    if (isCliamp) return activePlayer.position || 0
+    return activePlayer.position || 0
+  }
+  readonly property real lengthSeconds: {
+    if (!activePlayer) return 0
+    if (isCliamp) return activePlayer.duration || 0
+    if (isMprisPlayer && activePlayer.lengthSupported) return activePlayer.length || 0
+    return 0
+  }
+  readonly property bool canSeek: {
+    if (!activePlayer) return false
+    if (isCliamp) return (activePlayer.duration || 0) > 0
+    return activePlayer.canSeek === true
+  }
+  readonly property bool hasProgress: canSeek && lengthSeconds > 0
+
+  property real sliderValue: positionSeconds
+  property bool _dragging: false
+
+  function formatTime(seconds) {
+    if (!seconds || seconds <= 0) return "0:00"
+    var s = Math.floor(seconds)
+    var m = Math.floor(s / 60)
+    s = s % 60
+    return m + ":" + (s < 10 ? "0" : "") + s
+  }
+
+  Timer {
+    id: posTimer
+    interval: 500
+    repeat: true
+    running: root.activePlayer && root.activePlayer.isPlaying && root.hasProgress && !root._dragging
+    onTriggered: {
+      if (!root.activePlayer || root._dragging) return
+      if (root.isMprisPlayer) root.activePlayer.positionChanged()
+      root.sliderValue = root.positionSeconds
+    }
+  }
 
   readonly property bool sourcesVisible: sourcePlayers.length > 1
   readonly property bool shuffleActive: mediaService ? mediaService.playerShuffleActive(activePlayer) : false
@@ -278,6 +323,64 @@ Panel {
               width: parent.width
               visible: text !== ""
             }
+          }
+        }
+
+        Row {
+          visible: root.hasProgress
+          width: parent.width
+          spacing: Style.space(6)
+          anchors.horizontalCenter: parent.horizontalCenter
+
+          Text {
+            text: root.formatTime(root.sliderValue)
+            color: root.secondaryText
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            width: Style.space(32)
+            horizontalAlignment: Text.AlignRight
+            anchors.verticalCenter: parent.verticalCenter
+          }
+
+          PanelSlider {
+            id: seekSlider
+            bar: root.bar
+            width: parent.width - Style.space(72)
+            value: root.sliderValue
+            minimum: 0
+            maximum: root.lengthSeconds > 0 ? root.lengthSeconds : 1
+            trackHeight: Math.max(4, Math.round(Style.spacing.controlHeight * 0.11))
+            knobSize: Math.max(12, Math.round(Style.spacing.controlHeight * 0.32))
+            fillColor: root.accent
+            trackColor: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.15)
+            knobColor: root.foreground
+            anchors.verticalCenter: parent.verticalCenter
+
+            onMoved: function(val) {
+              root._dragging = true
+              root.sliderValue = val
+            }
+            onReleased: function(val) {
+              root.sliderValue = val
+              if (!root.activePlayer) { root._dragging = false; return }
+              if (root.isMprisPlayer) {
+                var delta = val - root.activePlayer.position
+                if (Math.abs(delta) > 0.1) root.activePlayer.seek(delta)
+              } else if (root.isCliamp) {
+                Quickshell.execDetached(["cliamp", "seek", String(Math.floor(val))])
+              }
+              Qt.callLater(function() { root._dragging = false })
+            }
+          }
+
+          Text {
+            text: root.formatTime(root.lengthSeconds)
+            color: root.secondaryText
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            width: Style.space(32)
+            horizontalAlignment: Text.AlignLeft
+            anchors.verticalCenter: parent.verticalCenter
           }
         }
 
