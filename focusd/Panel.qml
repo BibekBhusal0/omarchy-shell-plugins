@@ -208,7 +208,7 @@ Panel {
             text: root.installing
               ? "Installing focusd…"
               : "Install focusd"
-            iconText: root.installing ? "" : "󰏔"
+            iconText: root.installing ? "" : "󰏔"
             iconSpinning: root.installing
             fontFamily: root.fontFamily
             fontSize: Style.font.body
