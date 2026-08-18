@@ -21,11 +21,7 @@ Item {
   property int sessionsToday: 0
   property string focusedToday: "0s"
   property string dailyGoal: ""
-  property real dailyGoalProgress: 0
   property int currentStreak: 0
-  readonly property bool hasDailyGoal: dailyGoalSecs > 0
-
-  property real dailyGoalSecs: 0
 
   readonly property bool stopped: status === "stopped"
   readonly property bool running: status === "running"
@@ -129,9 +125,6 @@ Item {
     root.focusedToday = String(state.focused_today || "")
     root.dailyGoal = String(state.daily_goal || "")
     root.currentStreak = Number(state.current_streak) || 0
-    var focusedSecs = Number(state.focused_today_secs) || 0
-    root.dailyGoalSecs = Number(state.daily_goal_secs) || 0
-    root.dailyGoalProgress = root.dailyGoalSecs > 0 ? Math.max(0, Math.min(1, focusedSecs / root.dailyGoalSecs)) : 0
   }
 
   function sessionLabelFor(key) {
