@@ -94,8 +94,10 @@ Panel {
     if (!ytdlService) return
     var q = ["best", "1080p", "720p", "480p"]
     var i = q.indexOf(root.selectedQuality)
-    ytdlService.selectedQuality = q[(i + 1) % q.length]
+    var next = q[(i + 1) % q.length]
+    ytdlService.selectedQuality = next
     ytdlService.persistQuality()
+    ytdlService.setDefaultQuality(next)
   }
 
   function focusUrlField() {
@@ -295,7 +297,7 @@ Panel {
 
               Text {
                 anchors.centerIn: parent
-                // FIX: icon below
+                // FIX: icon below is the youtube play icon
                 text: "\uf16b"
                 color: root.foreground
                 font.family: root.fontFamily
@@ -334,7 +336,7 @@ Panel {
               text: root.ytdlService && root.ytdlService.installing
                 ? "Installing yt-dlp\u2026"
                 : "Install yt-dlp"
-              // FIX: icon below
+              // FIX: icon below is the download install icon
               iconText: root.ytdlService && root.ytdlService.installing ? "" : "\uf487"
               iconSpinning: root.ytdlService && root.ytdlService.installing
               fontFamily: root.fontFamily
@@ -368,7 +370,7 @@ Panel {
             Text {
               visible: root.hasClipboardUrl && root.inputAutoFilled
               width: parent.width
-              // FIX: icon below
+              // FIX: icon below is the clock icon for clipboard detection
               text: "\uf017 Link detected from clipboard"
               color: root.activeColor
               font.family: root.fontFamily
@@ -434,7 +436,7 @@ Panel {
 
               Button {
                 id: downloadManualBtn
-                // FIX: icon below
+                // FIX: icon below is the download arrow submit icon
                 iconText: "\uf381"
                 tooltipText: "Download"
                 foreground: root.foreground
@@ -469,7 +471,7 @@ Panel {
 
             Text {
               width: parent.width
-              // FIX: icon below
+              // FIX: icon below is the download arrow icon for active downloads
               text: "\uf381 Active Downloads (" + root.activeCount + ")"
               color: root.foreground
               font.family: root.fontFamily
@@ -518,7 +520,7 @@ Panel {
 
                     PanelActionButton {
                       id: cancelBtn
-                      // FIX: icon below
+                      // FIX: icon below is the x cancel icon
                       iconText: "\uf00d"
                       tooltipText: "Cancel download"
                       foreground: root.foreground
@@ -594,7 +596,7 @@ Panel {
 
               Text {
                 Layout.fillWidth: true
-                // FIX: icon below
+                // FIX: icon below is the history clock icon
                 text: "\uf1da History (" + root.historyCount + ")"
                 color: root.foreground
                 font.family: root.fontFamily
@@ -604,7 +606,7 @@ Panel {
               }
 
               PanelActionButton {
-                // FIX: icon below
+                // FIX: icon below is the eraser clear-history icon
                 iconText: "\uf1f8"
                 tooltipText: "Clear history"
                 foreground: root.foreground
@@ -650,7 +652,7 @@ Panel {
 
                   Text {
                     Layout.alignment: Qt.AlignVCenter
-                    // FIX: icon below
+                    // FIX: icon below is the status icon (check done, x error, ban cancelled, file default)
                     text: modelData.status === "done" ? "\uf00c"
                       : modelData.status === "error" ? "\uf00d"
                       : modelData.status === "cancelled" ? "\uf127"
@@ -701,7 +703,7 @@ Panel {
 
                     PanelActionButton {
                       visible: modelData.status === "done" && modelData.filepath
-                      // FIX: icon below
+                      // FIX: icon below is the play icon
                       iconText: "\uf04b"
                       tooltipText: "Play"
                       foreground: root.foreground
@@ -715,7 +717,7 @@ Panel {
 
                     PanelActionButton {
                       visible: modelData.status === "error" || modelData.status === "cancelled"
-                      // FIX: icon below
+                      // FIX: icon below is the refresh retry icon
                       iconText: "\uf021"
                       tooltipText: "Retry"
                       foreground: root.foreground
@@ -728,7 +730,7 @@ Panel {
                     }
 
                     PanelActionButton {
-                      // FIX: icon below
+                      // FIX: icon below is the x remove-from-history icon
                       iconText: "\uf00d"
                       tooltipText: "Remove from history"
                       foreground: root.foreground
@@ -757,7 +759,7 @@ Panel {
 
               Text {
                 anchors.centerIn: parent
-                // FIX: icon below
+                // FIX: icon below is the download arrow icon for the empty state
                 text: "\uf381"
                 color: Qt.darker(root.foreground, 1.4)
                 font.family: root.fontFamily

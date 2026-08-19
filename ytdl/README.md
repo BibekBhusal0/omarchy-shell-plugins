@@ -14,11 +14,13 @@ yt-dlp video downloader for the Omarchy bar.
 
 ## Requirements
 
-- yt-dlp (`omarchy pkg add yt-dlp`)
+All preinstalled on Omarchy:
+
+- yt-dlp (auto-installed from the panel if missing, via `omarchy pkg add yt-dlp`)
 - wl-paste (for clipboard URL detection)
-- python3 with the `sqlite3` module and the `sqlite3` CLI (both preinstalled on
-  Omarchy) - only needed when `cookiesBrowser` is set to a browser; the plugin
-  skips cookie handling entirely otherwise
+- jq (used to prune deleted files from download history)
+- `sqlite3` CLI - only needed when `cookiesBrowser` is set to a Firefox-based
+  browser (zen, glide); cookie handling is skipped entirely otherwise
 
 ## Settings
 
@@ -37,7 +39,7 @@ Configure in `~/.config/omarchy/shell.json` under the plugin entry:
 | Setting | Default | Options |
 |---------|---------|---------|
 | `downloadLocation` | `~/Downloads/yt-dlp` | Any valid directory path |
-| `defaultQuality` | `best` | `best`, `1080p`, `720p`, `480p`, `audio` |
+| `defaultQuality` | `best` | `best`, `1080p`, `720p`, `480p` |
 | `cookiesBrowser` | `none` | `none`, `firefox`, `chromium`, `chrome`, `zen`, `helium`, `glide` |
 | `extraArgs` | `` | Any yt-dlp flags, e.g. `--cookies-from-browser chromium` |
 

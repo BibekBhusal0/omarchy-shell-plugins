@@ -5,7 +5,6 @@ CMD="$1"
 shift
 
 SCRIPT_DIR="$(dirname "$0")"
-EXPORT="$SCRIPT_DIR/cookie-export.py"
 
 # Resolve a --cookies-from-browser flag for the given browser name.
 cookies_flag() {
@@ -18,8 +17,8 @@ cookies_flag() {
     zen)
       PROFILE="$(find_ff_profile ~/.config/zen)"
       [ -z "$PROFILE" ] && PROFILE=~/.config/zen
-      OUT="$(mktemp -d)/cookies"
-      python3 "$EXPORT" "$PROFILE" "$OUT" youtube >/dev/null 2>&1 && echo "--cookies-from-browser firefox:$OUT" || echo ""
+      OUT="$(mktemp -d)"
+      export_cookies "$PROFILE" "$OUT" youtube && echo "--cookies-from-browser firefox:$OUT" || echo ""
       ;;
     helium)
       # Chromium-based; cookies live in a profile dir, encrypted. yt-dlp decrypts
@@ -35,8 +34,8 @@ cookies_flag() {
       PROFILE="$(find_ff_profile ~/.config/glide)"
       [ -z "$PROFILE" ] && PROFILE="$(find ~/.config/glide -maxdepth 2 -name cookies.sqlite 2>/dev/null | head -1 | xargs dirname 2>/dev/null)"
       [ -z "$PROFILE" ] && PROFILE=~/.config/glide
-      OUT="$(mktemp -d)/cookies"
-      python3 "$EXPORT" "$PROFILE" "$OUT" youtube >/dev/null 2>&1 && echo "--cookies-from-browser firefox:$OUT" || echo ""
+      OUT="$(mktemp -d)"
+      export_cookies "$PROFILE" "$OUT" youtube && echo "--cookies-from-browser firefox:$OUT" || echo ""
       ;;
     *) echo "" ;;
   esac
@@ -55,6 +54,28 @@ find_ff_profile() {
     fi
   done
   return 1
+}
+
+# Copy a Firefox-style cookie DB, merge the live -wal into it, dedupe to the
+# newest cookie per (host, name), and filter to one host. yt-dlp reads the
+# result via --cookies-from-browser firefox:<outdir>.
+export_cookies() {
+  PROFILE="$1"
+  OUT="$2"
+  FILTER="$3"
+  DB="$OUT/cookies.sqlite"
+  [ -f "$PROFILE/cookies.sqlite" ] || return 1
+  cp "$PROFILE/cookies.sqlite" "$DB"
+  for suf in -wal -shm; do
+    [ -f "$PROFILE/cookies.sqlite$suf" ] && cp "$PROFILE/cookies.sqlite$suf" "$DB$suf"
+  done
+  sqlite3 "$DB" "PRAGMA wal_checkpoint(TRUNCATE);" >/dev/null 2>&1
+  rm -f "$DB-wal" "$DB-shm"
+  if [ -n "$FILTER" ]; then
+    sqlite3 "$DB" "DELETE FROM moz_cookies WHERE rowid NOT IN (SELECT rowid FROM (SELECT rowid, host, name, creationTime, ROW_NUMBER() OVER (PARTITION BY host, name ORDER BY creationTime DESC) AS rn FROM moz_cookies) WHERE rn = 1); DELETE FROM moz_cookies WHERE host NOT LIKE '%$FILTER%';"
+  else
+    sqlite3 "$DB" "DELETE FROM moz_cookies WHERE rowid NOT IN (SELECT rowid FROM (SELECT rowid, host, name, creationTime, ROW_NUMBER() OVER (PARTITION BY host, name ORDER BY creationTime DESC) AS rn FROM moz_cookies) WHERE rn = 1);"
+  fi
 }
 
 # Check if a download attempt failed specifically because of YouTube bot
@@ -114,10 +135,23 @@ case "$CMD" in
     run_with_retry --no-playlist --print "%(title)s" --no-warnings $EXTRA "$URL"
     ;;
     
-  check)
-    command -v yt-dlp >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && command -v sqlite3 >/dev/null 2>&1
+check)
+    command -v yt-dlp >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v sqlite3 >/dev/null 2>&1
     ;;
-    
+
+  prune-missing)
+    # Print a JSON array of history filepaths that no longer exist on disk so
+    # the service can drop them from the panel. Leaves the history file alone.
+    jq -r '.[] | select((.filepath // "") != "") | .filepath' "$1" |
+    while IFS= read -r fp; do
+      case "$fp" in
+        "~/"*) fp="$HOME/${fp#\~/}" ;;
+        "~"*) fp="$HOME/${fp#\~}" ;;
+      esac
+      [ -f "$fp" ] || printf '%s\n' "$fp"
+    done | jq -R . | jq -sc .
+    ;;
+
   *)
     echo "Unknown command: $CMD" >&2
     exit 1

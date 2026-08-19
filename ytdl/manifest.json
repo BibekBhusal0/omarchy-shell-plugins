@@ -34,9 +34,9 @@
         "key": "defaultQuality",
         "type": "enum",
         "label": "Default quality",
-        "options": ["best", "1080p", "720p", "480p", "audio"],
+        "options": ["best", "1080p", "720p", "480p"],
         "defaultValue": "best",
-        "description": "Default download format. 'audio' extracts audio only."
+        "description": "Default download format."
       },
       {
         "key": "cookiesBrowser",

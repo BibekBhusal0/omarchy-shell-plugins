@@ -40,6 +40,7 @@ Item {
   property string selectedQuality: "best"
   property bool _qualityFromFile: false
   readonly property string statePath: Quickshell.env("HOME") + "/.local/state/omarchy/ytdl-quality"
+  readonly property string historyPath: Quickshell.env("HOME") + "/.local/state/omarchy/ytdl-history.json"
 
   signal downloadsUpdated()
   signal historyUpdated()
@@ -80,6 +81,90 @@ Item {
   function persistQuality() {
     root._qualityFromFile = true
     Quickshell.execDetached(["sh", "-c", "printf '%s' '" + root.selectedQuality + "' > " + root.statePath])
+  }
+
+  // Cycling quality in the panel also rewrites the defaultQuality setting so
+  // the shell.json config, not just the in-memory selection, follows the user.
+  function setDefaultQuality(q) {
+    root.defaultQuality = q
+    if (shell && typeof shell.mutateShellConfig === "function") {
+      shell.mutateShellConfig(function(copy) {
+        if (copy.bar && copy.bar.layout) {
+          var sections = ["left", "center", "right"]
+          for (var si = 0; si < sections.length; si++) {
+            var entries = copy.bar.layout[sections[si]]
+            if (!Array.isArray(entries)) continue
+            for (var ei = 0; ei < entries.length; ei++) {
+              if (entries[ei] && String(entries[ei].id) === "bibek.ytdl")
+                entries[ei].defaultQuality = q
+            }
+          }
+        }
+        if (Array.isArray(copy.plugins)) {
+          for (var pi = 0; pi < copy.plugins.length; pi++) {
+            if (copy.plugins[pi] && String(copy.plugins[pi].id) === "bibek.ytdl")
+              copy.plugins[pi].defaultQuality = q
+          }
+        }
+      })
+    }
+  }
+
+  function historyToJSON() {
+    var out = []
+    for (var i = 0; i < history.length; i++) {
+      var h = history[i]
+      out.push({
+        dwnId: h.dwnId, url: h.url, title: h.title, status: h.status,
+        progress: h.progress, speed: h.speed, eta: h.eta,
+        filepath: h.filepath, error: h.error
+      })
+    }
+    return JSON.stringify(out)
+  }
+
+  function historyFromJSON(list) {
+    var out = []
+    if (!Array.isArray(list)) return out
+    for (var i = 0; i < list.length; i++) {
+      var it = list[i] || {}
+      var d = downloadComp.createObject(root)
+      d.dwnId = it.dwnId !== undefined ? it.dwnId : -1
+      d.url = it.url || ""
+      d.title = it.title || ""
+      d.status = it.status || "error"
+      d.progress = it.progress || 0
+      d.speed = it.speed || ""
+      d.eta = it.eta || ""
+      d.filepath = it.filepath || ""
+      d.error = it.error || ""
+      out.push(d)
+    }
+    return out
+  }
+
+  function persistHistory() {
+    Quickshell.execDetached(["env", "YTDL_HISTORY=" + root.historyToJSON(),
+      "sh", "-c", "printf %s \"$YTDL_HISTORY\" > " + root.historyPath])
+  }
+
+  FileView {
+    id: historyStateFile
+    path: root.historyPath
+    preload: true
+    printErrors: false
+    onLoaded: {
+      var text = String(this.text() || "").trim()
+      if (!text) return
+      try {
+        var parsed = JSON.parse(text)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          root.history = root.historyFromJSON(parsed)
+          root.historyUpdated()
+          root.pruneMissing()
+        }
+      } catch (e) { /* corrupt state file, start with empty history */ }
+    }
   }
 
   FileView {
@@ -200,6 +285,7 @@ Item {
         d.procIdx = -1
         downloads = removeById(downloads, id)
         history = [d].concat(history)
+        root.persistHistory()
         downloadsUpdated()
         historyUpdated()
         return
@@ -209,12 +295,61 @@ Item {
 
   function clearHistory() {
     history = []
+    root.persistHistory()
     historyUpdated()
   }
 
   function removeHistoryItem(id) {
     history = removeById(history, id)
+    root.persistHistory()
     historyUpdated()
+  }
+
+  // Drop history entries whose downloaded file has been deleted from disk.
+  function pruneMissing() {
+    if (!root.history.length || pruneProc.running) return
+    pruneProc.command = [scriptPath, "prune-missing", root.historyPath]
+    pruneProc.running = true
+  }
+
+  Process {
+    id: pruneProc
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var text = String(this.text || "").trim()
+        if (!text) return
+        try {
+          var missing = JSON.parse(text)
+          if (!Array.isArray(missing) || missing.length === 0) return
+          var missingMap = {}
+          for (var i = 0; i < missing.length; i++) missingMap[missing[i]] = true
+          var pruned = []
+          var changed = false
+          for (var j = 0; j < root.history.length; j++) {
+            var it = root.history[j]
+            if (it.filepath && missingMap[it.filepath]) {
+              changed = true
+              continue
+            }
+            pruned.push(it)
+          }
+          if (changed) {
+            root.history = pruned
+            root.persistHistory()
+            root.historyUpdated()
+          }
+        } catch (e) { /* malformed prune output, keep history as-is */ }
+      }
+    }
+  }
+
+  Timer {
+    id: pruneTimer
+    interval: 60000
+    repeat: true
+    running: true
+    onTriggered: root.pruneMissing()
   }
 
   function removeById(arr, id) {
@@ -251,6 +386,7 @@ Item {
         downloadsUpdated()
         if (d.status === "done" || d.status === "error") {
           history = [d].concat(history)
+          root.persistHistory()
           historyUpdated()
         }
         return

@@ -69,7 +69,7 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    // FIX: icon below
+    // FIX: icon below is the yt-dlp bar icon (youtube play, download, or active download arrow)
     text: {
       if (!ytdlService) return "\uf16b"
       if (!ytdlService.installed) return "\uf487"

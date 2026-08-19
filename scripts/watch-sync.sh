@@ -9,7 +9,7 @@ inotifywait -m -r -q -e close_write,create,delete,move \
   "$REPO_DIR"/focusd "$REPO_DIR"/obsidian-search "$REPO_DIR"/readest "$REPO_DIR"/ytdl "$REPO_DIR"/media |
 while IFS= read -r path; do
   case "$path" in
-    *.qml|*.js|*.json|*.sh)
+    *.qml|*.js|*.json|*.sh|*/ytdl)
       plugin="$(basename "$(dirname "$path")")"
       cp "$path" "$PLUGINS_DIR/$plugin/"
       echo "synced $path -> $PLUGINS_DIR/$plugin/"
