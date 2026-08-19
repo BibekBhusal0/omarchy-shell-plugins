@@ -31,30 +31,6 @@ Panel {
   readonly property var queuedDownloads: ytdlService ? filterQueued(ytdlService.downloads) : []
   readonly property var historyItems: ytdlService ? ytdlService.history : []
 
-  onActiveDownloadsChanged: {
-    console.log("[ytdl:panel] activeDownloads changed, count:", activeDownloads.length)
-    for (var i = 0; i < activeDownloads.length; i++) {
-      var d = activeDownloads[i]
-      console.log("[ytdl:panel]   [", i, "] id:", d.id, "title:", JSON.stringify(d.title), "progress:", d.progress, "speed:", JSON.stringify(d.speed), "eta:", JSON.stringify(d.eta), "status:", d.status)
-    }
-  }
-
-  onYtdlServiceChanged: {
-    console.log("[ytdl:panel] ytdlService changed:", !!ytdlService)
-    if (ytdlService) {
-      console.log("[ytdl:panel]   service installed:", ytdlService.installed)
-      console.log("[ytdl:panel]   service downloads len:", ytdlService.downloads ? ytdlService.downloads.length : "null")
-    }
-  }
-
-  onInstalledChanged: {
-    console.log("[ytdl:panel] installed changed:", installed)
-  }
-
-  onOpenedChanged: {
-    console.log("[ytdl:panel] opened changed:", opened)
-  }
-
   onHasClipboardUrlChanged: {
     if (hasClipboardUrl && ytdlService) {
       inputUrl = ytdlService.clipboardUrl
@@ -109,9 +85,7 @@ Panel {
   }
 
   function submitUrl() {
-    console.log("[ytdl] submitUrl called, inputUrl:", inputUrl, "ytdlService:", !!ytdlService)
     if (!ytdlService || !inputUrl) return
-    console.log("[ytdl] calling startDownload")
     ytdlService.startDownload(inputUrl, selectedQuality)
     inputUrl = ""
     inputAutoFilled = false
@@ -372,10 +346,6 @@ Panel {
             color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.04)
             border.width: 1
             border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-
-            Component.onCompleted: {
-              console.log("[ytdl:panel] delegate created, modelData:", JSON.stringify(modelData))
-            }
 
             Column {
               id: downloadCol

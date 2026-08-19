@@ -7,7 +7,7 @@ shift
 SCRIPT_DIR="$(dirname "$0")"
 EXPORT="$SCRIPT_DIR/cookie-export.py"
 
-# Resolve cookies-from-browser flag. $1 = browser name
+# Resolve a --cookies-from-browser flag for the given browser name.
 cookies_flag() {
   BROWSER="$1"
   [ -z "$BROWSER" ] || [ "$BROWSER" = "none" ] && return 0
@@ -16,18 +16,7 @@ cookies_flag() {
     chromium) echo "--cookies-from-browser chromium" ;;
     chrome) echo "--cookies-from-browser chrome" ;;
     zen)
-      # Pick the profile that has logged-in YouTube cookies (SID present).
-      PROFILE=""
-      for p in ~/.config/zen/*/; do
-        [ -f "$p/cookies.sqlite" ] || continue
-        # immutable=1 lets us read a live (locked) db without the wal
-        if sqlite3 "file:${p}cookies.sqlite?mode=ro&immutable=1" \
-            "select count(*) from moz_cookies where host like '%youtube%' and name='SID'" 2>/dev/null | grep -q "^[1-9]"; then
-          PROFILE="$p"
-          break
-        fi
-      done
-      [ -z "$PROFILE" ] && PROFILE="$(find ~/.config/zen -maxdepth 1 -type d -name '*.Default*' | head -1)"
+      PROFILE="$(find_ff_profile ~/.config/zen)"
       [ -z "$PROFILE" ] && PROFILE=~/.config/zen
       OUT="$(mktemp -d)/cookies"
       python3 "$EXPORT" "$PROFILE" "$OUT" youtube >/dev/null 2>&1 && echo "--cookies-from-browser firefox:$OUT" || echo ""
@@ -43,16 +32,7 @@ cookies_flag() {
       echo "--cookies-from-browser chromium:$PROFILE"
       ;;
     glide)
-      # Firefox-based like zen; use the same wal-aware export.
-      PROFILE=""
-      for p in ~/.config/glide/*/*/ ~/.config/glide/*/; do
-        [ -f "$p/cookies.sqlite" ] || continue
-        if sqlite3 "file:${p}cookies.sqlite?mode=ro&immutable=1" \
-            "select count(*) from moz_cookies where host like '%youtube%' and name='SID'" 2>/dev/null | grep -q "^[1-9]"; then
-          PROFILE="$p"
-          break
-        fi
-      done
+      PROFILE="$(find_ff_profile ~/.config/glide)"
       [ -z "$PROFILE" ] && PROFILE="$(find ~/.config/glide -maxdepth 2 -name cookies.sqlite 2>/dev/null | head -1 | xargs dirname 2>/dev/null)"
       [ -z "$PROFILE" ] && PROFILE=~/.config/glide
       OUT="$(mktemp -d)/cookies"
@@ -62,34 +42,78 @@ cookies_flag() {
   esac
 }
 
+# Find a Firefox-style profile dir under $1 whose cookies contain a logged-in
+# YouTube SID. immutable=1 reads a live (locked) db without the wal.
+find_ff_profile() {
+  BASE="$1"
+  for p in "$BASE"/*/; do
+    [ -f "$p/cookies.sqlite" ] || continue
+    if sqlite3 "file:${p}cookies.sqlite?mode=ro&immutable=1" \
+        "select count(*) from moz_cookies where host like '%youtube%' and name='SID'" 2>/dev/null | grep -q "^[1-9]"; then
+      echo "${p%/}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Check if a download attempt failed specifically because of YouTube bot
+# detection. $1 = exit code, $2 = temp stderr log file.
+needs_cookies() {
+  [ "$1" -ne 0 ] && grep -q "not a bot" "$2"
+}
+
+# Run yt-dlp for a download/title, retrying once with browser cookies if the
+# first attempt hits bot detection. $1.. = yt-dlp args (without cookies).
+# Stdout (title, progress lines) passes through; stderr is shown only on failure.
+run_with_retry() {
+  LOG="$(mktemp)"
+  ERRL="$(mktemp)"
+  yt-dlp "$@" >"$LOG" 2>"$ERRL"
+  RC=$?
+  if needs_cookies "$RC" "$ERRL"; then
+    COOKIES="$(cookies_flag "$COOKIE_BROWSER")"
+    if [ -n "$COOKIES" ]; then
+      # shellcheck disable=SC2086
+      yt-dlp $COOKIES "$@" >"$LOG" 2>"$ERRL"
+      RC=$?
+    fi
+  fi
+  cat "$LOG"
+  if [ "$RC" -ne 0 ]; then cat "$ERRL"; fi
+  rm -f "$LOG" "$ERRL"
+  return $RC
+}
+
 case "$CMD" in
   download)
     URL="$1"
     QUALITY="$2"
     OUTPUT="$3"
-    BROWSER="$4"
+    COOKIE_BROWSER="$4"
     EXTRA="$5"
 
-    COOKIES="$(cookies_flag "$BROWSER")"
-
+    # Extra args are trusted from the user config; word-split on purpose.
+    # shellcheck disable=SC2086
     case "$QUALITY" in
-      1080p) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b[height<=1080]/b" -o "$OUTPUT" "$URL" ;;
-      720p) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b[height<=720]/b" -o "$OUTPUT" "$URL" ;;
-      480p) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b[height<=480]/b" -o "$OUTPUT" "$URL" ;;
-      audio) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "ba/b" -o "$OUTPUT" "$URL" ;;
-      *) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b" -o "$OUTPUT" "$URL" ;;
+      1080p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=1080]/b" -o "$OUTPUT" "$URL" ;;
+      720p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=720]/b" -o "$OUTPUT" "$URL" ;;
+      480p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=480]/b" -o "$OUTPUT" "$URL" ;;
+      audio) run_with_retry --no-playlist --newline $EXTRA -f "ba/b" -o "$OUTPUT" "$URL" ;;
+      *) run_with_retry --no-playlist --newline $EXTRA -f "b" -o "$OUTPUT" "$URL" ;;
     esac
     ;;
     
   title)
-    BROWSER="$2"
+    URL="$1"
+    COOKIE_BROWSER="$2"
     EXTRA="$3"
-    COOKIES="$(cookies_flag "$BROWSER")"
-    yt-dlp --no-playlist --print "%(title)s" --no-warnings $COOKIES $EXTRA "$1" 2>/dev/null
+    # shellcheck disable=SC2086
+    run_with_retry --no-playlist --print "%(title)s" --no-warnings $EXTRA "$URL"
     ;;
     
   check)
-    command -v yt-dlp >/dev/null 2>&1
+    command -v yt-dlp >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && command -v sqlite3 >/dev/null 2>&1
     ;;
     
   *)

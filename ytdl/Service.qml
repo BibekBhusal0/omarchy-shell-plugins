@@ -48,7 +48,6 @@ Item {
       cookiesBrowser = settings.cookiesBrowser
     if (settings.extraArgs != null)
       extraArgs = settings.extraArgs
-    console.log("[ytdl] configure: cookiesBrowser:", cookiesBrowser, "extraArgs:", extraArgs)
   }
 
   function cleanUrl(url) {
@@ -86,13 +85,11 @@ Item {
         var d = cloneDownload(downloads[i])
         d._procIdx = downloads[i]._procIdx
         for (var k in props) d[k] = props[k]
-        console.log("[ytdl] updateDownload id:", id, "props:", JSON.stringify(props))
         downloads = setItem(downloads, i, d)
         downloadsUpdated()
         return
       }
     }
-    console.log("[ytdl] updateDownload: download not found for id:", id)
   }
 
   function procAt(i) {
@@ -110,7 +107,6 @@ Item {
 
   function startDownload(url, quality) {
     url = cleanUrl(url)
-    console.log("[ytdl] startDownload called, url:", url, "quality:", quality)
     if (!url) return
 
     for (var i = 0; i < downloads.length; i++) {
@@ -120,7 +116,6 @@ Item {
 
     var procIdx = findFreeProc()
     if (procIdx === -1) {
-      console.log("[ytdl] all processes busy, queuing")
       return
     }
 
@@ -128,7 +123,6 @@ Item {
     var q = quality || defaultQuality
     var outputTemplate = downloadLocation + "/%(title)s.%(ext)s"
     var cmd = [scriptPath, "download", url, q, outputTemplate, cookiesBrowser, extraArgs]
-    console.log("[ytdl] starting download, id:", id, "procIdx:", procIdx)
 
     var download = {
       id: id, url: url, title: extractVideoId(url) || url,
@@ -143,7 +137,6 @@ Item {
     proc.downloadId = id
     proc.command = cmd
     proc.running = true
-    console.log("[ytdl] process started, id:", id, "proc:", proc.objectName, "running:", proc.running)
 
     titleProc.targetId = id
     titleProc.command = [scriptPath, "title", url, cookiesBrowser, extraArgs]
@@ -282,7 +275,6 @@ Item {
       waitForEnd: true
       onStreamFinished: {
         var title = String(this.text || "").trim()
-        console.log("[ytdl] title fetch result, targetId:", titleProc.targetId, "title:", JSON.stringify(title))
         if (title && titleProc.targetId !== -1) {
           root.updateDownload(titleProc.targetId, { title: title })
           titleProc.targetId = -1
@@ -299,7 +291,6 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc0, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc0._errBuf += line + "\n" } }
     onExited: function(exitCode) {
-      console.log("[ytdl] dlProc0 exited, id:", downloadId, "exit:", exitCode)
       if (exitCode !== 0 && dlProc0._errBuf) {
         var errLines = String(dlProc0._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {
@@ -323,7 +314,6 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc1, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc1._errBuf += line + "\n" } }
     onExited: function(exitCode) {
-      console.log("[ytdl] dlProc1 exited, id:", downloadId, "exit:", exitCode)
       if (exitCode !== 0 && dlProc1._errBuf) {
         var errLines = String(dlProc1._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {
@@ -347,7 +337,6 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc2, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc2._errBuf += line + "\n" } }
     onExited: function(exitCode) {
-      console.log("[ytdl] dlProc2 exited, id:", downloadId, "exit:", exitCode)
       if (exitCode !== 0 && dlProc2._errBuf) {
         var errLines = String(dlProc2._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {

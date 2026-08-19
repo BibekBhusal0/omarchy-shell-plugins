@@ -16,6 +16,9 @@ yt-dlp video downloader for the Omarchy bar.
 
 - yt-dlp (`omarchy pkg add yt-dlp`)
 - wl-paste (for clipboard URL detection)
+- python3 with the `sqlite3` module and the `sqlite3` CLI (both preinstalled on
+  Omarchy) - only needed when `cookiesBrowser` is set to a browser; the plugin
+  skips cookie handling entirely otherwise
 
 ## Settings
 
@@ -41,11 +44,22 @@ Configure in `~/.config/omarchy/shell.json` under the plugin entry:
 ### Fixing YouTube bot detection
 
 If yt-dlp fails with "Sign in to confirm you're not a bot", log into YouTube in
-your browser, then set `cookiesBrowser` to that browser. The plugin passes
-`--cookies-from-browser` automatically. For fine-grained control, set
-`extraArgs` directly (e.g. `--cookies-from-browser chromium`).
+your browser, then set `cookiesBrowser` to that browser. The plugin only
+exports cookies on demand: every download first tries without cookies, and only
+retries with `--cookies-from-browser` if the bot check appears. So no cookies
+are read or copied for the common case.
+
+For fine-grained control, set `extraArgs` directly (e.g.
+`--cookies-from-browser chromium`).
 
 ## Bar Widget
 
 - Left click opens the download panel
 - Icon shows active download count when downloads are in progress
+
+## Inspiration
+
+- yt-dlp's own FAQ and extractor docs on exporting YouTube cookies
+  (https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)
+- omaqbt, omarr and omarchy-aria2 reference repos for the Quickshell Process /
+  IpcHandler patterns used here
