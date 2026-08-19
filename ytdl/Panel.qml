@@ -22,7 +22,6 @@ Panel {
 
   property string inputUrl: ""
   property string selectedQuality: "best"
-  property bool showHistory: false
   property bool inputAutoFilled: false
 
   // Keyboard cursor model: focusSection × selectedIndex.
@@ -109,8 +108,6 @@ Panel {
     if (urlInput) urlInput.focus = false
   }
 
-  // --- cursor navigation ---------------------------------------------------
-
   function sectionList() {
     var s = []
     if (!root.installed && !(ytdlService && ytdlService.checkingInstallation)) s.push("install")
@@ -124,7 +121,7 @@ Panel {
     if (name === "install") return 1
     if (name === "input") return 3
     if (name === "downloads") return root.activeCount
-    if (name === "history") return root.showHistory ? root.historyCount + 1 : 1
+    if (name === "history") return root.historyCount
     return 0
   }
 
@@ -189,15 +186,10 @@ Panel {
       var d = root.activeDownloads[root.selectedIndex]
       if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
     } else if (s === "history") {
-      if (root.selectedIndex === 0) {
-        root.showHistory = !root.showHistory
-        root.selectedIndex = 0
-      } else {
-        var h = root.historyItems[root.selectedIndex - 1]
-        if (!h || !ytdlService) return
-        if (h.status === "done") ytdlService.playFile(h.filepath)
-        else if (h.status === "error" || h.status === "cancelled") ytdlService.retryDownload(h)
-      }
+      var h = root.historyItems[root.selectedIndex]
+      if (!h || !ytdlService) return
+      if (h.status === "done") ytdlService.playFile(h.filepath)
+      else if (h.status === "error" || h.status === "cancelled") ytdlService.retryDownload(h)
     }
   }
 
@@ -206,8 +198,8 @@ Panel {
     if (root.focusSection === "downloads") {
       var d = root.activeDownloads[root.selectedIndex]
       if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
-    } else if (root.focusSection === "history" && root.selectedIndex > 0) {
-      var h = root.historyItems[root.selectedIndex - 1]
+    } else if (root.focusSection === "history") {
+      var h = root.historyItems[root.selectedIndex]
       if (h && ytdlService) ytdlService.removeHistoryItem(h.dwnId)
     }
   }
@@ -215,12 +207,6 @@ Panel {
   function handleTextKey(t) {
     if (t === "/") root.focusUrlField()
     else if (t === "q" || t === "Q") root.cycleQuality()
-    else if (t === "d" || t === "D") {
-      if (root.historyCount > 0) {
-        root.showHistory = !root.showHistory
-        root.selectedIndex = 0
-      }
-    }
   }
 
   function scrollToCursor() {
@@ -228,8 +214,8 @@ Panel {
     var item = null
     if (root.focusSection === "downloads" && root.selectedIndex >= 0 && activeRepeater.count > 0)
       item = activeRepeater.itemAt(root.selectedIndex)
-    else if (root.focusSection === "history" && root.selectedIndex > 0 && historyRepeater.count > 0)
-      item = historyRepeater.itemAt(root.selectedIndex - 1)
+    else if (root.focusSection === "history" && root.selectedIndex >= 0 && historyRepeater.count > 0)
+      item = historyRepeater.itemAt(root.selectedIndex)
     if (!item) return
     var y = item.mapToItem(flick.contentItem, 0, 0).y
     if (y < flick.contentY) flick.contentY = Math.max(0, y - Style.space(8))
@@ -253,10 +239,6 @@ Panel {
     } else if (root.focusSection === "history") {
       root.clampIndex()
     }
-  }
-
-  onShowHistoryChanged: {
-    if (root.focusSection === "history") root.clampIndex()
   }
 
   Component.onCompleted: {
@@ -482,6 +464,12 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
+            Rectangle {
+              width: parent.width
+              height: 1
+              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            }
+
             Text {
               width: parent.width
               // FIX: icon below
@@ -580,7 +568,7 @@ Panel {
                     Text {
                       id: etaText
                       anchors.right: parent.right
-                      text: modelData.eta ? "ETA " + modelData.eta : ""
+                      text: modelData.eta ? "Time remaining " + modelData.eta : ""
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
@@ -597,92 +585,58 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
-            Text {
+            Rectangle {
               width: parent.width
-              // FIX: icon below
-              text: "\uf1da History (" + root.historyCount + ")"
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              font.bold: true
+              height: 1
+              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
             }
 
-            CursorSurface {
+            RowLayout {
               width: parent.width
-              height: Style.space(34)
-              foreground: root.foreground
-              accent: root.activeColor
-              hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === 0
+              spacing: Style.space(8)
 
-              MouseArea {
-                anchors.fill: parent
-                hoverEnabled: true
-                onContainsMouseChanged: if (containsMouse) root.focusSectionAt("history", 0)
-                onClicked: {
-                  root.focusSectionAt("history", 0)
-                  root.showHistory = !root.showHistory
-                }
+              Text {
+                Layout.fillWidth: true
+                // FIX: icon below
+                text: "\uf1da History (" + root.historyCount + ")"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                elide: Text.ElideRight
               }
 
-              RowLayout {
-                anchors.fill: parent
-                anchors.margins: Style.space(6)
-                spacing: Style.space(8)
-
-                Text {
-                  Layout.fillWidth: true
-                  text: root.showHistory ? "Hide completed" : "Show completed"
-                  color: root.foreground
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  elide: Text.ElideRight
-                }
-
-                PanelActionButton {
-                  // FIX: icon below
-                  iconText: "\uf1f8"
-                  tooltipText: "Clear history"
-                  foreground: root.foreground
-                  hoverColor: Color.urgent
-                  fontFamily: root.fontFamily
-                  fontSize: Style.font.bodySmall
-                  onClicked: {
-                    if (ytdlService) ytdlService.clearHistory()
-                  }
-                }
-
-                PanelActionButton {
-                  // FIX: icon below
-                  iconText: root.showHistory ? "\uf077" : "\uf078"
-                  tooltipText: root.showHistory ? "Hide history" : "Show history"
-                  foreground: root.foreground
-                  fontFamily: root.fontFamily
-                  fontSize: Style.font.bodySmall
-                  onClicked: {
-                    root.showHistory = !root.showHistory
-                    root.selectedIndex = 0
-                  }
+              PanelActionButton {
+                // FIX: icon below
+                iconText: "\uf1f8"
+                tooltipText: "Clear history"
+                foreground: root.foreground
+                hoverColor: Color.urgent
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: {
+                  if (ytdlService) ytdlService.clearHistory()
                 }
               }
             }
 
             Repeater {
               id: historyRepeater
-              model: root.showHistory ? root.historyItems : []
+              model: root.historyItems
 
               delegate: CursorSurface {
                 width: parent.width
                 height: histBody.implicitHeight + Style.space(12)
                 foreground: root.foreground
                 accent: root.activeColor
-                hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === index + 1
+                hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === index
 
                 MouseArea {
                   anchors.fill: parent
                   hoverEnabled: true
-                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("history", index + 1)
+                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("history", index)
                   onClicked: {
-                    root.focusSectionAt("history", index + 1)
+                    root.focusSectionAt("history", index)
                     if (modelData.status === "done") {
                       if (ytdlService) ytdlService.playFile(modelData.filepath)
                     } else if (modelData.status === "error" || modelData.status === "cancelled") {
@@ -812,6 +766,12 @@ Panel {
             visible: root.installed && root.activeCount === 0 && root.historyCount === 0
             width: parent.width
             spacing: Style.space(10)
+
+            Rectangle {
+              width: parent.width
+              height: 1
+              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            }
 
             Item {
               width: parent.width
