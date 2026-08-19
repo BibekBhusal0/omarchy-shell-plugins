@@ -21,7 +21,7 @@ Panel {
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
   property string inputUrl: ""
-  property string selectedQuality: "best"
+  property string selectedQuality: ytdlService ? ytdlService.selectedQuality : "best"
   property bool inputAutoFilled: false
 
   // Keyboard cursor model: focusSection × selectedIndex.
@@ -91,9 +91,11 @@ Panel {
   }
 
   function cycleQuality() {
-    var q = ["best", "1080p", "720p", "480p", "audio"]
+    if (!ytdlService) return
+    var q = ["best", "1080p", "720p", "480p"]
     var i = q.indexOf(root.selectedQuality)
-    root.selectedQuality = q[(i + 1) % q.length]
+    ytdlService.selectedQuality = q[(i + 1) % q.length]
+    ytdlService.persistQuality()
   }
 
   function focusUrlField() {
@@ -275,18 +277,6 @@ Panel {
         contentWidth: width
         contentHeight: content.implicitHeight
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar {
-          policy: ScrollBar.AsNeeded
-          width: Style.space(6)
-          background: Rectangle {
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-            radius: Style.space(3)
-          }
-          contentItem: Rectangle {
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
-            radius: Style.space(3)
-          }
-        }
 
         Column {
           id: content
@@ -416,7 +406,7 @@ Panel {
                 accent: root.activeColor
                 hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 1
 
-                property var qualities: ["best", "1080p", "720p", "480p", "audio"]
+                property var qualities: ["best", "1080p", "720p", "480p"]
 
                 Text {
                   anchors.centerIn: parent
@@ -428,10 +418,17 @@ Panel {
                 }
 
                 MouseArea {
+                  id: qualityMouse
                   anchors.fill: parent
                   hoverEnabled: true
                   onContainsMouseChanged: if (containsMouse) root.focusSectionAt("input", 1)
                   onClicked: root.cycleQuality()
+                }
+
+                PanelToolTip {
+                  visible: qualityMouse.containsMouse
+                  text: "Quality: " + (qualitySelector.qualities[qualitySelector.qualities.indexOf(root.selectedQuality)] || "best")
+                  fontFamily: root.fontFamily
                 }
               }
 
@@ -717,19 +714,6 @@ Panel {
                     }
 
                     PanelActionButton {
-                      visible: modelData.status === "done" && modelData.filepath
-                      // FIX: icon below
-                      iconText: "\uf07b"
-                      tooltipText: "Open folder"
-                      foreground: root.foreground
-                      fontFamily: root.fontFamily
-                      fontSize: Style.font.bodySmall
-                      onClicked: {
-                        if (ytdlService) ytdlService.openFolder(modelData.filepath)
-                      }
-                    }
-
-                    PanelActionButton {
                       visible: modelData.status === "error" || modelData.status === "cancelled"
                       // FIX: icon below
                       iconText: "\uf021"
@@ -766,12 +750,6 @@ Panel {
             visible: root.installed && root.activeCount === 0 && root.historyCount === 0
             width: parent.width
             spacing: Style.space(10)
-
-            Rectangle {
-              width: parent.width
-              height: 1
-              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-            }
 
             Item {
               width: parent.width

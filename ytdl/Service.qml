@@ -36,6 +36,11 @@ Item {
   property string cookiesBrowser: "none"
   property string extraArgs: ""
 
+  // Persisted across shell restarts via a small state file.
+  property string selectedQuality: "best"
+  property bool _qualityFromFile: false
+  readonly property string statePath: Quickshell.env("HOME") + "/.local/state/omarchy/ytdl-quality"
+
   signal downloadsUpdated()
   signal historyUpdated()
 
@@ -62,12 +67,33 @@ Item {
     if (!settings) return
     if (settings.downloadLocation)
       downloadLocation = settings.downloadLocation
-    if (settings.defaultQuality)
+    if (settings.defaultQuality) {
       defaultQuality = settings.defaultQuality
+      if (!root._qualityFromFile) selectedQuality = settings.defaultQuality
+    }
     if (settings.cookiesBrowser)
       cookiesBrowser = settings.cookiesBrowser
     if (settings.extraArgs != null)
       extraArgs = settings.extraArgs
+  }
+
+  function persistQuality() {
+    root._qualityFromFile = true
+    Quickshell.execDetached(["sh", "-c", "printf '%s' '" + root.selectedQuality + "' > " + root.statePath])
+  }
+
+  FileView {
+    id: qualityStateFile
+    path: root.statePath
+    preload: true
+    printErrors: false
+    onLoaded: {
+      var v = String(text()).trim()
+      if (["best", "1080p", "720p", "480p"].indexOf(v) !== -1) {
+        root._qualityFromFile = true
+        root.selectedQuality = v
+      }
+    }
   }
 
   function cleanUrl(url) {
@@ -157,7 +183,7 @@ Item {
   function retryDownload(item) {
     if (!item || !item.url) return
     removeHistoryItem(item.dwnId)
-    startDownload(item.url, defaultQuality)
+    startDownload(item.url, root.selectedQuality || defaultQuality)
   }
 
   function cancelDownload(id) {
