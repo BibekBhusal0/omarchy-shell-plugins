@@ -6,10 +6,7 @@
   "author": "Bibek Bhusal",
   "description": "Download videos from YouTube and other sites via yt-dlp with parallel downloads and a persistent history.",
   "homepage": "https://github.com/BibekBhusal0/omarchy-ytdl",
-  "kinds": [
-    "service",
-    "bar-widget"
-  ],
+  "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
   "entryPoints": {
     "service": "Service.qml",
@@ -38,12 +35,7 @@
         "key": "defaultQuality",
         "type": "enum",
         "label": "Default quality",
-        "options": [
-          "best",
-          "1080p",
-          "720p",
-          "480p"
-        ],
+        "options": ["best", "1080p", "720p", "480p"],
         "defaultValue": "best",
         "description": "Default download format."
       },
@@ -51,15 +43,7 @@
         "key": "cookiesBrowser",
         "type": "enum",
         "label": "Cookies from browser",
-        "options": [
-          "none",
-          "firefox",
-          "chromium",
-          "chrome",
-          "zen",
-          "helium",
-          "glide"
-        ],
+        "options": ["none", "firefox", "chromium", "chrome", "zen", "helium", "glide"],
         "defaultValue": "none",
         "description": "Browser to pull cookies from to bypass YouTube bot detection. Use 'none' if you have no issues."
       },
