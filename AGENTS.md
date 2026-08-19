@@ -12,6 +12,7 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 | `media/`           | bar-widget + service | `BarWidget.qml`, `Service.qml`, `MediaModel.js`     |
 | `obsidian-search/` | menu (overlay)       | `ObsidianSearch.qml`, `search.sh`, `FuzzySearch.js` |
 | `readest/`         | menu (overlay)       | `Readest.qml`, `search.sh`, `FuzzySearch.js`        |
+| `ytdl/`            | bar-widget + service | `BarWidget.qml`, `Panel.qml`, `Service.qml`         |
 
 `scripts/publish.sh` + `.github/workflows/publish.yml` push each plugin folder to its standalone repo and cut a `v<version>` release.
 
@@ -57,6 +58,7 @@ To install a plugin from this repo into the live shell:
 - **High-value comments only.** Use comments to break down complex logic: non-obvious constants (like AT-SPI role codes), protocol message formats, timing-sensitive code, or workarounds.
 - **No mdashes in README files.**.
 - **No comments in Code** unless explaining a non-obvious behavior or workaround.
+- **Icon comments required.** Every Nerd Font icon glyph in QML must be preceded by `// FIX: icon below` on the line above it. This marks icons for later review and replacement if needed.
 
 ## Plugin conventions
 
@@ -68,6 +70,7 @@ To install a plugin from this repo into the live shell:
 - **focusd**: `Service.qml` drives the external `focusd` CLI (must be on `$PATH`) via `Quickshell.execDetached(["focusd", "toggle"])`. Timer state flows to the UI from the daemon. Bar icons are Nerd Font codepoints. Default config (`progressBarStyle`, `icons`) is in `manifest.json` `barWidget.defaults`; README documents it.
 - **media**: clone of the built-in `omarchy.media` (manifest id `bibek.media`, `omarchy.clonedFrom` set). The built-in is disabled via `disabledPlugins` so its IPC `media` target doesn't collide. `BarWidget.qml` must look up the service by the clone id (`firstPartyServiceFor("bibek.media")`), not the built-in id.
 - **obsidian-search / readest**: rely on `fd` + `jq` and `FuzzySearch.js`. Obsidian vault path defaults to the first vault in `~/.config/obsidian/obsidian.json`; Readest defaults to the Readest data dir under `~/.var/app/com.bilingify.readest/`. Both are overridable via `vaultPath` / `libraryPath` in the plugin entry of `~/.config/omarchy/shell.json`.
+- **ytdl**: yt-dlp video downloader. Service manages downloads via Process objects, monitors clipboard for YouTube URLs when a browser is focused. Download format args must NOT use `bestvideo+bestaudio` style selectors (causes HTTP 403 on YouTube) -- use `b[height<=X]/b` fallback chains or omit format for "best". Browser detection list must include `zen`, `helium`, `glide`. YouTube bot detection is bypassed via `cookiesBrowser`/`extraArgs` settings; Firefox-based browsers (zen, glide) lock their cookie DB while running so `cookie-export.py` merges the sqlite+wal and dedupes, and the `ytdl` script auto-selects the profile that has a logged-in SID. Helium is Chromium-based (cookies passed via profile dir).
 
 ## Requirements (documented in each plugin README)
 

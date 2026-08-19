@@ -1,0 +1,99 @@
+#!/bin/sh
+# ytdl helper script - wraps yt-dlp for the shell plugin
+
+CMD="$1"
+shift
+
+SCRIPT_DIR="$(dirname "$0")"
+EXPORT="$SCRIPT_DIR/cookie-export.py"
+
+# Resolve cookies-from-browser flag. $1 = browser name
+cookies_flag() {
+  BROWSER="$1"
+  [ -z "$BROWSER" ] || [ "$BROWSER" = "none" ] && return 0
+  case "$BROWSER" in
+    firefox) echo "--cookies-from-browser firefox" ;;
+    chromium) echo "--cookies-from-browser chromium" ;;
+    chrome) echo "--cookies-from-browser chrome" ;;
+    zen)
+      # Pick the profile that has logged-in YouTube cookies (SID present).
+      PROFILE=""
+      for p in ~/.config/zen/*/; do
+        [ -f "$p/cookies.sqlite" ] || continue
+        # immutable=1 lets us read a live (locked) db without the wal
+        if sqlite3 "file:${p}cookies.sqlite?mode=ro&immutable=1" \
+            "select count(*) from moz_cookies where host like '%youtube%' and name='SID'" 2>/dev/null | grep -q "^[1-9]"; then
+          PROFILE="$p"
+          break
+        fi
+      done
+      [ -z "$PROFILE" ] && PROFILE="$(find ~/.config/zen -maxdepth 1 -type d -name '*.Default*' | head -1)"
+      [ -z "$PROFILE" ] && PROFILE=~/.config/zen
+      OUT="$(mktemp -d)/cookies"
+      python3 "$EXPORT" "$PROFILE" "$OUT" youtube >/dev/null 2>&1 && echo "--cookies-from-browser firefox:$OUT" || echo ""
+      ;;
+    helium)
+      # Chromium-based; cookies live in a profile dir, encrypted. yt-dlp decrypts
+      # them via the browser's key when given the profile dir.
+      PROFILE=""
+      for p in ~/.config/net.imput.helium/*/; do
+        [ -f "$p/Default/Cookies" ] && { PROFILE="$p"; break; }
+      done
+      [ -z "$PROFILE" ] && PROFILE=~/.config/net.imput.helium
+      echo "--cookies-from-browser chromium:$PROFILE"
+      ;;
+    glide)
+      # Firefox-based like zen; use the same wal-aware export.
+      PROFILE=""
+      for p in ~/.config/glide/*/*/ ~/.config/glide/*/; do
+        [ -f "$p/cookies.sqlite" ] || continue
+        if sqlite3 "file:${p}cookies.sqlite?mode=ro&immutable=1" \
+            "select count(*) from moz_cookies where host like '%youtube%' and name='SID'" 2>/dev/null | grep -q "^[1-9]"; then
+          PROFILE="$p"
+          break
+        fi
+      done
+      [ -z "$PROFILE" ] && PROFILE="$(find ~/.config/glide -maxdepth 2 -name cookies.sqlite 2>/dev/null | head -1 | xargs dirname 2>/dev/null)"
+      [ -z "$PROFILE" ] && PROFILE=~/.config/glide
+      OUT="$(mktemp -d)/cookies"
+      python3 "$EXPORT" "$PROFILE" "$OUT" youtube >/dev/null 2>&1 && echo "--cookies-from-browser firefox:$OUT" || echo ""
+      ;;
+    *) echo "" ;;
+  esac
+}
+
+case "$CMD" in
+  download)
+    URL="$1"
+    QUALITY="$2"
+    OUTPUT="$3"
+    BROWSER="$4"
+    EXTRA="$5"
+
+    COOKIES="$(cookies_flag "$BROWSER")"
+
+    case "$QUALITY" in
+      1080p) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b[height<=1080]/b" -o "$OUTPUT" "$URL" ;;
+      720p) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b[height<=720]/b" -o "$OUTPUT" "$URL" ;;
+      480p) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b[height<=480]/b" -o "$OUTPUT" "$URL" ;;
+      audio) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "ba/b" -o "$OUTPUT" "$URL" ;;
+      *) yt-dlp --no-playlist --newline $COOKIES $EXTRA -f "b" -o "$OUTPUT" "$URL" ;;
+    esac
+    ;;
+    
+  title)
+    BROWSER="$2"
+    EXTRA="$3"
+    COOKIES="$(cookies_flag "$BROWSER")"
+    yt-dlp --no-playlist --print "%(title)s" --no-warnings $COOKIES $EXTRA "$1" 2>/dev/null
+    ;;
+    
+  check)
+    command -v yt-dlp >/dev/null 2>&1
+    ;;
+    
+  *)
+    echo "Unknown command: $CMD" >&2
+    exit 1
+    ;;
+esac
