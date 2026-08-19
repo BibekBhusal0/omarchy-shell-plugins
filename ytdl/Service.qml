@@ -14,6 +14,9 @@ Item {
   property string clipboardUrl: ""
   property string lastDetectedUrl: ""
 
+  // Downloads are QObjects mutated in place. The panel's Repeater binds to the
+  // array reference, so it keeps its delegates across progress ticks and only
+  // rebuilds when an item is added or removed.
   property var downloads: []
   readonly property int downloadCount: downloads.length
   readonly property int activeCount: {
@@ -37,6 +40,23 @@ Item {
   signal historyUpdated()
 
   readonly property string scriptPath: Qt.resolvedUrl("ytdl").toString().replace(/^file:\/\//, "")
+
+  // Download entry factory.
+  Component {
+    id: downloadComp
+    QtObject {
+      property var dwnId: -1
+      property string url: ""
+      property string title: ""
+      property string status: "downloading"
+      property real progress: 0
+      property string speed: ""
+      property string eta: ""
+      property string filepath: ""
+      property string error: ""
+      property int procIdx: -1
+    }
+  }
 
   function configure(settings) {
     if (!settings) return
@@ -65,27 +85,11 @@ Item {
     return /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]+/.test(text)
   }
 
-  function setItem(arr, idx, val) {
-    var copy = arr.slice()
-    copy[idx] = val
-    return copy
-  }
-
-  function cloneDownload(d) {
-    return {
-      id: d.id, url: d.url, title: d.title, status: d.status,
-      progress: d.progress, speed: d.speed, eta: d.eta,
-      filepath: d.filepath, error: d.error
-    }
-  }
-
   function updateDownload(id, props) {
     for (var i = 0; i < downloads.length; i++) {
-      if (downloads[i].id === id) {
-        var d = cloneDownload(downloads[i])
-        d._procIdx = downloads[i]._procIdx
+      var d = downloads[i]
+      if (d.dwnId === id) {
         for (var k in props) d[k] = props[k]
-        downloads = setItem(downloads, i, d)
         downloadsUpdated()
         return
       }
@@ -124,13 +128,13 @@ Item {
     var outputTemplate = downloadLocation + "/%(title)s.%(ext)s"
     var cmd = [scriptPath, "download", url, q, outputTemplate, cookiesBrowser, extraArgs]
 
-    var download = {
-      id: id, url: url, title: extractVideoId(url) || url,
-      status: "downloading", progress: 0, speed: "", eta: "",
-      filepath: "", error: "", _procIdx: procIdx
-    }
+    var d = downloadComp.createObject(root)
+    d.dwnId = id
+    d.url = url
+    d.title = extractVideoId(url) || url
+    d.procIdx = procIdx
 
-    downloads = downloads.concat([download])
+    downloads = downloads.concat([d])
     downloadsUpdated()
 
     var proc = procAt(procIdx)
@@ -145,23 +149,24 @@ Item {
 
   function retryDownload(item) {
     if (!item || !item.url) return
-    removeHistoryItem(item.id)
+    removeHistoryItem(item.dwnId)
     startDownload(item.url, defaultQuality)
   }
 
   function cancelDownload(id) {
     for (var i = 0; i < downloads.length; i++) {
-      if (downloads[i].id === id) {
-        var d = downloads[i]
-        if (d._procIdx != null && d._procIdx >= 0) {
-          procAt(d._procIdx).kill()
+      var d = downloads[i]
+      if (d.dwnId === id) {
+        if (d.procIdx >= 0) {
+          var proc = procAt(d.procIdx)
+          proc.downloadId = -1
+          if (proc.running) proc.running = false
         }
-        var updated = cloneDownload(d)
-        updated.status = "cancelled"
-        updated._procIdx = -1
-        downloads = setItem(downloads, i, updated)
-        history = [updated].concat(history)
+        d.status = "cancelled"
+        d.progress = 0
+        d.procIdx = -1
         downloads = removeById(downloads, id)
+        history = [d].concat(history)
         downloadsUpdated()
         historyUpdated()
         return
@@ -182,7 +187,7 @@ Item {
   function removeById(arr, id) {
     var result = []
     for (var i = 0; i < arr.length; i++) {
-      if (arr[i].id !== id) result.push(arr[i])
+      if (arr[i].dwnId !== id) result.push(arr[i])
     }
     return result
   }
@@ -199,8 +204,8 @@ Item {
 
   function onDownloadComplete(id, exitCode) {
     for (var i = 0; i < downloads.length; i++) {
-      if (downloads[i].id === id) {
-        var d = cloneDownload(downloads[i])
+      var d = downloads[i]
+      if (d.dwnId === id) {
         if (exitCode === 0) {
           d.status = "done"
           d.progress = 100
@@ -208,7 +213,7 @@ Item {
           d.status = "error"
           if (!d.error) d.error = "yt-dlp exited with code " + exitCode
         }
-        d._procIdx = -1
+        d.procIdx = -1
         downloads = removeById(downloads, id)
         downloadsUpdated()
         if (d.status === "done" || d.status === "error") {
@@ -227,22 +232,25 @@ Item {
 
     var destMatch = line.match(/\[download\]\s+Destination:\s+(.+)/)
     if (destMatch) {
-      var fname = destMatch[1].replace(/^.*\//, "").replace(/\.[^.]+$/, "")
-      root.updateDownload(id, { title: fname })
+      var full = destMatch[1].trim()
+      var fname = full.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
+      root.updateDownload(id, { title: fname, filepath: full })
       return
     }
 
     var alreadyMatch = line.match(/\[download\]\s+(.+?)\s+has already been downloaded/)
     if (alreadyMatch) {
-      var aname = alreadyMatch[1].replace(/^.*\//, "").replace(/\.[^.]+$/, "")
-      root.updateDownload(id, { title: aname, progress: 100 })
+      var afull = alreadyMatch[1].trim()
+      var aname = afull.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
+      root.updateDownload(id, { title: aname, filepath: afull, progress: 100 })
       return
     }
 
     var mergerRename = line.match(/\[Merger\]\s+Merging formats into "(.+)"/)
     if (mergerRename) {
-      var mname = mergerRename[1].replace(/^.*\//, "").replace(/\.[^.]+$/, "")
-      root.updateDownload(id, { status: "merging", progress: 100, title: mname })
+      var mfull = mergerRename[1].trim()
+      var mname = mfull.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
+      root.updateDownload(id, { status: "merging", progress: 100, title: mname, filepath: mfull })
       return
     }
 
@@ -440,9 +448,19 @@ Item {
 
   IpcHandler {
     target: "ytdl"
-    function start(url: string) { root.startDownload(url) }
-    function status() { return JSON.stringify({downloads: root.downloadCount, active: root.activeCount}) }
-    function ping() { return "pong" }
+    function start(url: string): void { root.startDownload(url) }
+    function cancel(id: string): void { root.cancelDownload(parseInt(id)) }
+    function status(): string { return JSON.stringify({downloads: root.downloadCount, active: root.activeCount}) }
+    function ping(): string { return "pong" }
+    function state(): string {
+      var d = root.downloads.map(function(x) {
+        return { id: x.dwnId, url: x.url, title: x.title, status: x.status, progress: x.progress, speed: x.speed, eta: x.eta, filepath: x.filepath }
+      })
+      var h = root.history.map(function(x) {
+        return { id: x.dwnId, url: x.url, title: x.title, status: x.status, filepath: x.filepath, error: x.error }
+      })
+      return JSON.stringify({ downloads: d, history: h })
+    }
   }
 
   Component.onCompleted: root.checkInstallation()

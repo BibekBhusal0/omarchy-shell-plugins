@@ -58,30 +58,32 @@ find_ff_profile() {
 }
 
 # Check if a download attempt failed specifically because of YouTube bot
-# detection. $1 = exit code, $2 = temp stderr log file.
+# detection or stream throttling. $1 = exit code, $2 = temp stderr log file.
+# "not a bot" = extractor-phase sign-in wall; "HTTP Error 403" = download-phase
+# throttling. Both resolve with logged-in cookies in practice.
 needs_cookies() {
-  [ "$1" -ne 0 ] && grep -q "not a bot" "$2"
+  [ "$1" -ne 0 ] && grep -Eq "not a bot|HTTP Error 403" "$2"
 }
 
 # Run yt-dlp for a download/title, retrying once with browser cookies if the
 # first attempt hits bot detection. $1.. = yt-dlp args (without cookies).
-# Stdout (title, progress lines) passes through; stderr is shown only on failure.
+# Stdout (title, progress lines) passes through live so the shell can stream
+# progress; stderr is captured to a temp file and shown only on failure.
+# PYTHONUNBUFFERED keeps yt-dlp's line output from being pipe-block-buffered.
 run_with_retry() {
-  LOG="$(mktemp)"
   ERRL="$(mktemp)"
-  yt-dlp "$@" >"$LOG" 2>"$ERRL"
+  PYTHONUNBUFFERED=1 yt-dlp "$@" 2>"$ERRL"
   RC=$?
   if needs_cookies "$RC" "$ERRL"; then
     COOKIES="$(cookies_flag "$COOKIE_BROWSER")"
     if [ -n "$COOKIES" ]; then
       # shellcheck disable=SC2086
-      yt-dlp $COOKIES "$@" >"$LOG" 2>"$ERRL"
+      PYTHONUNBUFFERED=1 yt-dlp $COOKIES "$@" 2>"$ERRL"
       RC=$?
     fi
   fi
-  cat "$LOG"
   if [ "$RC" -ne 0 ]; then cat "$ERRL"; fi
-  rm -f "$LOG" "$ERRL"
+  rm -f "$ERRL"
   return $RC
 }
 

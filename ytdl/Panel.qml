@@ -1,4 +1,6 @@
 import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import qs.Commons
@@ -21,14 +23,18 @@ Panel {
   property string inputUrl: ""
   property string selectedQuality: "best"
   property bool showHistory: false
-  property int selectedAction: 0
-  property bool cursorActive: true
   property bool inputAutoFilled: false
+
+  // Keyboard cursor model: focusSection × selectedIndex.
+  property string focusSection: "input"
+  property int selectedIndex: 0
+  property bool cursorActive: false
 
   readonly property bool installed: ytdlService ? ytdlService.installed : false
   readonly property bool hasClipboardUrl: ytdlService && ytdlService.clipboardUrl !== ""
+  readonly property int activeCount: ytdlService ? ytdlService.activeCount : 0
   readonly property var activeDownloads: ytdlService ? filterActive(ytdlService.downloads) : []
-  readonly property var queuedDownloads: ytdlService ? filterQueued(ytdlService.downloads) : []
+  readonly property int historyCount: ytdlService ? ytdlService.historyCount : 0
   readonly property var historyItems: ytdlService ? ytdlService.history : []
 
   onHasClipboardUrlChanged: {
@@ -51,16 +57,10 @@ Panel {
     return r
   }
 
-  function filterQueued(list) {
-    var r = []
-    for (var i = 0; i < list.length; i++)
-      if (list[i].status === "queued") r.push(list[i])
-    return r
-  }
-
   function open() {
-    selectedAction = 0
-    cursorActive = true
+    root.focusSection = "input"
+    root.selectedIndex = 0
+    root.cursorActive = false
     controller.show()
     if (ytdlService) ytdlService.checkInstallation()
     if (hasClipboardUrl && !inputUrl) {
@@ -91,6 +91,174 @@ Panel {
     inputAutoFilled = false
   }
 
+  function cycleQuality() {
+    var q = ["best", "1080p", "720p", "480p", "audio"]
+    var i = q.indexOf(root.selectedQuality)
+    root.selectedQuality = q[(i + 1) % q.length]
+  }
+
+  function focusUrlField() {
+    root.focusSection = "input"
+    root.selectedIndex = 0
+    root.cursorActive = true
+    if (urlInput) urlInput.forceActiveFocus()
+  }
+
+  function focusPanel() {
+    keyCatcher.forceActiveFocus()
+    if (urlInput) urlInput.focus = false
+  }
+
+  // --- cursor navigation ---------------------------------------------------
+
+  function sectionList() {
+    var s = []
+    if (!root.installed && !(ytdlService && ytdlService.checkingInstallation)) s.push("install")
+    if (root.installed) s.push("input")
+    if (root.installed && root.activeCount > 0) s.push("downloads")
+    if (root.installed && root.historyCount > 0) s.push("history")
+    return s
+  }
+
+  function sectionCount(name) {
+    if (name === "install") return 1
+    if (name === "input") return 3
+    if (name === "downloads") return root.activeCount
+    if (name === "history") return root.showHistory ? root.historyCount + 1 : 1
+    return 0
+  }
+
+  function clampIndex() {
+    var max = sectionCount(root.focusSection) - 1
+    if (root.selectedIndex > max) root.selectedIndex = Math.max(0, max)
+    if (root.selectedIndex < 0) root.selectedIndex = 0
+  }
+
+  function focusSectionAt(name, index) {
+    root.focusSection = name
+    root.selectedIndex = index
+    root.cursorActive = true
+    root.clampIndex()
+    Qt.callLater(root.scrollToCursor)
+  }
+
+  function moveCursor(dx, dy) {
+    if (!root.cursorActive) {
+      root.cursorActive = true
+      root.clampIndex()
+      return
+    }
+    if (dy !== 0) {
+      var count = sectionCount(root.focusSection)
+      var ni = root.selectedIndex + dy
+      if (ni >= count) {
+        var s = root.sectionList()
+        var i = s.indexOf(root.focusSection)
+        root.focusSection = s[(i + 1) % s.length]
+        root.selectedIndex = 0
+        root.clampIndex()
+      } else if (ni < 0) {
+        var s2 = root.sectionList()
+        var i2 = s2.indexOf(root.focusSection)
+        root.focusSection = s2[(i2 - 1 + s2.length) % s2.length]
+        root.selectedIndex = sectionCount(root.focusSection) - 1
+        root.clampIndex()
+      } else {
+        root.selectedIndex = ni
+      }
+      Qt.callLater(root.scrollToCursor)
+    }
+    if (dx !== 0 && root.focusSection === "input") {
+      root.selectedIndex = (root.selectedIndex + dx + 3) % 3
+    }
+  }
+
+  function activateCursor() {
+    if (!root.cursorActive) {
+      root.cursorActive = true
+      return
+    }
+    var s = root.focusSection
+    if (s === "install") {
+      if (ytdlService && !ytdlService.installing) ytdlService.installInTerminal()
+    } else if (s === "input") {
+      if (root.selectedIndex === 0) root.focusUrlField()
+      else if (root.selectedIndex === 1) root.cycleQuality()
+      else root.submitUrl()
+    } else if (s === "downloads") {
+      var d = root.activeDownloads[root.selectedIndex]
+      if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+    } else if (s === "history") {
+      if (root.selectedIndex === 0) {
+        root.showHistory = !root.showHistory
+        root.selectedIndex = 0
+      } else {
+        var h = root.historyItems[root.selectedIndex - 1]
+        if (!h || !ytdlService) return
+        if (h.status === "done") ytdlService.playFile(h.filepath)
+        else if (h.status === "error" || h.status === "cancelled") ytdlService.retryDownload(h)
+      }
+    }
+  }
+
+  function deleteCursor() {
+    if (!root.cursorActive) return
+    if (root.focusSection === "downloads") {
+      var d = root.activeDownloads[root.selectedIndex]
+      if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+    } else if (root.focusSection === "history" && root.selectedIndex > 0) {
+      var h = root.historyItems[root.selectedIndex - 1]
+      if (h && ytdlService) ytdlService.removeHistoryItem(h.dwnId)
+    }
+  }
+
+  function handleTextKey(t) {
+    if (t === "/") root.focusUrlField()
+    else if (t === "q" || t === "Q") root.cycleQuality()
+    else if (t === "d" || t === "D") {
+      if (root.historyCount > 0) {
+        root.showHistory = !root.showHistory
+        root.selectedIndex = 0
+      }
+    }
+  }
+
+  function scrollToCursor() {
+    if (!flick) return
+    var item = null
+    if (root.focusSection === "downloads" && root.selectedIndex >= 0 && activeRepeater.count > 0)
+      item = activeRepeater.itemAt(root.selectedIndex)
+    else if (root.focusSection === "history" && root.selectedIndex > 0 && historyRepeater.count > 0)
+      item = historyRepeater.itemAt(root.selectedIndex - 1)
+    if (!item) return
+    var y = item.mapToItem(flick.contentItem, 0, 0).y
+    if (y < flick.contentY) flick.contentY = Math.max(0, y - Style.space(8))
+    else if (y + item.height > flick.contentY + flick.height)
+      flick.contentY = y + item.height - flick.height + Style.space(8)
+  }
+
+  onActiveCountChanged: {
+    if (root.activeCount === 0 && root.focusSection === "downloads" && root.cursorActive) {
+      root.focusSection = "input"
+      root.selectedIndex = 0
+    } else if (root.focusSection === "downloads") {
+      root.clampIndex()
+    }
+  }
+
+  onHistoryCountChanged: {
+    if (root.historyCount === 0 && root.focusSection === "history" && root.cursorActive) {
+      root.focusSection = "input"
+      root.selectedIndex = 0
+    } else if (root.focusSection === "history") {
+      root.clampIndex()
+    }
+  }
+
+  onShowHistoryChanged: {
+    if (root.focusSection === "history") root.clampIndex()
+  }
+
   Component.onCompleted: {
     if (ytdlService) ytdlService.checkInstallation()
   }
@@ -103,633 +271,581 @@ Panel {
     open: root.opened
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(420))
-    contentHeight: panel.fittedContentHeight(content.implicitHeight)
+    contentHeight: panel.fittedContentHeight(flick.contentHeight, Style.space(500))
 
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
+      // Let the URL field own all keys while it is focused.
+      blocked: urlInput.activeFocus
 
-      onMoveRequested: function(dx, dy) {
-        if (dx !== 0) root.selectedAction = (root.selectedAction + dx + 2) % 2
-        else if (dy !== 0) root.selectedAction = (root.selectedAction + dy + 2) % 2
-      }
-      onActivateRequested: {
-        if (root.selectedAction === 0) root.submitUrl()
-        else root.showHistory = !root.showHistory
-      }
+      onMoveRequested: function(dx, dy) { root.moveCursor(dx, dy) }
+      onActivateRequested: root.activateCursor()
       onCloseRequested: root.close()
+      onDeleteRequested: root.deleteCursor()
       onTabRequested: function(direction) { root.switchPanel(direction) }
-    }
+      onTextKey: function(t) { root.handleTextKey(t) }
 
-    Column {
-      id: content
-      width: parent.width
-      spacing: Style.space(16)
-
-      // Not installed state
-      Column {
-        visible: !root.installed && !root.ytdlService?.checkingInstallation
-        width: parent.width
-        spacing: Style.space(14)
-
-        Item {
-          width: parent.width
-          implicitHeight: Style.space(56)
-
-          Text {
-            anchors.centerIn: parent
-            // FIX: icon below
-            text: "\uf16b"
-            color: root.foreground
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.display + Style.space(8)
+      Flickable {
+        id: flick
+        anchors.fill: parent
+        clip: true
+        contentWidth: width
+        contentHeight: content.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar {
+          policy: ScrollBar.AsNeeded
+          width: Style.space(6)
+          background: Rectangle {
+            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            radius: Style.space(3)
+          }
+          contentItem: Rectangle {
+            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.35)
+            radius: Style.space(3)
           }
         }
 
         Column {
+          id: content
           width: parent.width
-          spacing: Style.space(6)
+          spacing: Style.space(16)
 
-          Text {
+          // Not installed state
+          Column {
+            visible: !root.installed && root.ytdlService && !root.ytdlService.checkingInstallation
             width: parent.width
-            text: "yt-dlp is not installed."
-            color: root.foreground
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.title
-            font.bold: true
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-          }
+            spacing: Style.space(14)
 
-          Text {
-            width: parent.width
-            text: "Install yt-dlp to download videos from YouTube and other sites."
-            color: Qt.darker(root.foreground, 1.4)
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.body
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-          }
-        }
-
-        Button {
-          width: parent.width
-          text: root.ytdlService && root.ytdlService.installing
-            ? "Installing yt-dlp\u2026"
-            : "Install yt-dlp"
-          // FIX: icon below
-          iconText: root.ytdlService && root.ytdlService.installing ? "" : "\uf487"
-          iconSpinning: root.ytdlService && root.ytdlService.installing
-          fontFamily: root.fontFamily
-          fontSize: Style.font.body
-          iconSize: Style.font.icon
-          foreground: root.foreground
-          accent: root.activeColor
-          verticalPadding: Style.space(14)
-          bordered: true
-          selected: true
-          hasCursor: root.cursorActive && root.selectedAction === 0
-          enabled: !(root.ytdlService && root.ytdlService.installing)
-          onHovered: function(hovered) {
-            if (hovered) { root.cursorActive = true; root.selectedAction = 0 }
-          }
-          onClicked: {
-            if (root.ytdlService) {
-              if (root.ytdlService.installing) return
-              root.ytdlService.installInTerminal()
-            }
-          }
-        }
-      }
-
-      // URL input section (when installed)
-      Column {
-        visible: root.installed
-        width: parent.width
-        spacing: Style.space(10)
-
-        // Clipboard indicator
-        Text {
-          visible: root.hasClipboardUrl && root.inputAutoFilled
-          width: parent.width
-          // FIX: icon below
-          text: "\uf017 Link detected from clipboard"
-          color: root.activeColor
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.caption
-        }
-
-        // URL input field
-        Row {
-          width: parent.width
-          spacing: Style.space(8)
-
-          Rectangle {
-            width: parent.width - qualitySelector.width - downloadManualBtn.width - parent.spacing * 2
-            height: Style.space(36)
-            radius: Style.space(6)
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-            border.width: 1
-            border.color: urlInput.activeFocus
-              ? root.activeColor
-              : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
-
-            TextInput {
-              id: urlInput
-              anchors.fill: parent
-              anchors.margins: Style.space(8)
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
-              clip: true
-              selectByMouse: true
-              selectionColor: root.activeColor
-              verticalAlignment: TextInput.AlignVCenter
-
-              property string placeholder: "Paste URL here\u2026"
+            Item {
+              width: parent.width
+              implicitHeight: Style.space(56)
 
               Text {
-                visible: !urlInput.text && !urlInput.activeFocus
-                text: urlInput.placeholder
-                color: Qt.darker(root.foreground, 1.6)
-                font: urlInput.font
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.centerIn: parent
+                // FIX: icon below
+                text: "\uf16b"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.display + Style.space(8)
+              }
+            }
+
+            Column {
+              width: parent.width
+              spacing: Style.space(6)
+
+              Text {
+                width: parent.width
+                text: "yt-dlp is not installed."
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
               }
 
-              Keys.onReturnPressed: root.submitUrl()
-              Keys.onEnterPressed: root.submitUrl()
-              onTextChanged: {
-                root.inputUrl = text
-                if (text) root.inputAutoFilled = false
+              Text {
+                width: parent.width
+                text: "Install yt-dlp to download videos from YouTube and other sites."
+                color: Qt.darker(root.foreground, 1.4)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+              }
+            }
+
+            Button {
+              width: parent.width
+              text: root.ytdlService && root.ytdlService.installing
+                ? "Installing yt-dlp\u2026"
+                : "Install yt-dlp"
+              // FIX: icon below
+              iconText: root.ytdlService && root.ytdlService.installing ? "" : "\uf487"
+              iconSpinning: root.ytdlService && root.ytdlService.installing
+              fontFamily: root.fontFamily
+              fontSize: Style.font.body
+              iconSize: Style.font.icon
+              foreground: root.foreground
+              accent: root.activeColor
+              verticalPadding: Style.space(14)
+              bordered: true
+              selected: true
+              hasCursor: root.cursorActive && root.focusSection === "install"
+              enabled: !(root.ytdlService && root.ytdlService.installing)
+              onHovered: function(hovered) {
+                if (hovered) root.focusSectionAt("install", 0)
+              }
+              onClicked: {
+                if (root.ytdlService) {
+                  if (root.ytdlService.installing) return
+                  root.ytdlService.installInTerminal()
+                }
               }
             }
           }
 
-          Rectangle {
-            id: qualitySelector
-            width: Style.space(60)
-            height: Style.space(36)
-            radius: Style.space(6)
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-            border.width: 1
-            border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
-
-            property var qualities: ["best", "1080p", "720p", "480p", "audio"]
-            property int currentIndex: qualities.indexOf(root.selectedQuality)
+          // URL input section (when installed)
+          Column {
+            visible: root.installed
+            width: parent.width
+            spacing: Style.space(10)
 
             Text {
-              anchors.centerIn: parent
-              text: qualitySelector.qualities[qualitySelector.currentIndex] || "best"
+              visible: root.hasClipboardUrl && root.inputAutoFilled
+              width: parent.width
+              // FIX: icon below
+              text: "\uf017 Link detected from clipboard"
+              color: root.activeColor
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+            }
+
+            RowLayout {
+              width: parent.width
+              spacing: Style.space(8)
+
+              TextField {
+                id: urlInput
+                Layout.fillWidth: true
+                height: Style.space(36)
+                placeholderText: "Paste URL here\u2026"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                foreground: root.foreground
+                accent: root.activeColor
+                hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 0
+                onAccepted: root.submitUrl()
+                onHoveredChanged: if (hovered) root.focusSectionAt("input", 0)
+                onTextChanged: {
+                  root.inputUrl = text
+                  if (text) root.inputAutoFilled = false
+                }
+                Keys.onEscapePressed: root.focusPanel()
+              }
+
+              CursorSurface {
+                id: qualitySelector
+                implicitWidth: Style.space(64)
+                implicitHeight: Style.space(36)
+                foreground: root.foreground
+                accent: root.activeColor
+                hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 1
+
+                property var qualities: ["best", "1080p", "720p", "480p", "audio"]
+
+                Text {
+                  anchors.centerIn: parent
+                  text: qualitySelector.qualities[qualitySelector.qualities.indexOf(root.selectedQuality)] || "best"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("input", 1)
+                  onClicked: root.cycleQuality()
+                }
+              }
+
+              Button {
+                id: downloadManualBtn
+                // FIX: icon below
+                iconText: "\uf381"
+                tooltipText: "Download"
+                foreground: root.foreground
+                accent: root.activeColor
+                iconSize: Style.font.icon
+                implicitWidth: Style.space(36)
+                implicitHeight: Style.space(36)
+                horizontalPadding: 0
+                verticalPadding: 0
+                enabled: root.inputUrl !== ""
+                opacity: enabled ? 1 : 0.35
+                hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 2
+                onHovered: function(hovered) {
+                  if (hovered) root.focusSectionAt("input", 2)
+                }
+                onClicked: root.submitUrl()
+              }
+            }
+          }
+
+          // Active downloads
+          Column {
+            visible: root.installed && root.activeCount > 0
+            width: parent.width
+            spacing: Style.space(8)
+
+            Text {
+              width: parent.width
+              // FIX: icon below
+              text: "\uf381 Active Downloads (" + root.activeCount + ")"
               color: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
               font.bold: true
             }
 
-            MouseArea {
-              anchors.fill: parent
-              onClicked: {
-                var next = (qualitySelector.currentIndex + 1) % qualitySelector.qualities.length
-                root.selectedQuality = qualitySelector.qualities[next]
-              }
-            }
-          }
+            Repeater {
+              id: activeRepeater
+              model: root.activeDownloads
 
-          Button {
-            id: downloadManualBtn
-            // FIX: icon below
-            iconText: "\uf381"
-            tooltipText: "Download"
-            foreground: root.foreground
-            accent: root.activeColor
-            iconSize: Style.font.icon
-            implicitWidth: Style.space(36)
-            implicitHeight: Style.space(36)
-            horizontalPadding: 0
-            verticalPadding: 0
-            enabled: root.inputUrl !== ""
-            opacity: enabled ? 1 : 0.35
-            hasCursor: root.cursorActive && root.selectedAction === 0
-            onHovered: function(hovered) {
-              if (hovered) { root.cursorActive = true; root.selectedAction = 0 }
-            }
-            onClicked: root.submitUrl()
-          }
-        }
-      }
-
-      // Active downloads
-      Column {
-        visible: root.installed && root.activeDownloads.length > 0
-        width: parent.width
-        spacing: Style.space(8)
-
-        Row {
-          width: parent.width
-          Text {
-            // FIX: icon below
-            text: "\uf381 Active Downloads (" + root.activeDownloads.length + ")"
-            color: root.foreground
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-          }
-        }
-
-        Repeater {
-          model: root.activeDownloads
-
-          Rectangle {
-            width: parent.width
-            height: downloadCol.implicitHeight + Style.space(14)
-            radius: Style.space(6)
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.04)
-            border.width: 1
-            border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-
-            Column {
-              id: downloadCol
-              anchors.fill: parent
-              anchors.margins: Style.space(8)
-              spacing: Style.space(4)
-
-              Row {
+              delegate: CursorSurface {
                 width: parent.width
-                spacing: Style.space(6)
+                height: dlBody.implicitHeight + Style.space(16)
+                foreground: root.foreground
+                accent: root.activeColor
+                hasCursor: root.cursorActive && root.focusSection === "downloads" && root.selectedIndex === index
 
-                Text {
-                  width: parent.width - cancelBtn.width - parent.spacing
-                  text: modelData.title || "Fetching title\u2026"
-                  color: root.foreground
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  font.bold: true
-                  elide: Text.ElideRight
-                  maximumLineCount: 1
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("downloads", index)
+                  onClicked: root.focusSectionAt("downloads", index)
                 }
 
-                Text {
-                  text: modelData.progress > 0 ? Math.round(modelData.progress) + "%" : ""
-                  color: root.activeColor
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  font.bold: true
-                  anchors.verticalCenter: parent.verticalCenter
-                }
+                Column {
+                  id: dlBody
+                  anchors.fill: parent
+                  anchors.margins: Style.space(8)
+                  spacing: Style.space(6)
 
-                Text {
-                  text: modelData.speed || ""
-                  color: Qt.darker(root.foreground, 1.4)
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  anchors.verticalCenter: parent.verticalCenter
-                }
+                  RowLayout {
+                    width: parent.width
+                    spacing: Style.space(6)
 
-                Text {
-                  text: modelData.eta ? "ETA " + modelData.eta : ""
-                  color: Qt.darker(root.foreground, 1.4)
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  anchors.verticalCenter: parent.verticalCenter
-                }
+                    Text {
+                      Layout.fillWidth: true
+                      text: modelData.title || "Fetching title\u2026"
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.bodySmall
+                      font.bold: true
+                      elide: Text.ElideRight
+                      maximumLineCount: 1
+                    }
 
-                Rectangle {
-                  id: cancelBtn
-                  width: Style.space(22)
-                  height: Style.space(22)
-                  radius: Style.space(4)
-                  color: cancelArea.containsMouse
-                    ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.2)
-                    : "transparent"
+                    Text {
+                      text: modelData.progress > 0 ? Math.round(modelData.progress) + "%" : (modelData.status === "merging" ? "\u2026" : "")
+                      color: root.activeColor
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: true
+                    }
 
-                  Text {
-                    anchors.centerIn: parent
-                    // FIX: icon below
-                    text: "\uf00d"
-                    color: Color.urgent
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
+                    PanelActionButton {
+                      id: cancelBtn
+                      // FIX: icon below
+                      iconText: "\uf00d"
+                      tooltipText: "Cancel download"
+                      foreground: root.foreground
+                      hoverColor: Color.urgent
+                      fontFamily: root.fontFamily
+                      fontSize: Style.font.bodySmall
+                      onClicked: {
+                        if (ytdlService) ytdlService.cancelDownload(modelData.dwnId)
+                      }
+                    }
                   }
 
-                  MouseArea {
-                    id: cancelArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: {
-                      if (ytdlService) ytdlService.cancelDownload(modelData.id)
+                  Rectangle {
+                    width: parent.width
+                    height: Style.space(4)
+                    radius: height / 2
+                    color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
+
+                    Rectangle {
+                      width: Math.max(height, parent.width * (Math.max(0, Math.min(100, modelData.progress)) / 100))
+                      height: parent.height
+                      radius: parent.radius
+                      color: root.activeColor
+
+                      Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    }
+                  }
+
+                  Item {
+                    width: parent.width
+                    implicitHeight: Math.max(speedText.implicitHeight, etaText.implicitHeight)
+
+                    Text {
+                      id: speedText
+                      anchors.left: parent.left
+                      text: modelData.status === "merging"
+                        ? "Merging formats\u2026"
+                        : (modelData.speed || "Waiting\u2026")
+                      color: Qt.darker(root.foreground, 1.4)
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                    }
+
+                    Text {
+                      id: etaText
+                      anchors.right: parent.right
+                      text: modelData.eta ? "ETA " + modelData.eta : ""
+                      color: Qt.darker(root.foreground, 1.4)
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
                     }
                   }
                 }
               }
-
-              // Progress bar
-              Rectangle {
-                width: parent.width
-                height: Style.space(4)
-                radius: height / 2
-                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
-
-                Rectangle {
-                  width: Math.max(height, parent.width * (modelData.progress / 100))
-                  height: parent.height
-                  radius: parent.radius
-                  color: root.activeColor
-
-                  Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
-                }
-              }
             }
           }
-        }
-      }
 
-      // History section
-      Column {
-        visible: root.installed && root.historyItems.length > 0
-        width: parent.width
-        spacing: Style.space(8)
-
-        Rectangle {
-          width: parent.width
-          height: historyHeader.implicitHeight + Style.space(12)
-          radius: Style.space(6)
-          color: "transparent"
-
-          Row {
-            id: historyHeader
-            anchors.fill: parent
-            anchors.margins: Style.space(6)
+          // History section
+          Column {
+            visible: root.installed && root.historyCount > 0
+            width: parent.width
             spacing: Style.space(8)
 
             Text {
+              width: parent.width
               // FIX: icon below
-              text: "\uf1da History (" + root.historyItems.length + ")"
+              text: "\uf1da History (" + root.historyCount + ")"
               color: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
               font.bold: true
-              anchors.verticalCenter: parent.verticalCenter
             }
 
-            Item { width: parent.width - clearHistoryBtn.width - historyToggle.width - historyHeader.children[0].implicitWidth - parent.spacing * 3; height: 1 }
-
-            Rectangle {
-              id: clearHistoryBtn
-              width: Style.space(22)
-              height: Style.space(22)
-              radius: Style.space(4)
-              color: clearHistoryArea.containsMouse
-                ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.2)
-                : "transparent"
-              anchors.verticalCenter: parent.verticalCenter
-
-              Text {
-                anchors.centerIn: parent
-                // FIX: icon below
-                text: "\uf1f8"
-                color: Color.urgent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-              }
+            CursorSurface {
+              width: parent.width
+              height: Style.space(34)
+              foreground: root.foreground
+              accent: root.activeColor
+              hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === 0
 
               MouseArea {
-                id: clearHistoryArea
                 anchors.fill: parent
                 hoverEnabled: true
+                onContainsMouseChanged: if (containsMouse) root.focusSectionAt("history", 0)
                 onClicked: {
-                  if (ytdlService) ytdlService.clearHistory()
+                  root.focusSectionAt("history", 0)
+                  root.showHistory = !root.showHistory
                 }
               }
-            }
 
-            Rectangle {
-              id: historyToggle
-              width: Style.space(22)
-              height: Style.space(22)
-              radius: Style.space(4)
-              color: historyToggleArea.containsMouse
-                ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
-                : "transparent"
-              anchors.verticalCenter: parent.verticalCenter
-
-              Text {
-                anchors.centerIn: parent
-                text: root.showHistory ? "\uf077" : "\uf078"
-                color: root.foreground
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-              }
-
-              MouseArea {
-                id: historyToggleArea
+              RowLayout {
                 anchors.fill: parent
-                hoverEnabled: true
-                onClicked: root.showHistory = !root.showHistory
-              }
-            }
-          }
-        }
-
-        Repeater {
-          model: root.showHistory ? root.historyItems : []
-
-          Rectangle {
-            width: parent.width
-            height: historyRow.implicitHeight + Style.space(12)
-            radius: Style.space(6)
-            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.03)
-            border.width: 1
-            border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-
-            Row {
-              id: historyRow
-              anchors.fill: parent
-              anchors.margins: Style.space(6)
-              spacing: Style.space(6)
-
-              Text {
-                // FIX: icon below
-                text: modelData.status === "done" ? "\uf00c" : modelData.status === "error" ? "\uf00d" : "\uf016"
-                color: modelData.status === "done" ? "#4ade80" : modelData.status === "error" ? Color.urgent : Qt.darker(root.foreground, 1.4)
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-                anchors.verticalCenter: parent.verticalCenter
-              }
-
-              Column {
-                width: parent.width - parent.spacing * 2 - actionRow.width
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: Style.space(2)
+                anchors.margins: Style.space(6)
+                spacing: Style.space(8)
 
                 Text {
-                  width: parent.width
-                  text: modelData.title || "Unknown"
+                  Layout.fillWidth: true
+                  text: root.showHistory ? "Hide completed" : "Show completed"
                   color: root.foreground
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  font.bold: true
-                  elide: Text.ElideRight
-                  maximumLineCount: 1
-                }
-
-                Text {
-                  width: parent.width
-                  text: {
-                    if (modelData.status === "done") return "Completed"
-                    if (modelData.status === "error") return modelData.error || "Download failed"
-                    if (modelData.status === "cancelled") return "Cancelled"
-                    return modelData.status
-                  }
-                  color: Qt.darker(root.foreground, 1.4)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
                   elide: Text.ElideRight
-                  maximumLineCount: 1
+                }
+
+                PanelActionButton {
+                  // FIX: icon below
+                  iconText: "\uf1f8"
+                  tooltipText: "Clear history"
+                  foreground: root.foreground
+                  hoverColor: Color.urgent
+                  fontFamily: root.fontFamily
+                  fontSize: Style.font.bodySmall
+                  onClicked: {
+                    if (ytdlService) ytdlService.clearHistory()
+                  }
+                }
+
+                PanelActionButton {
+                  // FIX: icon below
+                  iconText: root.showHistory ? "\uf077" : "\uf078"
+                  tooltipText: root.showHistory ? "Hide history" : "Show history"
+                  foreground: root.foreground
+                  fontFamily: root.fontFamily
+                  fontSize: Style.font.bodySmall
+                  onClicked: {
+                    root.showHistory = !root.showHistory
+                    root.selectedIndex = 0
+                  }
                 }
               }
+            }
 
-              Row {
-                id: actionRow
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: Style.space(4)
+            Repeater {
+              id: historyRepeater
+              model: root.showHistory ? root.historyItems : []
 
-                Rectangle {
-                  visible: modelData.status === "done" && modelData.filepath
-                  width: Style.space(24)
-                  height: Style.space(24)
-                  radius: Style.space(4)
-                  color: playItemArea.containsMouse
-                    ? Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.2)
-                    : "transparent"
+              delegate: CursorSurface {
+                width: parent.width
+                height: histBody.implicitHeight + Style.space(12)
+                foreground: root.foreground
+                accent: root.activeColor
+                hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === index + 1
 
-                  Text {
-                    anchors.centerIn: parent
-                    // FIX: icon below
-                    text: "\uf04b"
-                    color: root.activeColor
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                  }
-
-                  MouseArea {
-                    id: playItemArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: { if (ytdlService) ytdlService.playFile(modelData.filepath) }
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("history", index + 1)
+                  onClicked: {
+                    root.focusSectionAt("history", index + 1)
+                    if (modelData.status === "done") {
+                      if (ytdlService) ytdlService.playFile(modelData.filepath)
+                    } else if (modelData.status === "error" || modelData.status === "cancelled") {
+                      if (ytdlService) ytdlService.retryDownload(modelData)
+                    }
                   }
                 }
 
-                Rectangle {
-                  visible: modelData.status === "done" && modelData.filepath
-                  width: Style.space(24)
-                  height: Style.space(24)
-                  radius: Style.space(4)
-                  color: folderItemArea.containsMouse
-                    ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
-                    : "transparent"
+                RowLayout {
+                  id: histBody
+                  anchors.fill: parent
+                  anchors.margins: Style.space(6)
+                  spacing: Style.space(6)
 
                   Text {
-                    anchors.centerIn: parent
+                    Layout.alignment: Qt.AlignVCenter
                     // FIX: icon below
-                    text: "\uf07b"
-                    color: root.foreground
+                    text: modelData.status === "done" ? "\uf00c"
+                      : modelData.status === "error" ? "\uf00d"
+                      : modelData.status === "cancelled" ? "\uf127"
+                      : "\uf016"
+                    color: modelData.status === "done" ? "#4ade80"
+                      : modelData.status === "error" ? Color.urgent
+                      : Qt.darker(root.foreground, 1.4)
                     font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
+                    font.pixelSize: Style.font.body
                   }
 
-                  MouseArea {
-                    id: folderItemArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: { if (ytdlService) ytdlService.openFolder(modelData.filepath) }
-                  }
-                }
+                  Column {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: Style.space(2)
 
-                Rectangle {
-                  visible: modelData.status === "error" || modelData.status === "cancelled"
-                  width: Style.space(24)
-                  height: Style.space(24)
-                  radius: Style.space(4)
-                  color: retryItemArea.containsMouse
-                    ? Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.2)
-                    : "transparent"
+                    Text {
+                      width: parent.width
+                      text: modelData.title || "Unknown"
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.bodySmall
+                      font.bold: true
+                      elide: Text.ElideRight
+                      maximumLineCount: 1
+                    }
 
-                  Text {
-                    anchors.centerIn: parent
-                    // FIX: icon below
-                    text: "\uf021"
-                    color: root.activeColor
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                  }
-
-                  MouseArea {
-                    id: retryItemArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: { if (ytdlService) ytdlService.retryDownload(modelData) }
-                  }
-                }
-
-                Rectangle {
-                  width: Style.space(24)
-                  height: Style.space(24)
-                  radius: Style.space(4)
-                  color: removeItemArea.containsMouse
-                    ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.2)
-                    : "transparent"
-
-                  Text {
-                    anchors.centerIn: parent
-                    // FIX: icon below
-                    text: "\uf00d"
-                    color: Color.urgent
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
+                    Text {
+                      width: parent.width
+                      text: {
+                        if (modelData.status === "done") return "Completed"
+                        if (modelData.status === "error") return modelData.error || "Download failed"
+                        if (modelData.status === "cancelled") return "Cancelled"
+                        return modelData.status
+                      }
+                      color: Qt.darker(root.foreground, 1.4)
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      elide: Text.ElideRight
+                      maximumLineCount: 1
+                    }
                   }
 
-                  MouseArea {
-                    id: removeItemArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: { if (ytdlService) ytdlService.removeHistoryItem(modelData.id) }
+                  Row {
+                    id: actions
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: Style.space(4)
+
+                    PanelActionButton {
+                      visible: modelData.status === "done" && modelData.filepath
+                      // FIX: icon below
+                      iconText: "\uf04b"
+                      tooltipText: "Play"
+                      foreground: root.foreground
+                      hoverColor: root.activeColor
+                      fontFamily: root.fontFamily
+                      fontSize: Style.font.bodySmall
+                      onClicked: {
+                        if (ytdlService) ytdlService.playFile(modelData.filepath)
+                      }
+                    }
+
+                    PanelActionButton {
+                      visible: modelData.status === "done" && modelData.filepath
+                      // FIX: icon below
+                      iconText: "\uf07b"
+                      tooltipText: "Open folder"
+                      foreground: root.foreground
+                      fontFamily: root.fontFamily
+                      fontSize: Style.font.bodySmall
+                      onClicked: {
+                        if (ytdlService) ytdlService.openFolder(modelData.filepath)
+                      }
+                    }
+
+                    PanelActionButton {
+                      visible: modelData.status === "error" || modelData.status === "cancelled"
+                      // FIX: icon below
+                      iconText: "\uf021"
+                      tooltipText: "Retry"
+                      foreground: root.foreground
+                      hoverColor: root.activeColor
+                      fontFamily: root.fontFamily
+                      fontSize: Style.font.bodySmall
+                      onClicked: {
+                        if (ytdlService) ytdlService.retryDownload(modelData)
+                      }
+                    }
+
+                    PanelActionButton {
+                      // FIX: icon below
+                      iconText: "\uf00d"
+                      tooltipText: "Remove from history"
+                      foreground: root.foreground
+                      hoverColor: Color.urgent
+                      fontFamily: root.fontFamily
+                      fontSize: Style.font.bodySmall
+                      onClicked: {
+                        if (ytdlService) ytdlService.removeHistoryItem(modelData.dwnId)
+                      }
+                    }
                   }
                 }
               }
             }
           }
-        }
-      }
 
-      // Empty state
-      Column {
-        visible: root.installed && root.activeDownloads.length === 0 && root.historyItems.length === 0
-        width: parent.width
-        spacing: Style.space(10)
+          // Empty state
+          Column {
+            visible: root.installed && root.activeCount === 0 && root.historyCount === 0
+            width: parent.width
+            spacing: Style.space(10)
 
-        Item {
-          width: parent.width
-          implicitHeight: Style.space(48)
+            Item {
+              width: parent.width
+              implicitHeight: Style.space(48)
 
-          Text {
-            anchors.centerIn: parent
-            // FIX: icon below
-            text: "\uf381"
-            color: Qt.darker(root.foreground, 1.4)
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.display
-            opacity: 0.4
+              Text {
+                anchors.centerIn: parent
+                // FIX: icon below
+                text: "\uf381"
+                color: Qt.darker(root.foreground, 1.4)
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.display
+                opacity: 0.4
+              }
+            }
+
+            Text {
+              width: parent.width
+              text: "Paste a YouTube URL above to start downloading."
+              color: Qt.darker(root.foreground, 1.4)
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+              horizontalAlignment: Text.AlignHCenter
+              wrapMode: Text.WordWrap
+            }
           }
-        }
-
-        Text {
-          width: parent.width
-          text: "Paste a YouTube URL above to start downloading."
-          color: Qt.darker(root.foreground, 1.4)
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.body
-          horizontalAlignment: Text.AlignHCenter
-          wrapMode: Text.WordWrap
         }
       }
     }
