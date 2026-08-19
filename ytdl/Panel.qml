@@ -531,14 +531,6 @@ Panel {
                       maximumLineCount: 1
                     }
 
-                    Text {
-                      text: modelData.progress > 0 ? Math.round(modelData.progress) + "%" : (modelData.status === "merging" ? "\u2026" : "")
-                      color: root.activeColor
-                      font.family: root.fontFamily
-                      font.pixelSize: Style.font.caption
-                      font.bold: true
-                    }
-
                     PanelActionButton {
                       id: cancelBtn
                       // FIX: icon below

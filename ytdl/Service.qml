@@ -89,7 +89,14 @@ Item {
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
       if (d.dwnId === id) {
-        for (var k in props) d[k] = props[k]
+        for (var k in props) {
+          // yt-dlp opens fragmented streams with a placeholder line of
+          // "100.0% of ~1.00KiB" before the real total is known, then reports
+          // the true (lower) percentage. Ignore it and clamp so the bar never
+          // regresses; the real 100% is set by the exit handler.
+          if (k === "progress" && (props[k] >= 100 || props[k] < d.progress)) continue
+          d[k] = props[k]
+        }
         downloadsUpdated()
         return
       }
