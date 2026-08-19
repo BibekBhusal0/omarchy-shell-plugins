@@ -118,3 +118,13 @@ omarchy plugin remove bibek.focusd
 Bar widget and panel design adapted from [Omadoro](https://github.com/brianblakely/omadoro) by Brian Blakely, licensed under the MIT License.
 
 This plugin is licensed under the [MIT License](../LICENSE).
+
+## Others
+
+Here are my other Omarchy plugins:
+
+- [Obsidian Search](https://github.com/BibekBhusal0/omarchy-obsidian-search) - fuzzy-search your Obsidian vault
+- [Readest](https://github.com/BibekBhusal0/omarchy-readest) - fuzzy-search your Readest library
+- [yt-dlp](https://github.com/BibekBhusal0/omarchy-ytdl) - video downloads with progress and history
+
+Please give a star if you find them useful!

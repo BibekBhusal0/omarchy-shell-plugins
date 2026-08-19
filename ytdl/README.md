@@ -74,3 +74,13 @@ omarchy plugin remove bibek.ytdl
 Download logic based on the yt-dlp docs on exporting YouTube cookies (https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies) and on the Quickshell `Process` / `IpcHandler` patterns from the omarchy-aria2 reference repo.
 
 This plugin is licensed under the [MIT License](../LICENSE).
+
+## Others
+
+Here are my other Omarchy plugins:
+
+- [Focusd](https://github.com/BibekBhusal0/omarchy-focusd) - pomodoro timer with streak, history and daily goal
+- [Obsidian Search](https://github.com/BibekBhusal0/omarchy-obsidian-search) - fuzzy-search your Obsidian vault
+- [Readest](https://github.com/BibekBhusal0/omarchy-readest) - fuzzy-search your Readest library
+
+Please give a star if you find them useful!

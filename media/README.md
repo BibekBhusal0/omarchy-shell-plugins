@@ -47,9 +47,9 @@ The bar widget appears automatically while something is playing:
 The popup shows:
 
 - **Album art** with track title, artist, and album
-- **Progress bar** — click or drag to seek; shows elapsed and total time. Hidden when the player doesn't expose position/length
-- **Transport controls** — shuffle, previous, play/pause, next, repeat (shuffle/repeat only shown when supported)
-- **Source list** — click to switch active media source (pauses the previous, plays the selected)
+- **Progress bar** - click or drag to seek; shows elapsed and total time. Hidden when the player doesn't expose position/length
+- **Transport controls** - shuffle, previous, play/pause, next, repeat (shuffle/repeat only shown when supported)
+- **Source list** - click to switch active media source (pauses the previous, plays the selected)
 
 ### IPC
 
@@ -85,3 +85,14 @@ omarchy plugin remove bibek.media
 Bar widget and service adapted from the built-in `omarchy.media` by the Omarchy team.
 
 This plugin is licensed under the [MIT License](../LICENSE).
+
+## Others
+
+Here are my other Omarchy plugins:
+
+- [Focusd](https://github.com/BibekBhusal0/omarchy-focusd) - pomodoro timer with streak, history and daily goal
+- [Obsidian Search](https://github.com/BibekBhusal0/omarchy-obsidian-search) - fuzzy-search your Obsidian vault
+- [Readest](https://github.com/BibekBhusal0/omarchy-readest) - fuzzy-search your Readest library
+- [yt-dlp](https://github.com/BibekBhusal0/omarchy-ytdl) - video downloads with progress and history
+
+Please give a star if you find them useful!
