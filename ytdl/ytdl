@@ -156,7 +156,7 @@ check)
   cleanup)
     # Remove yt-dlp leftovers after a cancelled/failed download: the main
     # ".part" plus any fragment parts and the ".ytdl" info file.
-    BASE="$2"
+    BASE="$1"
     case "$BASE" in
       "~/"*) BASE="$HOME/${BASE#\~/}" ;;
       "~"*) BASE="$HOME/${BASE#\~}" ;;
