@@ -469,7 +469,7 @@ Panel {
 
             Text {
               width: parent.width
-              text: "\uf381 Active Downloads (" + root.activeCount + ")"
+              text: " Active Downloads (" + root.activeCount + ")"
               color: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
