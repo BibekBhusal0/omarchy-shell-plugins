@@ -696,19 +696,6 @@ Panel {
                     spacing: Style.space(4)
 
                     PanelActionButton {
-                      visible: modelData.status === "done" && modelData.filepath
-                      iconText: ""
-                      tooltipText: "Play"
-                      foreground: root.foreground
-                      hoverColor: root.activeColor
-                      fontFamily: root.fontFamily
-                      fontSize: Style.font.bodySmall
-                      onClicked: {
-                        if (ytdlService) ytdlService.playFile(modelData.filepath)
-                      }
-                    }
-
-                    PanelActionButton {
                       visible: modelData.status === "error" || modelData.status === "cancelled"
                       iconText: ""
                       tooltipText: "Retry"
@@ -718,6 +705,19 @@ Panel {
                       fontSize: Style.font.bodySmall
                       onClicked: {
                         if (ytdlService) ytdlService.retryDownload(modelData)
+                      }
+                    }
+
+                    PanelActionButton {
+                      visible: modelData.status === "done"
+                      iconText: ""
+                      tooltipText: "Delete file"
+                      foreground: root.foreground
+                      hoverColor: Color.urgent
+                      fontFamily: root.fontFamily
+                      fontSize: Style.font.bodySmall
+                      onClicked: {
+                        if (ytdlService) ytdlService.deleteHistoryItem(modelData.dwnId)
                       }
                     }
 

@@ -282,6 +282,7 @@ Item {
           proc.downloadId = -1
           if (proc.running) proc.running = false
         }
+        if (d.filepath) Quickshell.execDetached([scriptPath, "cleanup", d.filepath])
         d.status = "cancelled"
         d.progress = 0
         d.procIdx = -1
@@ -307,6 +308,16 @@ Item {
     history = removeById(history, id)
     root.persistHistory()
     historyUpdated()
+  }
+
+  function deleteHistoryItem(id) {
+    for (var i = 0; i < history.length; i++) {
+      if (history[i].dwnId === id && history[i].filepath) {
+        Quickshell.execDetached(["rm", "-f", history[i].filepath])
+        break
+      }
+    }
+    root.removeHistoryItem(id)
   }
 
   // Drop history entries whose downloaded file has been deleted from disk.
@@ -376,6 +387,7 @@ Item {
         } else if (d.status !== "cancelled") {
           d.status = "error"
           if (!d.error) d.error = "yt-dlp exited with code " + exitCode
+          if (d.filepath) Quickshell.execDetached([scriptPath, "cleanup", d.filepath])
         }
         d.procIdx = -1
         downloads = removeById(downloads, id)

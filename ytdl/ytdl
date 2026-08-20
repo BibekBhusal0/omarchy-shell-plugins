@@ -140,9 +140,10 @@ check)
     ;;
 
   prune-missing)
-    # Print a JSON array of history filepaths that no longer exist on disk so
-    # the service can drop them from the panel. Leaves the history file alone.
-    jq -r '.[] | select((.filepath // "") != "") | .filepath' "$1" |
+    # Print a JSON array of filepaths of completed downloads that no longer
+    # exist on disk so the service can drop them from the panel. Cancelled and
+    # failed downloads stay in history even without a file. Leaves the file alone.
+    jq -r '.[] | select(.status == "done") | select((.filepath // "") != "") | .filepath' "$1" |
     while IFS= read -r fp; do
       case "$fp" in
         "~/"*) fp="$HOME/${fp#\~/}" ;;
@@ -150,6 +151,17 @@ check)
       esac
       [ -f "$fp" ] || printf '%s\n' "$fp"
     done | jq -R . | jq -sc .
+    ;;
+
+  cleanup)
+    # Remove yt-dlp leftovers after a cancelled/failed download: the main
+    # ".part" plus any fragment parts and the ".ytdl" info file.
+    BASE="$2"
+    case "$BASE" in
+      "~/"*) BASE="$HOME/${BASE#\~/}" ;;
+      "~"*) BASE="$HOME/${BASE#\~}" ;;
+    esac
+    [ -z "$BASE" ] || rm -f "${BASE}.part"* "${BASE}.ytdl" "${BASE}.info.json"
     ;;
 
   *)
