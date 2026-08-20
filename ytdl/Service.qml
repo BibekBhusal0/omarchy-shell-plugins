@@ -11,6 +11,7 @@ Item {
   property bool installed: false
   property bool checkingInstallation: true
   property bool installing: false
+  property bool panelOpen: false
   property string clipboardUrl: ""
   property string lastDetectedUrl: ""
 
@@ -529,20 +530,21 @@ Item {
     }
   }
 
-  // Clipboard polling
+  // Clipboard polling (only while the panel is open)
   property string _clipboardBuf: ""
+
+  function pollClipboard() {
+    if (clipboardProc.running) return
+    root._clipboardBuf = ""
+    clipboardProc.running = true
+  }
 
   Timer {
     id: clipboardTimer
     interval: 2000
     repeat: true
-    running: root.installed && !root.installing
-    onTriggered: {
-      if (!clipboardProc.running) {
-        root._clipboardBuf = ""
-        clipboardProc.running = true
-      }
-    }
+    running: root.installed && !root.installing && root.panelOpen
+    onTriggered: root.pollClipboard()
   }
 
   Process {

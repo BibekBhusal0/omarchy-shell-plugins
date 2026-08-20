@@ -48,6 +48,13 @@ Panel {
       urlInput.text = inputUrl
   }
 
+  onOpenedChanged: {
+    if (ytdlService) {
+      ytdlService.panelOpen = root.opened
+      if (root.opened) ytdlService.pollClipboard()
+    }
+  }
+
   function filterActive(list) {
     var r = []
     for (var i = 0; i < list.length; i++)
