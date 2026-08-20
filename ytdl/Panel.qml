@@ -386,7 +386,10 @@ Panel {
                 hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 0
                 onAccepted: root.submitUrl()
                 onHoveredChanged: if (hovered) root.focusSectionAt("input", 0)
-                onTextChanged: root.inputUrl = text
+                onTextChanged: {
+                  root.inputUrl = text
+                  if (text !== root.clipboardUrl) root.clipboardUrl = ""
+                }
                 Keys.onEscapePressed: root.focusPanel()
               }
 
