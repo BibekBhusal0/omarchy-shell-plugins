@@ -51,7 +51,10 @@ Panel {
   onOpenedChanged: {
     if (ytdlService) {
       ytdlService.panelOpen = root.opened
-      if (root.opened) ytdlService.pollClipboard()
+      if (root.opened) {
+        ytdlService.pollClipboard()
+        ytdlService.pruneMissing()
+      }
     }
   }
 

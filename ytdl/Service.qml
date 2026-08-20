@@ -162,7 +162,6 @@ Item {
         if (Array.isArray(parsed) && parsed.length > 0) {
           root.history = root.historyFromJSON(parsed)
           root.historyUpdated()
-          root.pruneMissing()
         }
       } catch (e) { /* corrupt state file, start with empty history */ }
     }
@@ -343,14 +342,6 @@ Item {
         } catch (e) { /* malformed prune output, keep history as-is */ }
       }
     }
-  }
-
-  Timer {
-    id: pruneTimer
-    interval: 60000
-    repeat: true
-    running: true
-    onTriggered: root.pruneMissing()
   }
 
   function removeById(arr, id) {
