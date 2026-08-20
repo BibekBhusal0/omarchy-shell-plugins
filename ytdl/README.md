@@ -78,7 +78,9 @@ omarchy plugin remove bibek.ytdl
 
 ## Credits
 
-Download logic based on the yt-dlp docs on exporting YouTube cookies (https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies) and on the Quickshell `Process` / `IpcHandler` patterns from the omarchy-aria2 reference repo.
+Download and panel logic based on the [omarchy-aria2](https://github.com/rawritude/omarchy-aria2) reference plugin (MIT).
+
+Cookie export follows the [yt-dlp docs on exporting YouTube cookies](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies) (Unlicense).
 
 This plugin is licensed under the [MIT License](../LICENSE).
 
