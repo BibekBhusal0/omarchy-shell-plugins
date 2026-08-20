@@ -41,6 +41,15 @@ Item {
   property string _playlistQuality: "1080p"
   property string _playlistError: ""
 
+  // "Playlist detected" preview: name and video count for URLs carrying a
+  // `list=` param, resolved lazily from the panel input.
+  property string playlistInfoUrl: ""
+  property string playlistInfoName: ""
+  property int playlistInfoCount: 0
+  property bool playlistInfoLoading: false
+  property bool playlistInfoError: false
+  property int _playlistInfoReq: 0
+
   property var history: []
   readonly property int historyCount: history.length
 
@@ -214,10 +223,12 @@ Item {
     return /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|playlist\?list=)|youtu\.be\/)[\w-]+/.test(text)
   }
 
-  // Any URL carrying a `list=` param is treated as a playlist (covers both
-  // `playlist?list=...` and watch URLs copied from a playlist page).
+  // A pure playlist URL (no video id) downloads the whole playlist. Watch URLs
+  // copied from a playlist page (v=...&list=...) download just that video; the
+  // "Playlist detected" panel section offers the playlist separately.
   function isPlaylistUrl(url) {
-    return /[?&]list=/.test(url)
+    if (!/[?&]list=/.test(url)) return false
+    return !root.extractVideoId(url)
   }
 
   function updateDownload(id, props) {
@@ -372,6 +383,38 @@ Item {
     playlistProc.downloadId = id
     playlistProc.command = [scriptPath, "playlist-items", url, cookiesBrowser, extraArgs]
     playlistProc.running = true
+  }
+
+  // Resolve a playlist's title and video count for the "Playlist detected"
+  // panel preview. Debounced by the panel; stale in-flight fetches are dropped
+  // via a request counter, so a fast retype can't surface an old result.
+  function fetchPlaylistInfo(url) {
+    url = cleanUrl(url)
+    // Only video URLs copied from a playlist page (v=...&list=...) need the
+    // preview; a bare playlist URL downloads the whole playlist via the main
+    // button already, so there is nothing to surface.
+    if (!url || !/[?&]list=/.test(url) || !root.extractVideoId(url)) {
+      root.clearPlaylistInfo()
+      return
+    }
+    root._playlistInfoReq++
+    if (playlistInfoProc.running) playlistInfoProc.running = false
+    playlistInfoProc._req = root._playlistInfoReq
+    playlistInfoProc.command = [scriptPath, "playlist-info", url, cookiesBrowser, extraArgs]
+    playlistInfoProc.running = true
+    root.playlistInfoUrl = url
+    root.playlistInfoName = ""
+    root.playlistInfoCount = 0
+    root.playlistInfoLoading = true
+    root.playlistInfoError = false
+  }
+
+  function clearPlaylistInfo() {
+    root.playlistInfoUrl = ""
+    root.playlistInfoName = ""
+    root.playlistInfoCount = 0
+    root.playlistInfoLoading = false
+    root.playlistInfoError = false
   }
 
   function retryDownload(item) {
@@ -605,6 +648,35 @@ Item {
     titleProc._fetchId = id
     titleProc.command = [scriptPath, "title", url, cookiesBrowser, extraArgs]
     titleProc.running = true
+  }
+
+  // Playlist metadata fetch for the "Playlist detected" panel preview. The
+  // request counter in `_req` ties results to the fetch that started them.
+  Process {
+    id: playlistInfoProc
+    property int _req: -1
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        if (playlistInfoProc._req !== root._playlistInfoReq) return
+        var parts = String(this.text || "").trim().split("\t")
+        if (parts.length >= 2 && parts[0]) {
+          root.playlistInfoName = parts[0]
+          root.playlistInfoCount = parseInt(parts[1], 10) || 0
+          root.playlistInfoError = false
+        } else {
+          root.playlistInfoError = true
+        }
+        root.playlistInfoLoading = false
+      }
+    }
+    onExited: function(exitCode) {
+      if (playlistInfoProc._req !== root._playlistInfoReq) return
+      if (exitCode !== 0) {
+        root.playlistInfoError = true
+        root.playlistInfoLoading = false
+      }
+    }
   }
 
   // Playlist enumeration process. Flat-resolves the playlist to a JSON array
