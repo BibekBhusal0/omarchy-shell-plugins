@@ -70,7 +70,6 @@ Item {
 
   readonly property string scriptPath: Qt.resolvedUrl("ytdl").toString().replace(/^file:\/\//, "")
 
-  // Download entry factory.
   Component {
     id: downloadComp
     QtObject {
@@ -980,7 +979,6 @@ Item {
     }
   }
 
-  // Installation check
   function checkInstallation() {
     if (whichProc.running) return
     root.checkingInstallation = true

@@ -335,7 +335,6 @@ Panel {
           width: parent.width
           spacing: Style.space(16)
 
-          // Not installed state
           Column {
             visible: !root.installed && root.ytdlService && !root.ytdlService.checkingInstallation
             width: parent.width
@@ -409,7 +408,6 @@ Panel {
             }
           }
 
-          // URL input section (when installed)
           Column {
             visible: root.installed
             width: parent.width
@@ -576,7 +574,6 @@ Panel {
             }
           }
 
-          // Active downloads
           Column {
             visible: root.installed && root.activeCount > 0
             width: parent.width
@@ -819,7 +816,6 @@ Panel {
             }
           }
 
-          // History section
           Column {
             visible: root.installed && root.historyCount > 0
               && (!ytdlService || ytdlService.enableHistory)
@@ -983,7 +979,6 @@ Panel {
             }
           }
 
-          // Empty state
           Column {
             visible: root.installed && root.activeCount === 0 && root.historyCount === 0
             width: parent.width

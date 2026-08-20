@@ -25,7 +25,6 @@ trap '[ -n "$COOKIE_TMP" ] && rm -rf "$COOKIE_TMP"' EXIT
 # cookies and keep waiting on yt-dlp, surviving the cancel.
 trap '_kill_tree $$; exit 0' INT TERM
 
-# Resolve a --cookies-from-browser flag for the given browser name.
 cookies_flag() {
   BROWSER="$1"
   [ -z "$BROWSER" ] || [ "$BROWSER" = "none" ] && return 0
@@ -161,8 +160,7 @@ case "$CMD" in
     COOKIE_BROWSER="$2"
     EXTRA="$3"
     # Flat-resolve the playlist to id/title/url so the service can queue each
-    # video as its own sequential download. Also retries with cookies if the
-    # playlist tab itself hits bot detection.
+    # video as its own sequential download.
     # shellcheck disable=SC2086
     run_with_retry --flat-playlist --print "$(printf '%s\t%s\t%s' '%(id)s' '%(title)s' '%(url)s')" $EXTRA "$URL" |
       jq -R 'split("\t") | select(length == 3) | {id: .[0], title: .[1], url: .[2]}' |
@@ -185,8 +183,6 @@ check)
     ;;
 
   kill-tree)
-    # Kill the whole process tree under the given PID (used by the service on
-    # cancel; see the TERM/INT trap above for the signal path).
     _kill_tree "$1"
     kill -KILL "$1" 2>/dev/null
     ;;
