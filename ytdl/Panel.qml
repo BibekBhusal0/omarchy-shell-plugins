@@ -21,8 +21,8 @@ Panel {
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
   property string inputUrl: ""
+  property string clipboardUrl: ""
   property string selectedQuality: ytdlService ? ytdlService.selectedQuality : "1080p"
-  property bool inputAutoFilled: false
 
   // Keyboard cursor model: focusSection × selectedIndex.
   property string focusSection: "input"
@@ -30,18 +30,10 @@ Panel {
   property bool cursorActive: false
 
   readonly property bool installed: ytdlService ? ytdlService.installed : false
-  readonly property bool hasClipboardUrl: ytdlService && ytdlService.clipboardUrl !== ""
   readonly property int activeCount: ytdlService ? ytdlService.activeCount : 0
   readonly property var activeDownloads: ytdlService ? filterActive(ytdlService.downloads) : []
   readonly property int historyCount: ytdlService ? ytdlService.historyCount : 0
   readonly property var historyItems: ytdlService ? ytdlService.history : []
-
-  onHasClipboardUrlChanged: {
-    if (hasClipboardUrl && ytdlService) {
-      inputUrl = ytdlService.clipboardUrl
-      inputAutoFilled = true
-    }
-  }
 
   onInputUrlChanged: {
     if (inputUrl && urlInput.text !== inputUrl)
@@ -49,13 +41,8 @@ Panel {
   }
 
   onOpenedChanged: {
-    if (ytdlService) {
-      ytdlService.panelOpen = root.opened
-      if (root.opened) {
-        ytdlService.pollClipboard()
-        ytdlService.pruneMissing()
-      }
-    }
+    if (root.opened && ytdlService)
+      ytdlService.pruneMissing()
   }
 
   function filterActive(list) {
@@ -71,10 +58,9 @@ Panel {
     root.selectedIndex = 0
     root.cursorActive = false
     controller.show()
-    if (ytdlService) ytdlService.checkInstallation()
-    if (hasClipboardUrl && !inputUrl) {
-      inputUrl = ytdlService.clipboardUrl
-      inputAutoFilled = true
+    if (ytdlService) {
+      ytdlService.checkInstallation()
+      root.pasteClipboard()
     }
   }
 
@@ -93,11 +79,20 @@ Panel {
     return false
   }
 
+  function pasteClipboard() {
+    if (!ytdlService) return
+    ytdlService.checkClipboard(function(url) {
+      root.clipboardUrl = url
+      root.inputUrl = url
+      if (urlInput.text !== url) urlInput.text = url
+    })
+  }
+
   function submitUrl() {
     if (!ytdlService || !inputUrl) return
     ytdlService.startDownload(inputUrl, selectedQuality)
     inputUrl = ""
-    inputAutoFilled = false
+    urlInput.text = ""
   }
 
   function cycleQuality() {
@@ -373,16 +368,7 @@ Panel {
           Column {
             visible: root.installed
             width: parent.width
-            spacing: Style.space(10)
-
-            Text {
-              visible: root.hasClipboardUrl && root.inputAutoFilled
-              width: parent.width
-              text: " Link detected from clipboard"
-              color: root.activeColor
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-            }
+            spacing: Style.space(4)
 
             RowLayout {
               width: parent.width
@@ -400,10 +386,7 @@ Panel {
                 hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 0
                 onAccepted: root.submitUrl()
                 onHoveredChanged: if (hovered) root.focusSectionAt("input", 0)
-                onTextChanged: {
-                  root.inputUrl = text
-                  if (text) root.inputAutoFilled = false
-                }
+                onTextChanged: root.inputUrl = text
                 Keys.onEscapePressed: root.focusPanel()
               }
 
@@ -460,6 +443,15 @@ Panel {
                 }
                 onClicked: root.submitUrl()
               }
+            }
+
+            Text {
+              visible: root.clipboardUrl !== ""
+              width: parent.width
+              text: "URL detected from clipboard"
+              color: root.activeColor
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
             }
           }
 

@@ -11,9 +11,8 @@ Item {
   property bool installed: false
   property bool checkingInstallation: true
   property bool installing: false
-  property bool panelOpen: false
   property string clipboardUrl: ""
-  property string lastDetectedUrl: ""
+  property var _clipboardCallback: null
 
   // Downloads are QObjects mutated in place. The panel's Repeater binds to the
   // array reference, so it keeps its delegates across progress ticks and only
@@ -528,21 +527,14 @@ Item {
     }
   }
 
-  // Clipboard polling (only while the panel is open)
+  // One-shot clipboard read, run when the panel opens.
   property string _clipboardBuf: ""
 
-  function pollClipboard() {
+  function checkClipboard(callback) {
     if (clipboardProc.running) return
     root._clipboardBuf = ""
+    root._clipboardCallback = callback
     clipboardProc.running = true
-  }
-
-  Timer {
-    id: clipboardTimer
-    interval: 2000
-    repeat: true
-    running: root.installed && !root.installing && root.panelOpen
-    onTriggered: root.pollClipboard()
   }
 
   Process {
@@ -552,19 +544,21 @@ Item {
       onRead: function(data) { root._clipboardBuf += data }
     }
     onExited: function(exitCode) {
-      if (exitCode !== 0) return
+      var cb = root._clipboardCallback
+      root._clipboardCallback = null
+      if (exitCode !== 0) {
+        if (cb) cb("")
+        return
+      }
       var content = String(root._clipboardBuf || "").trim()
       root._clipboardBuf = ""
+      var url = ""
       if (root.isYouTubeUrl(content)) {
         var cleaned = content.match(/(https?:\/\/[^\s]+)/)
-        if (cleaned && cleaned[1] !== root.lastDetectedUrl) {
-          root.clipboardUrl = cleaned[1]
-          root.lastDetectedUrl = cleaned[1]
-        }
-      } else {
-        root.clipboardUrl = ""
-        root.lastDetectedUrl = ""
+        if (cleaned) url = cleaned[1]
       }
+      root.clipboardUrl = url
+      if (cb) cb(url)
     }
   }
 
