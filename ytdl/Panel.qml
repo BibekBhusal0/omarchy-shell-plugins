@@ -297,8 +297,7 @@ Panel {
 
               Text {
                 anchors.centerIn: parent
-                // FIX: icon below is the youtube play icon
-                text: "\uf16b"
+                text: ""
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.display + Style.space(8)
@@ -336,8 +335,7 @@ Panel {
               text: root.ytdlService && root.ytdlService.installing
                 ? "Installing yt-dlp\u2026"
                 : "Install yt-dlp"
-              // FIX: icon below is the download install icon
-              iconText: root.ytdlService && root.ytdlService.installing ? "" : "\uf487"
+              iconText: root.ytdlService && root.ytdlService.installing ? "" : ""
               iconSpinning: root.ytdlService && root.ytdlService.installing
               fontFamily: root.fontFamily
               fontSize: Style.font.body
@@ -370,8 +368,7 @@ Panel {
             Text {
               visible: root.hasClipboardUrl && root.inputAutoFilled
               width: parent.width
-              // FIX: icon below is the clock icon for clipboard detection
-              text: "\uf017 Link detected from clipboard"
+              text: " Link detected from clipboard"
               color: root.activeColor
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -436,8 +433,7 @@ Panel {
 
               Button {
                 id: downloadManualBtn
-                // FIX: icon below is the download arrow submit icon
-                iconText: "\uf381"
+                iconText: ""
                 tooltipText: "Download"
                 foreground: root.foreground
                 accent: root.activeColor
@@ -471,7 +467,6 @@ Panel {
 
             Text {
               width: parent.width
-              // FIX: icon below is the download arrow icon for active downloads
               text: "\uf381 Active Downloads (" + root.activeCount + ")"
               color: root.foreground
               font.family: root.fontFamily
@@ -520,8 +515,7 @@ Panel {
 
                     PanelActionButton {
                       id: cancelBtn
-                      // FIX: icon below is the x cancel icon
-                      iconText: "\uf00d"
+                      iconText: ""
                       tooltipText: "Cancel download"
                       foreground: root.foreground
                       hoverColor: Color.urgent
@@ -596,8 +590,7 @@ Panel {
 
               Text {
                 Layout.fillWidth: true
-                // FIX: icon below is the history clock icon
-                text: "\uf1da History (" + root.historyCount + ")"
+                text: " History (" + root.historyCount + ")"
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
@@ -606,8 +599,7 @@ Panel {
               }
 
               PanelActionButton {
-                // FIX: icon below is the eraser clear-history icon
-                iconText: "\uf1f8"
+                iconText: ""
                 tooltipText: "Clear history"
                 foreground: root.foreground
                 hoverColor: Color.urgent
@@ -652,11 +644,10 @@ Panel {
 
                   Text {
                     Layout.alignment: Qt.AlignVCenter
-                    // FIX: icon below is the status icon (check done, x error, ban cancelled, file default)
-                    text: modelData.status === "done" ? "\uf00c"
-                      : modelData.status === "error" ? "\uf00d"
-                      : modelData.status === "cancelled" ? "\uf127"
-                      : "\uf016"
+                    text: modelData.status === "done" ? ""
+                      : modelData.status === "error" ? ""
+                      : modelData.status === "cancelled" ? "󰜺"
+                      : ""
                     color: modelData.status === "done" ? "#4ade80"
                       : modelData.status === "error" ? Color.urgent
                       : Qt.darker(root.foreground, 1.4)
@@ -703,8 +694,7 @@ Panel {
 
                     PanelActionButton {
                       visible: modelData.status === "done" && modelData.filepath
-                      // FIX: icon below is the play icon
-                      iconText: "\uf04b"
+                      iconText: ""
                       tooltipText: "Play"
                       foreground: root.foreground
                       hoverColor: root.activeColor
@@ -717,8 +707,7 @@ Panel {
 
                     PanelActionButton {
                       visible: modelData.status === "error" || modelData.status === "cancelled"
-                      // FIX: icon below is the refresh retry icon
-                      iconText: "\uf021"
+                      iconText: ""
                       tooltipText: "Retry"
                       foreground: root.foreground
                       hoverColor: root.activeColor
@@ -730,8 +719,7 @@ Panel {
                     }
 
                     PanelActionButton {
-                      // FIX: icon below is the x remove-from-history icon
-                      iconText: "\uf00d"
+                      iconText: ""
                       tooltipText: "Remove from history"
                       foreground: root.foreground
                       hoverColor: Color.urgent
@@ -759,8 +747,7 @@ Panel {
 
               Text {
                 anchors.centerIn: parent
-                // FIX: icon below is the download arrow icon for the empty state
-                text: "\uf381"
+                text: ""
                 color: Qt.darker(root.foreground, 1.4)
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.display
