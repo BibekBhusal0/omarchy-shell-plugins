@@ -63,6 +63,18 @@ If yt-dlp fails with "Sign in to confirm you're not a bot", log into YouTube in 
 
 For fine-grained control, set `extraArgs` directly (e.g. `--cookies-from-browser chromium`).
 
+## Troubleshooting
+
+If a download fails, test yt-dlp directly in the terminal first:
+
+```bash
+yt-dlp -f "b[height<=1080]/b" "https://www.youtube.com/watch?v=..."
+```
+
+- If the yt-dlp CLI fails, do not open an issue here. Report it upstream at https://github.com/yt-dlp/yt-dlp/issues or ask on the yt-dlp Discord (https://discord.gg/H5MNcFW63r).
+- If the CLI works with different arguments, set them in the `extraArgs` setting above.
+- Only if the CLI works but the widget does not, open an issue in this repository.
+
 ## Uninstall
 
 ```bash
