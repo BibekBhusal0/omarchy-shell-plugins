@@ -141,6 +141,19 @@ case "$CMD" in
     # shellcheck disable=SC2086
     run_with_retry --no-playlist --print "%(title)s" --no-warnings $EXTRA "$URL"
     ;;
+
+  playlist-items)
+    URL="$1"
+    COOKIE_BROWSER="$2"
+    EXTRA="$3"
+    # Flat-resolve the playlist to id/title/url so the service can queue each
+    # video as its own sequential download. Also retries with cookies if the
+    # playlist tab itself hits bot detection.
+    # shellcheck disable=SC2086
+    run_with_retry --flat-playlist --print "$(printf '%s\t%s\t%s' '%(id)s' '%(title)s' '%(url)s')" $EXTRA "$URL" |
+      jq -R 'split("\t") | select(length == 3) | {id: .[0], title: .[1], url: .[2]}' |
+      jq -sc .
+    ;;
     
 check)
     command -v yt-dlp >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v sqlite3 >/dev/null 2>&1

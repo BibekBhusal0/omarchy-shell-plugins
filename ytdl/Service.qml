@@ -28,6 +28,13 @@ Item {
     return n
   }
 
+  // Playlist queue: each video becomes its own download entry, processed one
+  // at a time. `_playlistProcessing` is true while a queue is being drained.
+  property var _playlistQueue: []
+  property bool _playlistProcessing: false
+  property string _playlistQuality: "1080p"
+  property string _playlistError: ""
+
   property var history: []
   readonly property int historyCount: history.length
 
@@ -62,6 +69,8 @@ Item {
       property string filepath: ""
       property string error: ""
       property int procIdx: -1
+      property bool _playlistItem: false
+      property bool _playlistPlaceholder: false
     }
   }
 
@@ -195,7 +204,13 @@ Item {
   }
 
   function isYouTubeUrl(text) {
-    return /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]+/.test(text)
+    return /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|playlist\?list=)|youtu\.be\/)[\w-]+/.test(text)
+  }
+
+  // Any URL carrying a `list=` param is treated as a playlist (covers both
+  // `playlist?list=...` and watch URLs copied from a playlist page).
+  function isPlaylistUrl(url) {
+    return /[?&]list=/.test(url)
   }
 
   function updateDownload(id, props) {
@@ -229,9 +244,13 @@ Item {
     return -1
   }
 
-  function startDownload(url, quality) {
+  function startDownload(url, quality, isPlaylistItem, knownTitle) {
     url = cleanUrl(url)
     if (!url) return
+    if (!isPlaylistItem && root.isPlaylistUrl(url)) {
+      root.startPlaylist(url, quality)
+      return
+    }
 
     for (var i = 0; i < downloads.length; i++) {
       if (downloads[i].url === url && (downloads[i].status === "downloading" || downloads[i].status === "merging"))
@@ -251,8 +270,9 @@ Item {
     var d = downloadComp.createObject(root)
     d.dwnId = id
     d.url = url
-    d.title = extractVideoId(url) || url
+    d.title = knownTitle || extractVideoId(url) || url
     d.procIdx = procIdx
+    d._playlistItem = !!isPlaylistItem
 
     downloads = downloads.concat([d])
     downloadsUpdated()
@@ -265,6 +285,49 @@ Item {
     titleProc.targetId = id
     titleProc.command = [scriptPath, "title", url, cookiesBrowser, extraArgs]
     titleProc.running = true
+    root._dbg("started download id=" + id + " title=" + d.title + " proc=" + proc.objectName)
+  }
+
+  // Resolve a playlist to its individual videos, then queue them for
+  // one-at-a-time downloads. A placeholder entry gives feedback while the
+  // flat enumeration runs.
+  function startPlaylist(url, quality) {
+    root._dbg("startPlaylist url=" + url)
+    root._playlistQuality = quality || defaultQuality
+    root._playlistError = ""
+    var id = Date.now() + Math.floor(Math.random() * 1000)
+    var d = downloadComp.createObject(root)
+    d.dwnId = id
+    d.url = url
+    d.title = "Resolving playlist\u2026"
+    d.procIdx = -1
+    d._playlistPlaceholder = true
+
+    downloads = downloads.concat([d])
+    downloadsUpdated()
+
+    playlistProc.downloadId = id
+    playlistProc.command = [scriptPath, "playlist-items", url, cookiesBrowser, extraArgs]
+    playlistProc.running = true
+  }
+
+  // Start the next queued playlist video. Only called from playlist completion
+  // handlers, so playlist items always download strictly one after another.
+  function _pumpPlaylist() {
+    if (root._playlistQueue.length === 0) {
+      root._playlistProcessing = false
+      return
+    }
+    // One-at-a-time invariant: never start another playlist item while one is
+    // still downloading. Self-heals if a race ever left two in flight.
+    for (var i = 0; i < root.downloads.length; i++) {
+      var act = root.downloads[i]
+      if (act._playlistItem && (act.status === "downloading" || act.status === "merging"))
+        return
+    }
+    root._playlistProcessing = true
+    var item = root._playlistQueue.shift()
+    root.startDownload(item.url, item.quality, true, item.title)
   }
 
   function retryDownload(item) {
@@ -277,6 +340,14 @@ Item {
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
       if (d.dwnId === id) {
+        if (d._playlistItem || d._playlistPlaceholder) {
+          root._playlistQueue = []
+          root._playlistProcessing = false
+        }
+        if (d._playlistPlaceholder) {
+          if (playlistProc.running) playlistProc.running = false
+          playlistProc.downloadId = -1
+        }
         if (d.procIdx >= 0) {
           var proc = procAt(d.procIdx)
           proc.downloadId = -1
@@ -378,6 +449,7 @@ Item {
   }
 
   function onDownloadComplete(id, exitCode) {
+    root._dbg("onDownloadComplete id=" + id + " rc=" + exitCode + " dlCount=" + root.downloads.length)
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
       if (d.dwnId === id) {
@@ -399,6 +471,8 @@ Item {
           }
           historyUpdated()
         }
+        if (d._playlistItem && root._playlistProcessing)
+          Qt.callLater(root._pumpPlaylist)
         return
       }
     }
@@ -470,6 +544,70 @@ Item {
     }
   }
 
+  // Playlist enumeration process. Flat-resolves the playlist to a JSON array
+  // of {id, title, url}; each entry is then queued as its own download.
+  Process {
+    id: playlistProc
+    property var downloadId: -1
+    property string _errBuf: ""
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var id = playlistProc.downloadId
+        playlistProc.downloadId = -1
+        root._dbg("playlist stream finished id=" + id + " textlen=" + String(this.text || "").length)
+        if (id === -1) return
+        var items = []
+        var text = String(this.text || "").trim()
+        if (text) {
+          try {
+            var parsed = JSON.parse(text)
+            if (Array.isArray(parsed)) {
+              for (var i = 0; i < parsed.length; i++) {
+                var it = parsed[i] || {}
+                if (it.url) {
+                  items.push({ url: it.url, title: it.title || "", quality: root._playlistQuality })
+                }
+              }
+            }
+          } catch (e) { /* malformed enumeration output, treat as empty */ }
+        }
+        if (items.length === 0) {
+          // Resolution failed; surface the error on the placeholder entry.
+          var err = root._playlistError || "Could not resolve playlist"
+          for (var j = 0; j < root.downloads.length; j++) {
+            var d = root.downloads[j]
+            if (d.dwnId === id) {
+              d.status = "error"
+              d.error = err
+              root.downloads = root.removeById(root.downloads, id)
+              if (root.enableHistory) {
+                root.history = [d].concat(root.history)
+                root.persistHistory()
+              }
+              root.historyUpdated()
+              root.downloadsUpdated()
+              break
+            }
+          }
+        } else {
+          root.downloads = root.removeById(root.downloads, id)
+          root.downloadsUpdated()
+          for (var k = 0; k < items.length; k++)
+            root._playlistQueue.push(items[k])
+          root._pumpPlaylist()
+        }
+      }
+    }
+    stderr: SplitParser {
+      onRead: function(line) {
+        playlistProc._errBuf += line + "\n"
+        if (line.indexOf("ERROR") !== -1)
+          root._playlistError = line.replace(/^ERROR:\s*/, "")
+      }
+    }
+  }
+
   Process {
     id: dlProc0
     objectName: "dlProc0"
@@ -478,6 +616,7 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc0, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc0._errBuf += line + "\n" } }
     onExited: function(exitCode) {
+      root._dbg("dlProc0 exited rc=" + exitCode + " dwnId=" + downloadId)
       if (exitCode !== 0 && dlProc0._errBuf) {
         var errLines = String(dlProc0._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {
@@ -501,6 +640,7 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc1, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc1._errBuf += line + "\n" } }
     onExited: function(exitCode) {
+      root._dbg("dlProc1 exited rc=" + exitCode + " dwnId=" + downloadId)
       if (exitCode !== 0 && dlProc1._errBuf) {
         var errLines = String(dlProc1._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {
@@ -524,6 +664,7 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc2, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc2._errBuf += line + "\n" } }
     onExited: function(exitCode) {
+      root._dbg("dlProc2 exited rc=" + exitCode + " dwnId=" + downloadId)
       if (exitCode !== 0 && dlProc2._errBuf) {
         var errLines = String(dlProc2._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {

@@ -763,7 +763,7 @@ Panel {
 
             Text {
               width: parent.width
-              text: "Paste a YouTube URL above to start downloading."
+              text: "Paste a YouTube URL or playlist above to start downloading."
               color: Qt.darker(root.foreground, 1.4)
               font.family: root.fontFamily
               font.pixelSize: Style.font.body
