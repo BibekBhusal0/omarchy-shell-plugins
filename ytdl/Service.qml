@@ -36,6 +36,7 @@ Item {
   property string defaultQuality: "best"
   property string cookiesBrowser: "none"
   property string extraArgs: ""
+  property bool enableHistory: true
 
   // Persisted across shell restarts via a small state file.
   property string selectedQuality: "best"
@@ -77,6 +78,8 @@ Item {
       cookiesBrowser = settings.cookiesBrowser
     if (settings.extraArgs != null)
       extraArgs = settings.extraArgs
+    if (settings.enableHistory != null)
+      enableHistory = !!settings.enableHistory
   }
 
   function persistQuality() {
@@ -284,8 +287,10 @@ Item {
         d.progress = 0
         d.procIdx = -1
         downloads = removeById(downloads, id)
-        history = [d].concat(history)
-        root.persistHistory()
+        if (root.enableHistory) {
+          history = [d].concat(history)
+          root.persistHistory()
+        }
         downloadsUpdated()
         historyUpdated()
         return
@@ -377,8 +382,10 @@ Item {
         downloads = removeById(downloads, id)
         downloadsUpdated()
         if (d.status === "done" || d.status === "error") {
-          history = [d].concat(history)
-          root.persistHistory()
+          if (root.enableHistory) {
+            history = [d].concat(history)
+            root.persistHistory()
+          }
           historyUpdated()
         }
         return

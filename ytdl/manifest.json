@@ -22,7 +22,8 @@
       "downloadLocation": "~/Downloads/yt-dlp",
       "defaultQuality": "best",
       "cookiesBrowser": "none",
-      "extraArgs": ""
+      "extraArgs": "",
+      "enableHistory": true
     },
     "schema": [
       {
@@ -52,6 +53,13 @@
         "type": "string",
         "label": "Extra yt-dlp args",
         "description": "Extra arguments passed to every yt-dlp invocation, e.g. '--cookies-from-browser chromium' or '--socket-timeout 30'."
+      },
+      {
+        "key": "enableHistory",
+        "type": "boolean",
+        "label": "Enable download history",
+        "description": "Keep finished downloads in a history list with play, retry and remove actions.",
+        "defaultValue": true
       }
     ]
   }

@@ -585,6 +585,7 @@ Panel {
           // History section
           Column {
             visible: root.installed && root.historyCount > 0
+              && (!ytdlService || ytdlService.enableHistory)
             width: parent.width
             spacing: Style.space(8)
 
