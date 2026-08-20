@@ -32,6 +32,8 @@ Panel {
   readonly property bool installed: ytdlService ? ytdlService.installed : false
   readonly property int activeCount: ytdlService ? ytdlService.activeCount : 0
   readonly property var activeDownloads: ytdlService ? filterActive(ytdlService.downloads) : []
+  readonly property int queuedCount: ytdlService ? ytdlService.queuedCount : 0
+  readonly property var queuedDownloads: ytdlService ? filterQueued(ytdlService.downloads) : []
   readonly property int historyCount: ytdlService ? ytdlService.historyCount : 0
   readonly property var historyItems: ytdlService ? ytdlService.history : []
 
@@ -49,6 +51,14 @@ Panel {
     var r = []
     for (var i = 0; i < list.length; i++)
       if (list[i].status === "downloading" || list[i].status === "merging")
+        r.push(list[i])
+    return r
+  }
+
+  function filterQueued(list) {
+    var r = []
+    for (var i = 0; i < list.length; i++)
+      if (list[i].status === "queued")
         r.push(list[i])
     return r
   }
@@ -122,6 +132,7 @@ Panel {
     if (!root.installed && !(ytdlService && ytdlService.checkingInstallation)) s.push("install")
     if (root.installed) s.push("input")
     if (root.installed && root.activeCount > 0) s.push("downloads")
+    if (root.installed && root.queuedCount > 0) s.push("queue")
     if (root.installed && root.historyCount > 0) s.push("history")
     return s
   }
@@ -130,6 +141,7 @@ Panel {
     if (name === "install") return 1
     if (name === "input") return 3
     if (name === "downloads") return root.activeCount
+    if (name === "queue") return root.queuedCount
     if (name === "history") return root.historyCount
     return 0
   }
@@ -194,6 +206,9 @@ Panel {
     } else if (s === "downloads") {
       var d = root.activeDownloads[root.selectedIndex]
       if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+    } else if (s === "queue") {
+      var q = root.queuedDownloads[root.selectedIndex]
+      if (q && ytdlService) ytdlService.removeQueued(q.dwnId)
     } else if (s === "history") {
       var h = root.historyItems[root.selectedIndex]
       if (!h || !ytdlService) return
@@ -207,6 +222,9 @@ Panel {
     if (root.focusSection === "downloads") {
       var d = root.activeDownloads[root.selectedIndex]
       if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+    } else if (root.focusSection === "queue") {
+      var q = root.queuedDownloads[root.selectedIndex]
+      if (q && ytdlService) ytdlService.removeQueued(q.dwnId)
     } else if (root.focusSection === "history") {
       var h = root.historyItems[root.selectedIndex]
       if (h && ytdlService) ytdlService.removeHistoryItem(h.dwnId)
@@ -223,6 +241,8 @@ Panel {
     var item = null
     if (root.focusSection === "downloads" && root.selectedIndex >= 0 && activeRepeater.count > 0)
       item = activeRepeater.itemAt(root.selectedIndex)
+    else if (root.focusSection === "queue" && root.selectedIndex >= 0 && queueRepeater.count > 0)
+      item = queueRepeater.itemAt(root.selectedIndex)
     else if (root.focusSection === "history" && root.selectedIndex >= 0 && historyRepeater.count > 0)
       item = historyRepeater.itemAt(root.selectedIndex)
     if (!item) return
@@ -237,6 +257,15 @@ Panel {
       root.focusSection = "input"
       root.selectedIndex = 0
     } else if (root.focusSection === "downloads") {
+      root.clampIndex()
+    }
+  }
+
+  onQueuedCountChanged: {
+    if (root.queuedCount === 0 && root.focusSection === "queue" && root.cursorActive) {
+      root.focusSection = "input"
+      root.selectedIndex = 0
+    } else if (root.focusSection === "queue") {
       root.clampIndex()
     }
   }
@@ -470,13 +499,31 @@ Panel {
               color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
             }
 
-            Text {
+            RowLayout {
               width: parent.width
-              text: " Active Downloads (" + root.activeCount + ")"
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              font.bold: true
+              spacing: Style.space(8)
+
+              Text {
+                Layout.fillWidth: true
+                text: " Active Downloads (" + root.activeCount + ")"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                elide: Text.ElideRight
+              }
+
+              PanelActionButton {
+                iconText: "󰅙"
+                tooltipText: "Cancel all downloads"
+                foreground: root.foreground
+                hoverColor: Color.urgent
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: {
+                  if (ytdlService) ytdlService.cancelAll()
+                }
+              }
             }
 
             Repeater {
@@ -570,6 +617,112 @@ Panel {
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Queue section: downloads waiting for a free slot (max 3 parallel).
+          Column {
+            visible: root.installed && root.queuedCount > 0
+            width: parent.width
+            spacing: Style.space(8)
+
+            Rectangle {
+              width: parent.width
+              height: 1
+              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            }
+
+            RowLayout {
+              width: parent.width
+              spacing: Style.space(8)
+
+              Text {
+                Layout.fillWidth: true
+                text: "󰐑 Queue (" + root.queuedCount + ")"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                elide: Text.ElideRight
+              }
+
+              PanelActionButton {
+                iconText: ""
+                tooltipText: "Clear queue"
+                foreground: root.foreground
+                hoverColor: Color.urgent
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: {
+                  if (ytdlService) ytdlService.clearQueue()
+                }
+              }
+            }
+
+            Repeater {
+              id: queueRepeater
+              model: root.queuedDownloads
+
+              delegate: CursorSurface {
+                width: parent.width
+                height: qBody.implicitHeight + Style.space(12)
+                foreground: root.foreground
+                accent: root.activeColor
+                hasCursor: root.cursorActive && root.focusSection === "queue" && root.selectedIndex === index
+
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("queue", index)
+                  onClicked: root.focusSectionAt("queue", index)
+                }
+
+                RowLayout {
+                  id: qBody
+                  anchors.fill: parent
+                  anchors.margins: Style.space(6)
+                  spacing: Style.space(6)
+
+                  Column {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: Style.space(2)
+
+                    Text {
+                      width: parent.width
+                      text: modelData.title || "Unknown"
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.bodySmall
+                      font.bold: true
+                      elide: Text.ElideRight
+                      maximumLineCount: 1
+                    }
+
+                    Text {
+                      width: parent.width
+                      text: "Waiting for a free slot"
+                      color: Qt.darker(root.foreground, 1.4)
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      elide: Text.ElideRight
+                      maximumLineCount: 1
+                    }
+                  }
+
+                  PanelActionButton {
+                    iconText: ""
+                    tooltipText: "Remove from queue"
+                    foreground: root.foreground
+                    hoverColor: Color.urgent
+                    fontFamily: root.fontFamily
+                    fontSize: Style.font.bodySmall
+                    onClicked: {
+                      if (ytdlService) ytdlService.removeQueued(modelData.dwnId)
                     }
                   }
                 }

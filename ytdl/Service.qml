@@ -27,11 +27,17 @@ Item {
     }
     return n
   }
+  readonly property int queuedCount: {
+    var n = 0
+    for (var i = 0; i < downloads.length; i++) {
+      if (downloads[i].status === "queued")
+        n++
+    }
+    return n
+  }
 
-  // Playlist queue: each video becomes its own download entry, processed one
-  // at a time. `_playlistProcessing` is true while a queue is being drained.
-  property var _playlistQueue: []
-  property bool _playlistProcessing: false
+  // Playlist resolution state. Enumerated videos are queued into `downloads`
+  // like any other download (status "queued") and start as procs free up.
   property string _playlistQuality: "1080p"
   property string _playlistError: ""
 
@@ -69,6 +75,7 @@ Item {
       property string filepath: ""
       property string error: ""
       property int procIdx: -1
+      property string _quality: "1080p"
       property bool _playlistItem: false
       property bool _playlistPlaceholder: false
     }
@@ -252,14 +259,11 @@ Item {
       return
     }
 
+    // Skip if an active or queued entry already carries this URL.
     for (var i = 0; i < downloads.length; i++) {
-      if (downloads[i].url === url && (downloads[i].status === "downloading" || downloads[i].status === "merging"))
+      var s = downloads[i].status
+      if (downloads[i].url === url && (s === "downloading" || s === "merging" || s === "queued"))
         return
-    }
-
-    var procIdx = findFreeProc()
-    if (procIdx === -1) {
-      return
     }
 
     var id = Date.now() + Math.floor(Math.random() * 1000)
@@ -271,8 +275,18 @@ Item {
     d.dwnId = id
     d.url = url
     d.title = knownTitle || extractVideoId(url) || url
-    d.procIdx = procIdx
+    d.procIdx = -1
+    d._quality = q
     d._playlistItem = !!isPlaylistItem
+
+    var procIdx = findFreeProc()
+    if (procIdx === -1) {
+      // All three slots busy: sit in the queue until one frees up.
+      d.status = "queued"
+      downloads = downloads.concat([d])
+      downloadsUpdated()
+      return
+    }
 
     downloads = downloads.concat([d])
     downloadsUpdated()
@@ -281,18 +295,67 @@ Item {
     proc.downloadId = id
     proc.command = cmd
     proc.running = true
+    d.procIdx = procIdx
 
-    titleProc.targetId = id
-    titleProc.command = [scriptPath, "title", url, cookiesBrowser, extraArgs]
-    titleProc.running = true
-    root._dbg("started download id=" + id + " title=" + d.title + " proc=" + proc.objectName)
+    root._fetchTitle(id, url)
   }
 
-  // Resolve a playlist to its individual videos, then queue them for
-  // one-at-a-time downloads. A placeholder entry gives feedback while the
-  // flat enumeration runs.
+  // Start queued downloads on any free procs, in FIFO order. Called whenever a
+  // proc frees up (a download completes or is cancelled).
+  function _startNextQueued() {
+    for (var i = 0; i < downloads.length; i++) {
+      if (downloads[i].status !== "queued") continue
+      var procIdx = findFreeProc()
+      if (procIdx === -1) return
+      var d = downloads[i]
+      var outputTemplate = downloadLocation + "/%(title)s.%(ext)s"
+      var cmd = [scriptPath, "download", d.url, d._quality, outputTemplate, cookiesBrowser, extraArgs]
+      var proc = procAt(procIdx)
+      proc.downloadId = d.dwnId
+      proc.command = cmd
+      proc.running = true
+      d.procIdx = procIdx
+      d.status = "downloading"
+      downloadsUpdated()
+      root._fetchTitle(d.dwnId, d.url)
+    }
+  }
+
+  function clearQueue() {
+    var remaining = []
+    for (var i = 0; i < downloads.length; i++) {
+      if (downloads[i].status !== "queued") remaining.push(downloads[i])
+    }
+    downloads = remaining
+    downloadsUpdated()
+  }
+
+  function removeQueued(id) {
+    for (var i = 0; i < downloads.length; i++) {
+      if (downloads[i].dwnId === id && downloads[i].status === "queued") {
+        downloads = removeById(downloads, id)
+        downloadsUpdated()
+        return
+      }
+    }
+  }
+
+  function cancelAll() {
+    var ids = []
+    for (var i = 0; i < downloads.length; i++) {
+      if (downloads[i].status === "downloading" || downloads[i].status === "merging")
+        ids.push(downloads[i].dwnId)
+    }
+    for (var j = 0; j < ids.length; j++)
+      root.cancelDownload(ids[j])
+    // Stop queued items too, otherwise they refill the freed slots.
+    root.clearQueue()
+  }
+
+  // Resolve a playlist to its individual videos, then queue them as normal
+  // downloads (they start as procs free up, like any pasted video). A
+  // placeholder entry gives feedback while the flat enumeration runs.
   function startPlaylist(url, quality) {
-    root._dbg("startPlaylist url=" + url)
     root._playlistQuality = quality || defaultQuality
     root._playlistError = ""
     var id = Date.now() + Math.floor(Math.random() * 1000)
@@ -311,25 +374,6 @@ Item {
     playlistProc.running = true
   }
 
-  // Start the next queued playlist video. Only called from playlist completion
-  // handlers, so playlist items always download strictly one after another.
-  function _pumpPlaylist() {
-    if (root._playlistQueue.length === 0) {
-      root._playlistProcessing = false
-      return
-    }
-    // One-at-a-time invariant: never start another playlist item while one is
-    // still downloading. Self-heals if a race ever left two in flight.
-    for (var i = 0; i < root.downloads.length; i++) {
-      var act = root.downloads[i]
-      if (act._playlistItem && (act.status === "downloading" || act.status === "merging"))
-        return
-    }
-    root._playlistProcessing = true
-    var item = root._playlistQueue.shift()
-    root.startDownload(item.url, item.quality, true, item.title)
-  }
-
   function retryDownload(item) {
     if (!item || !item.url) return
     removeHistoryItem(item.dwnId)
@@ -340,13 +384,17 @@ Item {
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
       if (d.dwnId === id) {
-        if (d._playlistItem || d._playlistPlaceholder) {
-          root._playlistQueue = []
-          root._playlistProcessing = false
+        if (d.status === "queued") {
+          root.downloads = root.removeById(root.downloads, id)
+          root.downloadsUpdated()
+          return
         }
         if (d._playlistPlaceholder) {
           if (playlistProc.running) playlistProc.running = false
           playlistProc.downloadId = -1
+          root.downloads = root.removeById(root.downloads, id)
+          root.downloadsUpdated()
+          return
         }
         if (d.procIdx >= 0) {
           var proc = procAt(d.procIdx)
@@ -364,6 +412,8 @@ Item {
         }
         downloadsUpdated()
         historyUpdated()
+        // A proc just freed up; let a queued download take its slot.
+        Qt.callLater(root._startNextQueued)
         return
       }
     }
@@ -449,7 +499,6 @@ Item {
   }
 
   function onDownloadComplete(id, exitCode) {
-    root._dbg("onDownloadComplete id=" + id + " rc=" + exitCode + " dlCount=" + root.downloads.length)
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
       if (d.dwnId === id) {
@@ -471,8 +520,8 @@ Item {
           }
           historyUpdated()
         }
-        if (d._playlistItem && root._playlistProcessing)
-          Qt.callLater(root._pumpPlaylist)
+        // A proc just freed up; let a queued download take its slot.
+        Qt.callLater(root._startNextQueued)
         return
       }
     }
@@ -528,20 +577,34 @@ Item {
     }
   }
 
-  // Title fetch process
+  // Title fetch process. `_fetchId` records the entry this process was started
+  // for; the result is only applied if it still matches, so a stale fetch that
+  // raced a new download can't overwrite the new entry's title.
   Process {
     id: titleProc
     property var targetId: -1
+    property var _fetchId: -1
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
         var title = String(this.text || "").trim()
-        if (title && titleProc.targetId !== -1) {
+        if (title && titleProc.targetId !== -1 && titleProc.targetId === titleProc._fetchId) {
           root.updateDownload(titleProc.targetId, { title: title })
           titleProc.targetId = -1
+          titleProc._fetchId = -1
         }
       }
     }
+  }
+
+  // Queue a title fetch for `id`. No-ops when a fetch is already in flight so
+  // a running process is never reassigned to a different URL.
+  function _fetchTitle(id, url) {
+    if (titleProc.running || id === -1) return
+    titleProc.targetId = id
+    titleProc._fetchId = id
+    titleProc.command = [scriptPath, "title", url, cookiesBrowser, extraArgs]
+    titleProc.running = true
   }
 
   // Playlist enumeration process. Flat-resolves the playlist to a JSON array
@@ -555,7 +618,6 @@ Item {
       onStreamFinished: {
         var id = playlistProc.downloadId
         playlistProc.downloadId = -1
-        root._dbg("playlist stream finished id=" + id + " textlen=" + String(this.text || "").length)
         if (id === -1) return
         var items = []
         var text = String(this.text || "").trim()
@@ -593,9 +655,10 @@ Item {
         } else {
           root.downloads = root.removeById(root.downloads, id)
           root.downloadsUpdated()
+          // Queue every video as its own download; up to three start now and
+          // the rest wait for a free slot.
           for (var k = 0; k < items.length; k++)
-            root._playlistQueue.push(items[k])
-          root._pumpPlaylist()
+            root.startDownload(items[k].url, items[k].quality, true, items[k].title)
         }
       }
     }
@@ -616,7 +679,6 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc0, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc0._errBuf += line + "\n" } }
     onExited: function(exitCode) {
-      root._dbg("dlProc0 exited rc=" + exitCode + " dwnId=" + downloadId)
       if (exitCode !== 0 && dlProc0._errBuf) {
         var errLines = String(dlProc0._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {
@@ -640,7 +702,6 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc1, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc1._errBuf += line + "\n" } }
     onExited: function(exitCode) {
-      root._dbg("dlProc1 exited rc=" + exitCode + " dwnId=" + downloadId)
       if (exitCode !== 0 && dlProc1._errBuf) {
         var errLines = String(dlProc1._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {
@@ -664,7 +725,6 @@ Item {
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc2, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc2._errBuf += line + "\n" } }
     onExited: function(exitCode) {
-      root._dbg("dlProc2 exited rc=" + exitCode + " dwnId=" + downloadId)
       if (exitCode !== 0 && dlProc2._errBuf) {
         var errLines = String(dlProc2._errBuf).split("\n")
         for (var i = 0; i < errLines.length; i++) {
