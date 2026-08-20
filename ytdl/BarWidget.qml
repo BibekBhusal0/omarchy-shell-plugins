@@ -72,7 +72,7 @@ BarWidget {
     text: {
       if (!ytdlService) return "󰏔"
       if (!ytdlService.installed) return "󰏔"
-      if (ytdlService.activeCount > 0) return ""
+      if (ytdlService.activeCount > 0) return " (" + ytdlService.activeCount + ")"
       return "󰗃"
     }
     hasVisualContent: text !== ""
