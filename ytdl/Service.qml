@@ -33,13 +33,13 @@ Item {
   readonly property int historyCount: history.length
 
   property string downloadLocation: "~/Downloads/yt-dlp"
-  property string defaultQuality: "best"
+  property string defaultQuality: "1080p"
   property string cookiesBrowser: "none"
   property string extraArgs: ""
   property bool enableHistory: true
 
   // Persisted across shell restarts via a small state file.
-  property string selectedQuality: "best"
+  property string selectedQuality: "1080p"
   property bool _qualityFromFile: false
   readonly property string statePath: Quickshell.env("HOME") + "/.local/state/omarchy/ytdl-quality"
   readonly property string historyPath: Quickshell.env("HOME") + "/.local/state/omarchy/ytdl-history.json"

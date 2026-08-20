@@ -21,7 +21,7 @@ Panel {
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
   property string inputUrl: ""
-  property string selectedQuality: ytdlService ? ytdlService.selectedQuality : "best"
+  property string selectedQuality: ytdlService ? ytdlService.selectedQuality : "1080p"
   property bool inputAutoFilled: false
 
   // Keyboard cursor model: focusSection × selectedIndex.

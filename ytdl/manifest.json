@@ -20,7 +20,7 @@
     "defaultSection": "right",
     "defaults": {
       "downloadLocation": "~/Downloads/yt-dlp",
-      "defaultQuality": "best",
+      "defaultQuality": "1080p",
       "cookiesBrowser": "none",
       "extraArgs": "",
       "enableHistory": true
@@ -37,7 +37,7 @@
         "type": "enum",
         "label": "Default quality",
         "options": ["best", "1080p", "720p", "480p"],
-        "defaultValue": "best",
+        "defaultValue": "1080p",
         "description": "Default download format."
       },
       {
