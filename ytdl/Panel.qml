@@ -93,6 +93,11 @@ Panel {
   function pasteClipboard() {
     if (!ytdlService) return
     ytdlService.checkClipboard(function(url) {
+      // Don't re-offer a link that is already downloading or queued.
+      if (!url || ytdlService.isUrlBusy(url)) {
+        root.clipboardUrl = ""
+        return
+      }
       root.clipboardUrl = url
       root.inputUrl = url
       if (urlInput.text !== url) urlInput.text = url
@@ -559,8 +564,13 @@ Panel {
                 horizontalPadding: 0
                 verticalPadding: 0
                 onClicked: {
-                  if (ytdlService && ytdlService.playlistInfoUrl)
+                  if (ytdlService && ytdlService.playlistInfoUrl) {
                     ytdlService.startPlaylist(ytdlService.playlistInfoUrl, root.selectedQuality)
+                    ytdlService.clearPlaylistInfo()
+                    root.clipboardUrl = ""
+                    root.inputUrl = ""
+                    urlInput.text = ""
+                  }
                 }
               }
             }

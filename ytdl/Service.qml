@@ -231,6 +231,22 @@ Item {
     return !root.extractVideoId(url)
   }
 
+  // True when `url` is already downloading or waiting in the queue. Matches by
+  // video id too, so a watch URL copied with a `list=` param is seen as the
+  // same download as its bare-watch twin already in progress.
+  function isUrlBusy(url) {
+    url = cleanUrl(url)
+    var vid = root.extractVideoId(url)
+    for (var i = 0; i < downloads.length; i++) {
+      var d = downloads[i]
+      var s = d.status
+      if (s !== "downloading" && s !== "merging" && s !== "queued") continue
+      if (d.url === url) return true
+      if (vid && root.extractVideoId(d.url) === vid) return true
+    }
+    return false
+  }
+
   function updateDownload(id, props) {
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
