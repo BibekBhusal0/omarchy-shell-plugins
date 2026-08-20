@@ -549,8 +549,7 @@ Panel {
               }
 
               Button {
-                // FIX: icon below
-                iconText: "󰠲"
+                iconText: ""
                 tooltipText: "Download the whole playlist"
                 foreground: root.foreground
                 accent: root.activeColor
@@ -785,7 +784,7 @@ Panel {
 
                     Text {
                       width: parent.width
-                      text: "Waiting for a free slot"
+                      text: "In queue"
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption

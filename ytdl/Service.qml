@@ -292,10 +292,13 @@ Item {
 
     var procIdx = findFreeProc()
     if (procIdx === -1) {
-      // All three slots busy: sit in the queue until one frees up.
+      // All three slots busy: sit in the queue until one frees up. Fetch the
+      // title now so the queue shows a real name instead of a video id; the
+      // Destination line only appears once the download actually runs.
       d.status = "queued"
       downloads = downloads.concat([d])
       downloadsUpdated()
+      root._fetchTitle(id, url)
       return
     }
 
@@ -622,7 +625,10 @@ Item {
 
   // Title fetch process. `_fetchId` records the entry this process was started
   // for; the result is only applied if it still matches, so a stale fetch that
-  // raced a new download can't overwrite the new entry's title.
+  // raced a new download can't overwrite the new entry's title. `_titleQueue`
+  // holds pending lookups (queued items plus downloads that missed their slot)
+  // and is drained one fetch at a time so every entry gets a real title.
+  property var _titleQueue: []
   Process {
     id: titleProc
     property var targetId: -1
@@ -633,20 +639,38 @@ Item {
         var title = String(this.text || "").trim()
         if (title && titleProc.targetId !== -1 && titleProc.targetId === titleProc._fetchId) {
           root.updateDownload(titleProc.targetId, { title: title })
-          titleProc.targetId = -1
-          titleProc._fetchId = -1
         }
+        titleProc.targetId = -1
+        titleProc._fetchId = -1
+        Qt.callLater(root._pumpTitle)
       }
     }
   }
 
-  // Queue a title fetch for `id`. No-ops when a fetch is already in flight so
-  // a running process is never reassigned to a different URL.
+  // Queue a title fetch for `id` and pump the next one if the process is free.
+  // Idempotent per entry: skip requests for entries that already carry a real
+  // title (playlist items, or one applied by a previous fetch or the
+  // Destination line).
   function _fetchTitle(id, url) {
-    if (titleProc.running || id === -1) return
-    titleProc.targetId = id
-    titleProc._fetchId = id
-    titleProc.command = [scriptPath, "title", url, cookiesBrowser, extraArgs]
+    if (id === -1 || !url) return
+    for (var i = 0; i < downloads.length; i++) {
+      var d = downloads[i]
+      if (d.dwnId === id && d.title && d.title !== d.url && d.title !== root.extractVideoId(d.url))
+        return
+    }
+    for (var j = 0; j < _titleQueue.length; j++) {
+      if (_titleQueue[j].id === id) return
+    }
+    _titleQueue.push({ id: id, url: url })
+    root._pumpTitle()
+  }
+
+  function _pumpTitle() {
+    if (titleProc.running || _titleQueue.length === 0) return
+    var item = _titleQueue.shift()
+    titleProc.targetId = item.id
+    titleProc._fetchId = item.id
+    titleProc.command = [scriptPath, "title", item.url, cookiesBrowser, extraArgs]
     titleProc.running = true
   }
 
