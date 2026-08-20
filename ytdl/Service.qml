@@ -273,9 +273,51 @@ Item {
 
   function findFreeProc() {
     for (var i = 0; i < 3; i++) {
-      if (!procAt(i).running) return i
+      var p = procAt(i)
+      if (!p._draining && !p.running) return i
     }
     return -1
+  }
+
+  // Self-heal proc/download desyncs that a race can leave behind (e.g. a
+  // process kept running after its record was cancelled, or a promoted item
+  // whose record lost its "downloading" status). If a proc has a live process
+  // but no record tracks it, reattach it to the queued item for the same video
+  // so it shows as active; if none matches, kill the stray process. Runs on a
+  // short timer so any desync repairs itself within a tick.
+  function reconcileProcs() {
+    for (var i = 0; i < 3; i++) {
+      var p = procAt(i)
+      if (!p.running) continue
+      var tracked = false
+      for (var j = 0; j < downloads.length; j++) {
+        if (downloads[j].status === "downloading" && downloads[j].procIdx === i) {
+          tracked = true
+          break
+        }
+      }
+      if (tracked) continue
+      var pvid = root.extractVideoId(p._url)
+      var target = -1
+      for (var k = 0; k < downloads.length; k++) {
+        var q = downloads[k]
+        if (q.status !== "queued") continue
+        if (pvid && root.extractVideoId(q.url) === pvid) { target = k; break }
+      }
+      if (target >= 0) {
+        var t = downloads[target]
+        p.downloadId = t.dwnId
+        p._errBuf = ""
+        t.procIdx = i
+        t.status = "downloading"
+        downloadsUpdated()
+      } else {
+        var pid = p.processId
+        if (pid && typeof pid === "number" && pid > 0)
+          Quickshell.execDetached([scriptPath, "kill-tree", String(pid)])
+        p._draining = true
+      }
+    }
   }
 
   function startDownload(url, quality, isPlaylistItem, knownTitle) {
@@ -286,11 +328,17 @@ Item {
       return
     }
 
-    // Skip if an active or queued entry already carries this URL.
+    // Skip if an active or queued entry already carries this URL. Match by
+    // video id too, so a watch URL copied with a `list=` param is seen as the
+    // same download as its bare-watch twin already in progress. Without this a
+    // video can end up with two records (one running, one queued) and the
+    // queued copy looks like it downloads by itself.
+    var vid = root.extractVideoId(url)
     for (var i = 0; i < downloads.length; i++) {
       var s = downloads[i].status
-      if (downloads[i].url === url && (s === "downloading" || s === "merging" || s === "queued"))
-        return
+      if (s !== "downloading" && s !== "merging" && s !== "queued") continue
+      if (downloads[i].url === url) return
+      if (vid && root.extractVideoId(downloads[i].url) === vid) return
     }
 
     var id = Date.now() + Math.floor(Math.random() * 1000)
@@ -323,6 +371,8 @@ Item {
 
     var proc = procAt(procIdx)
     proc.downloadId = id
+    proc._errBuf = ""
+    proc._url = url
     proc.command = cmd
     proc.running = true
     d.procIdx = procIdx
@@ -342,6 +392,8 @@ Item {
       var cmd = [scriptPath, "download", d.url, d._quality, outputTemplate, cookiesBrowser, extraArgs]
       var proc = procAt(procIdx)
       proc.downloadId = d.dwnId
+      proc._errBuf = ""
+      proc._url = d.url
       proc.command = cmd
       proc.running = true
       d.procIdx = procIdx
@@ -378,8 +430,6 @@ Item {
     }
     for (var j = 0; j < ids.length; j++)
       root.cancelDownload(ids[j])
-    // Stop queued items too, otherwise they refill the freed slots.
-    root.clearQueue()
   }
 
   // Resolve a playlist to its individual videos, then queue them as normal
@@ -460,10 +510,26 @@ Item {
         }
         if (d.procIdx >= 0) {
           var proc = procAt(d.procIdx)
+          var pid = proc.processId
           proc.downloadId = -1
-          if (proc.running) proc.running = false
+          if (proc.running) {
+            // Mark the proc as draining so no new download starts on it until
+            // its process has actually exited (onExited clears the flag).
+            proc._draining = true
+            proc.running = false
+          }
         }
-        if (d.filepath) Quickshell.execDetached([scriptPath, "cleanup", d.filepath])
+        if (d.filepath) {
+          if (pid && typeof pid === "number" && pid > 0) {
+            // Kill the whole tree (shell + yt-dlp + ffmpeg), wait for it to
+            // die, then drop the partials. Quickshell only SIGTERMs the direct
+            // child, which would otherwise orphan yt-dlp and leave it
+            // downloading in the background.
+            Quickshell.execDetached([scriptPath, "cancel", String(pid), d.filepath])
+          } else {
+            Quickshell.execDetached([scriptPath, "cleanup", d.filepath])
+          }
+        }
         d.status = "cancelled"
         d.progress = 0
         d.procIdx = -1
@@ -474,7 +540,8 @@ Item {
         }
         downloadsUpdated()
         historyUpdated()
-        // A proc just freed up; let a queued download take its slot.
+        // A proc just freed up (or its exit is imminent); let a queued download
+        // take its slot. Promotion is retried once the process exits.
         Qt.callLater(root._startNextQueued)
         return
       }
@@ -788,6 +855,8 @@ Item {
     objectName: "dlProc0"
     property var downloadId: -1
     property string _errBuf: ""
+    property bool _draining: false
+    property string _url: ""
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc0, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc0._errBuf += line + "\n" } }
     onExited: function(exitCode) {
@@ -803,6 +872,10 @@ Item {
       dlProc0._errBuf = ""
       root.onDownloadComplete(downloadId, exitCode)
       downloadId = -1
+      dlProc0._url = ""
+      dlProc0._draining = false
+      // The process really exited now, so a queued download can take its slot.
+      Qt.callLater(root._startNextQueued)
     }
   }
 
@@ -811,6 +884,8 @@ Item {
     objectName: "dlProc1"
     property var downloadId: -1
     property string _errBuf: ""
+    property bool _draining: false
+    property string _url: ""
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc1, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc1._errBuf += line + "\n" } }
     onExited: function(exitCode) {
@@ -826,6 +901,9 @@ Item {
       dlProc1._errBuf = ""
       root.onDownloadComplete(downloadId, exitCode)
       downloadId = -1
+      dlProc1._url = ""
+      dlProc1._draining = false
+      Qt.callLater(root._startNextQueued)
     }
   }
 
@@ -834,6 +912,8 @@ Item {
     objectName: "dlProc2"
     property var downloadId: -1
     property string _errBuf: ""
+    property bool _draining: false
+    property string _url: ""
     stdout: SplitParser { onRead: function(line) { root.parseLine(dlProc2, line) } }
     stderr: SplitParser { onRead: function(line) { dlProc2._errBuf += line + "\n" } }
     onExited: function(exitCode) {
@@ -849,7 +929,20 @@ Item {
       dlProc2._errBuf = ""
       root.onDownloadComplete(downloadId, exitCode)
       downloadId = -1
+      dlProc2._url = ""
+      dlProc2._draining = false
+      Qt.callLater(root._startNextQueued)
     }
+  }
+
+  // Watchdog for proc/download desyncs (see reconcileProcs). Fires rarely; the
+  // cost is a scan of 3 procs and the downloads list.
+  Timer {
+    id: reconcileTimer
+    interval: 2000
+    repeat: true
+    running: true
+    onTriggered: root.reconcileProcs()
   }
 
   // One-shot clipboard read, run when the panel opens.

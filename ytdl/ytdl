@@ -6,10 +6,24 @@ shift
 
 SCRIPT_DIR="$(dirname "$0")"
 
+# Recursively kill every process under PID $1. Quickshell signals only its
+# direct child (this script); without this, yt-dlp and its ffmpeg children
+# would be orphaned and keep downloading after a cancel.
+_kill_tree() {
+  for C in $(ps -o pid= --ppid "$1" 2>/dev/null); do
+    _kill_tree "$C"
+    kill -KILL "$C" 2>/dev/null
+  done
+}
+
 # Temp dir holding an exported cookie DB (zen/glide). Removed on exit so
 # authentication material never persists outside the browser profile.
 COOKIE_TMP=""
-trap '[ -n "$COOKIE_TMP" ] && rm -rf "$COOKIE_TMP"' EXIT INT TERM
+trap '[ -n "$COOKIE_TMP" ] && rm -rf "$COOKIE_TMP"' EXIT
+# On TERM/INT (a cancel) kill the whole yt-dlp tree and exit; the EXIT trap
+# then drops the cookie temp dir. Without `exit` the shell would only clean
+# cookies and keep waiting on yt-dlp, surviving the cancel.
+trap '_kill_tree $$; exit 0' INT TERM
 
 # Resolve a --cookies-from-browser flag for the given browser name.
 cookies_flag() {
@@ -168,6 +182,29 @@ case "$CMD" in
     
 check)
     command -v yt-dlp >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v sqlite3 >/dev/null 2>&1
+    ;;
+
+  kill-tree)
+    # Kill the whole process tree under the given PID (used by the service on
+    # cancel; see the TERM/INT trap above for the signal path).
+    _kill_tree "$1"
+    kill -KILL "$1" 2>/dev/null
+    ;;
+
+  cancel)
+    # Kill the tree under PID $1, wait for it to be reaped, then remove the
+    # partial files for $2. Cleaning only after the tree is dead stops the
+    # dying yt-dlp from re-creating a fragment we already removed.
+    _kill_tree "$1"
+    kill -KILL "$1" 2>/dev/null
+    i=0
+    while [ $i -lt 40 ] && kill -0 "$1" 2>/dev/null; do sleep 0.05; i=$((i + 1)); done
+    BASE="$2"
+    case "$BASE" in
+      "~/"*) BASE="$HOME/${BASE#\~/}" ;;
+      "~"*) BASE="$HOME/${BASE#\~}" ;;
+    esac
+    [ -z "$BASE" ] || rm -f "${BASE}.part"* "${BASE}.ytdl" "${BASE}.info.json"
     ;;
 
   prune-missing)
