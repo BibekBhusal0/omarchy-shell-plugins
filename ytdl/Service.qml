@@ -336,22 +336,10 @@ Item {
   function startDownload(url, quality, isPlaylistItem, knownTitle) {
     url = cleanUrl(url)
     if (!url) return
+    if (root.isUrlBusy(url)) return
     if (!isPlaylistItem && root.isPlaylistUrl(url)) {
       root.startPlaylist(url, quality)
       return
-    }
-
-    // Skip if an active or queued entry already carries this URL. Match by
-    // video id too, so a watch URL copied with a `list=` param is seen as the
-    // same download as its bare-watch twin already in progress. Without this a
-    // video can end up with two records (one running, one queued) and the
-    // queued copy looks like it downloads by itself.
-    var vid = root.extractVideoId(url)
-    for (var i = 0; i < downloads.length; i++) {
-      var s = downloads[i].status
-      if (s !== "downloading" && s !== "merging" && s !== "queued") continue
-      if (downloads[i].url === url) return
-      if (vid && root.extractVideoId(downloads[i].url) === vid) return
     }
 
     var id = Date.now() + Math.floor(Math.random() * 1000)
