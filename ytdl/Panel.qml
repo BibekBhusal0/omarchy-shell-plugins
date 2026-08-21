@@ -37,6 +37,7 @@ Panel {
   readonly property int historyCount: ytdlService ? ytdlService.historyCount : 0
   readonly property var historyItems: ytdlService ? ytdlService.history : []
   readonly property bool playlistSectionVisible: ytdlService && ytdlService.playlistInfoUrl !== ""
+  readonly property bool detectedSectionVisible: ytdlService && ytdlService.detectedUrl !== ""
 
   onInputUrlChanged: {
     if (inputUrl && urlInput.text !== inputUrl)
@@ -72,6 +73,7 @@ Panel {
     if (ytdlService) {
       ytdlService.checkInstallation()
       root.pasteClipboard()
+      ytdlService.detectYouTube()
     }
   }
 
@@ -499,6 +501,68 @@ Panel {
               color: root.activeColor
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
+            }
+          }
+
+          // YouTube detected via MPRIS: browser is playing a YouTube video,
+          // offer a one-click download without manually pasting the URL.
+          Column {
+            visible: root.detectedSectionVisible
+            width: parent.width
+            spacing: Style.space(8)
+
+            Rectangle {
+              width: parent.width
+              height: 1
+              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            }
+
+            RowLayout {
+              width: parent.width
+              spacing: Style.space(8)
+
+              Column {
+                Layout.fillWidth: true
+                spacing: Style.space(2)
+
+                Text {
+                  width: parent.width
+                  text: "YouTube video from browser detected"
+                  color: root.activeColor
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                  elide: Text.ElideRight
+                }
+
+                Text {
+                  width: parent.width
+                  text: ytdlService ? (ytdlService.detectedTitle || ytdlService.detectedUrl) : ""
+                  color: Qt.darker(root.foreground, 1.4)
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  elide: Text.ElideRight
+                  maximumLineCount: 1
+                }
+              }
+
+              Button {
+                iconText: ""
+                tooltipText: "Download this video"
+                foreground: root.foreground
+                accent: root.activeColor
+                iconSize: Style.font.icon
+                implicitWidth: Style.space(36)
+                implicitHeight: Style.space(36)
+                horizontalPadding: 0
+                verticalPadding: 0
+                onClicked: {
+                  if (ytdlService && ytdlService.detectedUrl) {
+                    ytdlService.startDownload(ytdlService.detectedUrl, root.selectedQuality)
+                    ytdlService.clearDetection()
+                  }
+                }
+              }
             }
           }
 
@@ -987,7 +1051,7 @@ Panel {
             Item {
               width: parent.width
               implicitHeight: Style.space(48)
-              visible: !root.playlistSectionVisible
+              visible: !root.playlistSectionVisible && !root.detectedSectionVisible
 
               Text {
                 anchors.centerIn: parent

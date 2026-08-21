@@ -14,6 +14,12 @@ Item {
   property string clipboardUrl: ""
   property var _clipboardCallback: null
 
+  // MPRIS auto-detection state. When a browser is playing a YouTube video,
+  // detectYouTube() populates these so the panel can offer a one-click download.
+  property string detectedUrl: ""
+  property string detectedTitle: ""
+  property bool detecting: false
+
   // Downloads are QObjects mutated in place. The panel's Repeater binds to the
   // array reference, so it keeps its delegates across progress ticks and only
   // rebuilds when an item is added or removed.
@@ -69,6 +75,7 @@ Item {
   signal historyUpdated()
 
   readonly property string scriptPath: Qt.resolvedUrl("ytdl").toString().replace(/^file:\/\//, "")
+  readonly property string detectScriptPath: Qt.resolvedUrl("detect-url-mpri").toString().replace(/^file:\/\//, "")
 
   Component {
     id: downloadComp
@@ -979,6 +986,50 @@ Item {
     }
   }
 
+  // MPRIS auto-detection: reads currently playing YouTube from any browser.
+  property string _detectBuf: ""
+
+  function detectYouTube() {
+    if (detectProc.running) return
+    root._detectBuf = ""
+    root.detecting = true
+    detectProc.command = ["bash", detectScriptPath]
+    detectProc.running = true
+  }
+
+  function clearDetection() {
+    root.detectedUrl = ""
+    root.detectedTitle = ""
+  }
+
+  Process {
+    id: detectProc
+    stdout: SplitParser {
+      onRead: function(line) { root._detectBuf += line + "\n" }
+    }
+    onExited: function(exitCode) {
+      root.detecting = false
+      root.detectedUrl = ""
+      root.detectedTitle = ""
+      if (exitCode !== 0) return
+      var text = String(root._detectBuf || "").trim()
+      root._detectBuf = ""
+      if (!text) return
+      // Script outputs one JSON per line; take the first YouTube URL found.
+      var lines = text.split("\n")
+      for (var i = 0; i < lines.length; i++) {
+        try {
+          var obj = JSON.parse(lines[i])
+          if (obj.url && root.isYouTubeUrl(obj.url) && !root.isUrlBusy(obj.url)) {
+            root.detectedUrl = obj.url
+            root.detectedTitle = obj.title || ""
+            return
+          }
+        } catch (e) {}
+      }
+    }
+  }
+
   function checkInstallation() {
     if (whichProc.running) return
     root.checkingInstallation = true
@@ -1031,6 +1082,26 @@ Item {
     function cancel(id: string): void { root.cancelDownload(parseInt(id)) }
     function status(): string { return JSON.stringify({downloads: root.downloadCount, active: root.activeCount}) }
     function ping(): string { return "pong" }
+    function autoDownload(): string {
+      // First try clipboard (already read, synchronous)
+      var url = root.clipboardUrl
+      if (url && root.isYouTubeUrl(url) && !root.isUrlBusy(url)) {
+        root.startDownload(url, root.selectedQuality || root.defaultQuality)
+        Quickshell.execDetached(["notify-send", "-a", "yt-dlp", "YouTube detected", "Downloading from clipboard"])
+        return JSON.stringify({status: "started", url: url, source: "clipboard"})
+      }
+      // Then try MPRIS detection (async, result available next call)
+      url = root.detectedUrl
+      if (url && root.isYouTubeUrl(url) && !root.isUrlBusy(url)) {
+        root.startDownload(url, root.selectedQuality || root.defaultQuality)
+        Quickshell.execDetached(["notify-send", "-a", "yt-dlp", "YouTube detected", root.detectedTitle || url])
+        root.clearDetection()
+        return JSON.stringify({status: "started", url: url, source: "mpris"})
+      }
+      // Nothing found, trigger async MPRIS detection for next call
+      root.detectYouTube()
+      return JSON.stringify({status: "detecting", message: "Scanning browsers for YouTube..."})
+    }
     function state(): string {
       var d = root.downloads.map(function(x) {
         return { id: x.dwnId, url: x.url, title: x.title, status: x.status, progress: x.progress, speed: x.speed, eta: x.eta, filepath: x.filepath }
