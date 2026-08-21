@@ -29,6 +29,10 @@ Panel {
   property int selectedIndex: 0
   property bool cursorActive: false
 
+  // Hover state: separate from keyboard cursor for visual feedback.
+  property string hoverSection: ""
+  property int hoverIndex: -1
+
   readonly property bool installed: ytdlService ? ytdlService.installed : false
   readonly property int activeCount: ytdlService ? ytdlService.activeCount : 0
   readonly property var activeDownloads: ytdlService ? filterActive(ytdlService.downloads) : []
@@ -78,6 +82,8 @@ Panel {
   }
 
   function close() {
+    root.hoverSection = ""
+    root.hoverIndex = -1
     controller.hide()
   }
 
@@ -178,9 +184,10 @@ Panel {
       root.clampIndex()
       return
     }
-    if (dy !== 0) {
+    if (dy !== 0 || dx !== 0) {
+      var direction = dy !== 0 ? dy : dx
       var count = sectionCount(root.focusSection)
-      var ni = root.selectedIndex + dy
+      var ni = root.selectedIndex + direction
       if (ni >= count) {
         var s = root.sectionList()
         var i = s.indexOf(root.focusSection)
@@ -197,9 +204,6 @@ Panel {
         root.selectedIndex = ni
       }
       Qt.callLater(root.scrollToCursor)
-    }
-    if (dx !== 0 && root.focusSection === "input") {
-      root.selectedIndex = (root.selectedIndex + dx + 3) % 3
     }
   }
 
@@ -244,7 +248,10 @@ Panel {
         if (ytdlService) ytdlService.clearHistory()
       } else {
         var h = root.historyItems[root.selectedIndex - 1]
-        if (h && ytdlService) ytdlService.removeHistoryItem(h.dwnId)
+        if (h && ytdlService) {
+          if (h.status === "done") ytdlService.playFile(h.filepath)
+          else if (h.status === "error" || h.status === "cancelled") ytdlService.retryDownload(h)
+        }
       }
     }
   }
@@ -287,7 +294,11 @@ Panel {
   function scrollToCursor() {
     if (!flick) return
     var item = null
-    if (root.focusSection === "detected")
+    if (root.focusSection === "input") {
+      if (root.selectedIndex === 0 && urlInput) item = urlInput
+      else if (root.selectedIndex === 1 && qualitySelector) item = qualitySelector
+      else if (root.selectedIndex === 2 && downloadManualBtn) item = downloadManualBtn
+    } else if (root.focusSection === "detected")
       item = flick.contentItem.parent.detectedColumn
     else if (root.focusSection === "playlist")
       item = flick.contentItem.parent.playlistColumn
@@ -606,7 +617,7 @@ Panel {
               }
 
               Button {
-                iconText: ""
+                iconText: ""
                 tooltipText: "Download this video"
                 foreground: root.foreground
                 accent: root.activeColor
@@ -677,7 +688,7 @@ Panel {
               }
 
               Button {
-                iconText: ""
+                iconText: ""
                 tooltipText: "Download the whole playlist"
                 foreground: root.foreground
                 accent: root.activeColor
@@ -749,11 +760,20 @@ Panel {
                 foreground: root.foreground
                 accent: root.activeColor
                 hasCursor: root.cursorActive && root.focusSection === "downloads" && root.selectedIndex === index + 1
+                  || root.hoverSection === "downloads" && root.hoverIndex === index
 
                 MouseArea {
                   anchors.fill: parent
                   hoverEnabled: true
-                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("downloads", index)
+                  onContainsMouseChanged: {
+                    if (containsMouse) {
+                      root.hoverSection = "downloads"
+                      root.hoverIndex = index
+                    } else if (root.hoverSection === "downloads" && root.hoverIndex === index) {
+                      root.hoverSection = ""
+                      root.hoverIndex = -1
+                    }
+                  }
                   onClicked: root.focusSectionAt("downloads", index)
                 }
 
@@ -864,7 +884,7 @@ Panel {
               }
 
               PanelActionButton {
-                iconText: "󰅙"
+                iconText: ""
                 tooltipText: "Clear queue"
                 foreground: root.foreground
                 hoverColor: Color.urgent
@@ -887,11 +907,20 @@ Panel {
                 foreground: root.foreground
                 accent: root.activeColor
                 hasCursor: root.cursorActive && root.focusSection === "queue" && root.selectedIndex === index + 1
+                  || root.hoverSection === "queue" && root.hoverIndex === index
 
                 MouseArea {
                   anchors.fill: parent
                   hoverEnabled: true
-                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("queue", index)
+                  onContainsMouseChanged: {
+                    if (containsMouse) {
+                      root.hoverSection = "queue"
+                      root.hoverIndex = index
+                    } else if (root.hoverSection === "queue" && root.hoverIndex === index) {
+                      root.hoverSection = ""
+                      root.hoverIndex = -1
+                    }
+                  }
                   onClicked: root.focusSectionAt("queue", index)
                 }
 
@@ -971,7 +1000,7 @@ Panel {
               }
 
               PanelActionButton {
-                iconText: "󰅙"
+                iconText: ""
                 tooltipText: "Clear history"
                 foreground: root.foreground
                 hoverColor: Color.urgent
@@ -994,11 +1023,21 @@ Panel {
                 foreground: root.foreground
                 accent: root.activeColor
                 hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === index + 1
+                  || root.hoverSection === "history" && root.hoverIndex === index
 
                 MouseArea {
                   anchors.fill: parent
                   hoverEnabled: true
-                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("history", index)
+                  onContainsMouseChanged: {
+                    if (containsMouse) {
+                      root.hoverSection = "history"
+                      root.hoverIndex = index
+                    } else if (root.hoverSection === "history" && root.hoverIndex === index) {
+                      root.hoverSection = ""
+                      root.hoverIndex = -1
+                    }
+                  }
+
                   onClicked: {
                     root.focusSectionAt("history", index)
                     if (modelData.status === "done") {
