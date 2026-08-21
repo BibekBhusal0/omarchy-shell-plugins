@@ -74,9 +74,9 @@ Item {
   signal downloadsUpdated()
   signal historyUpdated()
 
-  readonly property string scriptPath: Qt.resolvedUrl("ytdl").toString().replace(/^file:\/\//, "")
-  readonly property string detectScriptPath: Qt.resolvedUrl("detect-url-mpri").toString().replace(/^file:\/\//, "")
-  readonly property string autoDownloadScriptPath: Qt.resolvedUrl("auto-download.sh").toString().replace(/^file:\/\//, "")
+  readonly property string scriptPath: Qt.resolvedUrl("scripts/ytdl").toString().replace(/^file:\/\//, "")
+  readonly property string detectScriptPath: Qt.resolvedUrl("scripts/detect-url-mpri").toString().replace(/^file:\/\//, "")
+  readonly property string autoDownloadScriptPath: Qt.resolvedUrl("scripts/auto-download.sh").toString().replace(/^file:\/\//, "")
 
   Component {
     id: downloadComp
