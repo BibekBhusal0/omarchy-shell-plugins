@@ -76,6 +76,7 @@ Item {
 
   readonly property string scriptPath: Qt.resolvedUrl("ytdl").toString().replace(/^file:\/\//, "")
   readonly property string detectScriptPath: Qt.resolvedUrl("detect-url-mpri").toString().replace(/^file:\/\//, "")
+  readonly property string autoDownloadScriptPath: Qt.resolvedUrl("auto-download.sh").toString().replace(/^file:\/\//, "")
 
   Component {
     id: downloadComp
@@ -634,11 +635,6 @@ Item {
     Quickshell.execDetached(["xdg-open", filepath])
   }
 
-  function openFolder(filepath) {
-    if (!filepath) return
-    Quickshell.execDetached(["xdg-open", filepath.replace(/\/[^\/]+$/, "")])
-  }
-
   function onDownloadComplete(id, exitCode) {
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
@@ -1086,26 +1082,8 @@ Item {
     function cancel(id: string): void { root.cancelDownload(parseInt(id)) }
     function status(): string { return JSON.stringify({downloads: root.downloadCount, active: root.activeCount}) }
     function autoDownload(): string {
-      // First try clipboard (already read, synchronous)
-      var url = root.clipboardUrl
-      if (url && root.isYouTubeUrl(url) && !root.isUrlBusy(url)) {
-        root.startDownload(url, root.selectedQuality || root.defaultQuality)
-        Quickshell.execDetached(["notify-send", "-a", "yt-dlp", "YouTube detected", "Downloading from clipboard"])
-        root.clipboardUrl = ""
-        return JSON.stringify({status: "started", url: url, source: "clipboard"})
-      }
-      // Then try MPRIS detection (already completed)
-      url = root.detectedUrl
-      if (url && root.isYouTubeUrl(url) && !root.isUrlBusy(url)) {
-        root.startDownload(url, root.selectedQuality || root.defaultQuality)
-        Quickshell.execDetached(["notify-send", "-a", "yt-dlp", "YouTube detected", root.detectedTitle || url])
-        root.detectedUrl = ""
-        root.detectedTitle = ""
-        return JSON.stringify({status: "started", url: url, source: "mpris"})
-      }
-      // Nothing found, trigger async MPRIS detection for next call
-      if (!root.detecting) root.detectYouTube()
-      return JSON.stringify({status: "detecting", message: "Scanning browsers for YouTube..."})
+      Quickshell.execDetached([autoDownloadScriptPath])
+      return JSON.stringify({status: "started", message: "Auto-download triggered"})
     }
     function state(): string {
       var d = root.downloads.map(function(x) {
