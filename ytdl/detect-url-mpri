@@ -1,0 +1,50 @@
+#!/bin/bash
+# Detect YouTube URL from active browsers via MPRIS
+# Firefox (zen): xesam:url gives full URL directly
+# Chromium (helium): no URL field, search YouTube by title + verify duration
+
+output_json() {
+    printf '{"browser":"%s","title":"%s","url":"%s"}\n' "$1" "$2" "$3"
+}
+
+FOUND=0
+
+# Check all MPRIS chromium/firefox services
+busctl --user list 2>/dev/null | grep "org.mpris.MediaPlayer2\.\(firefox\|chromium\)" | while read -r line; do
+    service=$(echo "$line" | awk '{print $1}')
+
+    raw=$(busctl --user call "$service" /org/mpris/MediaPlayer2 \
+        org.freedesktop.DBus.Properties GetAll \
+        "s" "org.mpris.MediaPlayer2.Player" 2>/dev/null)
+
+    title=$(echo "$raw" | grep -o '"xesam:title" s "[^"]*"' | sed 's/"xesam:title" s "//;s/\\342\\200\\231/'"'"'/g;s/"$//')
+    [ -z "$title" ] && continue
+
+    # Firefox: has xesam:url
+    if echo "$service" | grep -q "firefox"; then
+        url=$(echo "$raw" | grep -o '"xesam:url" s "[^"]*"' | sed 's/"xesam:url" s "//;s/"$//')
+        if echo "$url" | grep -q "youtube.com/watch\|youtu\.be/"; then
+            output_json "firefox" "$title" "$url"
+        fi
+        continue
+    fi
+
+    # Chromium: no URL, search by title + duration verify
+    if echo "$service" | grep -q "chromium"; then
+        dur_us=$(echo "$raw" | grep -o '"mpris:length" x [0-9]*' | awk '{print $3}')
+        dur_s=$((dur_us / 1000000))
+
+        result=$(yt-dlp --no-download --print "%(webpage_url)s %(duration)s" \
+            "ytsearch1:${title}" 2>/dev/null)
+        url=$(echo "$result" | awk '{print $1}')
+        yt_dur=$(echo "$result" | awk '{print $2}')
+
+        [ -z "$url" ] && continue
+
+        diff=$((dur_s - yt_dur))
+        [ $diff -lt 0 ] && diff=$((-diff))
+        if [ "$diff" -le 3 ]; then
+            output_json "chromium" "$title" "$url"
+        fi
+    fi
+done
