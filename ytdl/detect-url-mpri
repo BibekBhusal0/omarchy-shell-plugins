@@ -23,6 +23,7 @@ busctl --user list 2>/dev/null | grep "org.mpris.MediaPlayer2\." | while read -r
     # Skip if no metadata (not playing anything)
     echo "$raw" | grep -q '"Metadata"' || continue
 
+    # busctl escapes non-ASCII as octal (\360...); \0nnn form decodes via printf %b
     title=$(echo "$raw" | grep -o '"xesam:title" s "[^"]*"' | sed 's/"xesam:title" s "//;s/\\342\\200\\231/'"'"'/g;s/"$//')
     [ -z "$title" ] && continue
 
@@ -33,7 +34,13 @@ busctl --user list 2>/dev/null | grep "org.mpris.MediaPlayer2\." | while read -r
         continue
     fi
 
-    # Method 2: No URL or not YouTube - search by title (Chromium and others)
+    # Method 2: No URL (for chromium based browsers)
+    player=${service#*org.mpris.MediaPlayer2.}
+    case "$player" in
+        chromium*|chrome*|brave*|edge*|vivaldi*|helium*) ;;
+        *) continue ;;
+    esac
+
     # Get duration to verify the match
     dur_us=$(echo "$raw" | grep -o '"mpris:length" x [0-9]*' | awk '{print $3}')
     [ -z "$dur_us" ] || [ "$dur_us" -eq 0 ] && continue
