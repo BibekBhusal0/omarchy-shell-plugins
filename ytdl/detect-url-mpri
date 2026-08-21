@@ -5,7 +5,7 @@
 # Chromium (Helium/Chrome): search by title + verify duration
 
 output_json() {
-    printf '{"title":"%s","url":"%s"}\n' "$1" "$2"
+    jq -n --compact-output --arg t "$1" --arg u "$2" '{title: $t, url: $u}'
 }
 
 is_youtube_url() {

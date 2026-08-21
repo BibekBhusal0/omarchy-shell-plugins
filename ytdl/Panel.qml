@@ -152,9 +152,9 @@ Panel {
     if (name === "input") return 3
     if (name === "detected") return 1
     if (name === "playlist") return 1
-    if (name === "downloads") return root.activeCount
-    if (name === "queue") return root.queuedCount
-    if (name === "history") return root.historyCount
+    if (name === "downloads") return root.activeCount + (root.activeCount > 0 ? 1 : 0)
+    if (name === "queue") return root.queuedCount + (root.queuedCount > 0 ? 1 : 0)
+    if (name === "history") return root.historyCount + (root.historyCount > 0 ? 1 : 0)
     return 0
   }
 
@@ -226,16 +226,26 @@ Panel {
         ytdlService.clearPlaylistInfo()
       }
     } else if (s === "downloads") {
-      var d = root.activeDownloads[root.selectedIndex]
-      if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+      if (root.selectedIndex === 0) {
+        if (ytdlService) ytdlService.cancelAll()
+      } else {
+        var d = root.activeDownloads[root.selectedIndex - 1]
+        if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+      }
     } else if (s === "queue") {
-      var q = root.queuedDownloads[root.selectedIndex]
-      if (q && ytdlService) ytdlService.removeQueued(q.dwnId)
+      if (root.selectedIndex === 0) {
+        if (ytdlService) ytdlService.clearQueue()
+      } else {
+        var q = root.queuedDownloads[root.selectedIndex - 1]
+        if (q && ytdlService) ytdlService.removeQueued(q.dwnId)
+      }
     } else if (s === "history") {
-      var h = root.historyItems[root.selectedIndex]
-      if (!h || !ytdlService) return
-      if (h.status === "done") ytdlService.playFile(h.filepath)
-      else if (h.status === "error" || h.status === "cancelled") ytdlService.retryDownload(h)
+      if (root.selectedIndex === 0) {
+        if (ytdlService) ytdlService.clearHistory()
+      } else {
+        var h = root.historyItems[root.selectedIndex - 1]
+        if (h && ytdlService) ytdlService.removeHistoryItem(h.dwnId)
+      }
     }
   }
 
@@ -246,14 +256,26 @@ Panel {
     } else if (root.focusSection === "playlist") {
       if (ytdlService) ytdlService.clearPlaylistInfo()
     } else if (root.focusSection === "downloads") {
-      var d = root.activeDownloads[root.selectedIndex]
-      if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+      if (root.selectedIndex === 0) {
+        if (ytdlService) ytdlService.cancelAll()
+      } else {
+        var d = root.activeDownloads[root.selectedIndex - 1]
+        if (d && ytdlService) ytdlService.cancelDownload(d.dwnId)
+      }
     } else if (root.focusSection === "queue") {
-      var q = root.queuedDownloads[root.selectedIndex]
-      if (q && ytdlService) ytdlService.removeQueued(q.dwnId)
+      if (root.selectedIndex === 0) {
+        if (ytdlService) ytdlService.clearQueue()
+      } else {
+        var q = root.queuedDownloads[root.selectedIndex - 1]
+        if (q && ytdlService) ytdlService.removeQueued(q.dwnId)
+      }
     } else if (root.focusSection === "history") {
-      var h = root.historyItems[root.selectedIndex]
-      if (h && ytdlService) ytdlService.removeHistoryItem(h.dwnId)
+      if (root.selectedIndex === 0) {
+        if (ytdlService) ytdlService.clearHistory()
+      } else {
+        var h = root.historyItems[root.selectedIndex - 1]
+        if (h && ytdlService) ytdlService.removeHistoryItem(h.dwnId)
+      }
     }
   }
 
@@ -269,12 +291,12 @@ Panel {
       item = flick.contentItem.parent.detectedColumn
     else if (root.focusSection === "playlist")
       item = flick.contentItem.parent.playlistColumn
-    else if (root.focusSection === "downloads" && root.selectedIndex >= 0 && activeRepeater.count > 0)
-      item = activeRepeater.itemAt(root.selectedIndex)
-    else if (root.focusSection === "queue" && root.selectedIndex >= 0 && queueRepeater.count > 0)
-      item = queueRepeater.itemAt(root.selectedIndex)
-    else if (root.focusSection === "history" && root.selectedIndex >= 0 && historyRepeater.count > 0)
-      item = historyRepeater.itemAt(root.selectedIndex)
+    else if (root.focusSection === "downloads" && root.selectedIndex > 0 && activeRepeater.count > 0)
+      item = activeRepeater.itemAt(root.selectedIndex - 1)
+    else if (root.focusSection === "queue" && root.selectedIndex > 0 && queueRepeater.count > 0)
+      item = queueRepeater.itemAt(root.selectedIndex - 1)
+    else if (root.focusSection === "history" && root.selectedIndex > 0 && historyRepeater.count > 0)
+      item = historyRepeater.itemAt(root.selectedIndex - 1)
     if (!item) return
     var y = item.mapToItem(flick.contentItem, 0, 0).y
     if (y < flick.contentY) flick.contentY = Math.max(0, y - Style.space(8))
@@ -710,6 +732,7 @@ Panel {
                 hoverColor: Color.urgent
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                hasCursor: root.cursorActive && root.focusSection === "downloads" && root.selectedIndex === 0
                 onClicked: {
                   if (ytdlService) ytdlService.cancelAll()
                 }
@@ -725,7 +748,7 @@ Panel {
                 height: dlBody.implicitHeight + Style.space(16)
                 foreground: root.foreground
                 accent: root.activeColor
-                hasCursor: root.cursorActive && root.focusSection === "downloads" && root.selectedIndex === index
+                hasCursor: root.cursorActive && root.focusSection === "downloads" && root.selectedIndex === index + 1
 
                 MouseArea {
                   anchors.fill: parent
@@ -841,15 +864,17 @@ Panel {
               }
 
               PanelActionButton {
-                iconText: ""
+                iconText: "󰅙"
                 tooltipText: "Clear queue"
                 foreground: root.foreground
                 hoverColor: Color.urgent
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                hasCursor: root.cursorActive && root.focusSection === "queue" && root.selectedIndex === 0
                 onClicked: {
                   if (ytdlService) ytdlService.clearQueue()
                 }
+              }
               }
             }
 
@@ -862,7 +887,7 @@ Panel {
                 height: qBody.implicitHeight + Style.space(12)
                 foreground: root.foreground
                 accent: root.activeColor
-                hasCursor: root.cursorActive && root.focusSection === "queue" && root.selectedIndex === index
+                hasCursor: root.cursorActive && root.focusSection === "queue" && root.selectedIndex === index + 1
 
                 MouseArea {
                   anchors.fill: parent
@@ -947,15 +972,17 @@ Panel {
               }
 
               PanelActionButton {
-                iconText: ""
+                iconText: "󰅙"
                 tooltipText: "Clear history"
                 foreground: root.foreground
                 hoverColor: Color.urgent
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === 0
                 onClicked: {
                   if (ytdlService) ytdlService.clearHistory()
                 }
+              }
               }
             }
 
@@ -968,7 +995,7 @@ Panel {
                 height: histBody.implicitHeight + Style.space(12)
                 foreground: root.foreground
                 accent: root.activeColor
-                hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === index
+                hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === index + 1
 
                 MouseArea {
                   anchors.fill: parent
