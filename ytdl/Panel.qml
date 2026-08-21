@@ -875,7 +875,6 @@ Panel {
                   if (ytdlService) ytdlService.clearQueue()
                 }
               }
-              }
             }
 
             Repeater {
@@ -982,7 +981,6 @@ Panel {
                 onClicked: {
                   if (ytdlService) ytdlService.clearHistory()
                 }
-              }
               }
             }
 
