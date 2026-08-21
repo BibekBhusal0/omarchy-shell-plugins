@@ -997,6 +997,8 @@ Item {
 
   function detectYouTube() {
     if (detectProc.running) return
+    root.detectedUrl = ""
+    root.detectedTitle = ""
     root._detectBuf = ""
     root.detecting = true
     detectProc.command = ["bash", detectScriptPath]
