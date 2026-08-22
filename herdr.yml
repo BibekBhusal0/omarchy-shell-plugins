@@ -1,0 +1,15 @@
+workspaces:
+  - name: omarchy-plugins
+    tabs:
+      - label: editor
+        panes:
+          - command: nvim :SessionLoad omarchy-plugins
+      - label: AI
+        panes:
+          - command: opencode --yolo
+      - label: sync
+        panes:
+          - {}
+          - split: right
+            ratio: 0.7
+            command: ./scripts/watch-sync.sh
