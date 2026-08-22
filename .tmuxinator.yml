@@ -1,5 +1,5 @@
 name: omarchy-plugins
-root: ~/Code/omarchy-shell-plugin/
+root: ~/Code/omarchy-shell-plugins/
 
 windows:
   - editor: nvim :SessionLoad omarchy-plugins

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="/home/bibek/Code/omarchy-shell-plugin"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGINS_DIR="$HOME/.config/omarchy/plugins"
 
 inotifywait -m -r -q -e close_write,create,delete,move \
