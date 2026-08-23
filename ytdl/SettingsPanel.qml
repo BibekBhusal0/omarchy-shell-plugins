@@ -5,320 +5,332 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 
-Rectangle {
+// Labeled, scrollable settings view for the downloader.
+// It is dynamically sized and keyboard-navigable.
+Flickable {
   id: root
-  color: Color.popups.background
-  radius: Style.space(8)
-  
+  clip: true
+  contentWidth: width
+  contentHeight: contentColumn.implicitHeight
+  boundsBehavior: Flickable.StopAtBounds
+
   property var ytdlService: null
   property color foreground: Color.popups.text
   property color activeColor: Color.accent
   property string fontFamily: Style.font.family
-  
-  property string selectedQuality: ytdlService ? ytdlService.selectedQuality : "1080p"
-  property string selectedDownloadType: ytdlService ? ytdlService.defaultDownloadType : "video"
-  property string selectedVideoFormat: ytdlService ? ytdlService.videoFormat : "mp4"
-  property string selectedAudioFormat: ytdlService ? ytdlService.audioFormat : "mp3"
-  property bool downloadTranscripts: ytdlService ? ytdlService.downloadTranscripts : false
-  property string transcriptLanguages: ytdlService ? ytdlService.transcriptLanguages : "en"
-  property bool playlistInSeparateFolder: ytdlService ? ytdlService.playlistInSeparateFolder : true
-  
+
+  property bool cursorActive: false
+  property int selectedIndex: 0
+
   signal closeRequested()
-  
+  signal inputClosed()
+  signal cursorMoveRequested(int index)
+
+  // The panel card sizes itself from this; Flickable reports no
+  // implicitHeight of its own.
+  readonly property real preferredHeight: contentColumn.implicitHeight
+
+  onSelectedIndexChanged: Qt.callLater(root.scrollToCursor)
+  onCursorActiveChanged: Qt.callLater(root.scrollToCursor)
+
+  // Expose popupOpen so the parent key catcher knows to block keys while a dropdown is active.
+  readonly property bool isPopupOpen: typeDropdown.popupOpen || qualityDropdown.popupOpen || vformatDropdown.popupOpen || aformatDropdown.popupOpen
+
+  // While the languages field owns focus, every keystroke must reach it
+  // instead of the parent key catcher.
+  readonly property bool isInputActive: langInput.activeFocus
+
+  // Mouse hover on any control moves the shared cursor so keyboard and
+  // pointer highlight stay in sync (the parent owns selectedIndex).
+  function hoverKey(itemKey) {
+    var i = visibleItems.indexOf(itemKey)
+    if (i >= 0) cursorMoveRequested(i)
+  }
+
+  // Return the ordered list of visible settings controls for keyboard cursor indexing.
+  readonly property var visibleItems: {
+    var items = ["type"];
+    if (ytdlService && ytdlService.defaultDownloadType !== "audio") {
+      items.push("quality");
+      items.push("vformat");
+    }
+    if (ytdlService && ytdlService.defaultDownloadType !== "video") {
+      items.push("aformat");
+    }
+    items.push("transcripts");
+    if (ytdlService && ytdlService.downloadTranscripts) {
+      items.push("languages");
+    }
+    items.push("playlistFolder");
+    items.push("back");
+    return items;
+  }
+
+  function getSelectedIndexForItem(itemKey) {
+    return visibleItems.indexOf(itemKey);
+  }
+
+  function activateIndex(idx) {
+    if (idx < 0 || idx >= visibleItems.length) return;
+    var itemKey = visibleItems[idx];
+    if (itemKey === "type") {
+      typeDropdown.toggle();
+    } else if (itemKey === "quality") {
+      qualityDropdown.toggle();
+    } else if (itemKey === "vformat") {
+      vformatDropdown.toggle();
+    } else if (itemKey === "aformat") {
+      aformatDropdown.toggle();
+    } else if (itemKey === "transcripts") {
+      if (ytdlService) {
+        ytdlService.updateSetting("downloadTranscripts", !ytdlService.downloadTranscripts);
+      }
+    } else if (itemKey === "languages") {
+      langInput.forceActiveFocus();
+    } else if (itemKey === "playlistFolder") {
+      if (ytdlService) {
+        ytdlService.updateSetting("playlistInSeparateFolder", !ytdlService.playlistInSeparateFolder);
+      }
+    } else if (itemKey === "back") {
+      root.closeRequested();
+    }
+  }
+
+  function scrollToCursor() {
+    if (!root.cursorActive || selectedIndex < 0 || selectedIndex >= visibleItems.length) return;
+    var itemKey = visibleItems[selectedIndex];
+    var item = null;
+    if (itemKey === "type") item = typeDropdown;
+    else if (itemKey === "quality") item = qualityDropdown;
+    else if (itemKey === "vformat") item = vformatDropdown;
+    else if (itemKey === "aformat") item = aformatDropdown;
+    else if (itemKey === "transcripts") item = transcriptsToggle;
+    else if (itemKey === "languages") item = langInput;
+    else if (itemKey === "playlistFolder") item = playlistFolderToggle;
+    else if (itemKey === "back") item = backBtn;
+
+    if (!item) return;
+    var y = item.mapToItem(contentColumn, 0, 0).y;
+    if (y < root.contentY) {
+      root.contentY = Math.max(0, y - Style.space(8));
+    } else if (y + item.height > root.contentY + root.height) {
+      root.contentY = y + item.height - root.height + Style.space(8);
+    }
+  }
+
   Column {
-    anchors.fill: parent
-    anchors.margins: Style.space(16)
-    spacing: Style.space(16)
-    
+    id: contentColumn
+    width: parent.width
+    spacing: Style.space(14)
+
+    // Header row
     RowLayout {
       width: parent.width
       spacing: Style.space(8)
-      
+
       Text {
         Layout.fillWidth: true
-        text: "Download Settings"
+        text: "Downloader Settings"
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.title
         font.bold: true
       }
-      
+
       PanelActionButton {
-        iconText: "\uf00d"
-        tooltipText: "Close"
+        // FIX: icon below
+        iconText: ""
+        tooltipText: "Back to downloads"
         foreground: root.foreground
-        hoverColor: Color.urgent
+        hoverColor: root.activeColor
         fontFamily: root.fontFamily
         fontSize: Style.font.body
+        hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "back"
         onClicked: root.closeRequested()
       }
     }
-    
+
     Rectangle {
       width: parent.width
       height: 1
-      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
+      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
     }
-    
+
+    // 1. Download Type dropdown
+    Dropdown {
+      id: typeDropdown
+      width: parent.width
+      label: "Download Type"
+      value: ytdlService ? ytdlService.defaultDownloadType : "video"
+      options: [
+        { value: "video", label: "Video" },
+        { value: "audio", label: "Audio" },
+        { value: "both", label: "Video & Audio" }
+      ]
+      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "type"
+      onHovered: function(isHovered) {
+        if (isHovered) root.hoverKey("type")
+      }
+      onChanged: function(val) {
+        if (ytdlService) ytdlService.updateSetting("defaultDownloadType", val);
+      }
+    }
+
+    // 2. Video Quality dropdown
+    Dropdown {
+      id: qualityDropdown
+      width: parent.width
+      label: "Video Quality"
+      value: ytdlService ? ytdlService.selectedQuality : "1080p"
+      options: [
+        { value: "best", label: "Best available" },
+        { value: "1080p", label: "1080p" },
+        { value: "720p", label: "720p" },
+        { value: "480p", label: "480p" }
+      ]
+      visible: ytdlService && ytdlService.defaultDownloadType !== "audio"
+      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "quality"
+      onHovered: function(isHovered) {
+        if (isHovered) root.hoverKey("quality")
+      }
+      onChanged: function(val) {
+        if (ytdlService) ytdlService.updateSetting("selectedQuality", val);
+      }
+    }
+
+    // 3. Video Format dropdown
+    Dropdown {
+      id: vformatDropdown
+      width: parent.width
+      label: "Video Format"
+      value: ytdlService ? ytdlService.videoFormat : "mp4"
+      options: [
+        { value: "mp4", label: "MP4" },
+        { value: "mkv", label: "MKV" },
+        { value: "webm", label: "WebM" },
+        { value: "avi", label: "AVI" }
+      ]
+      visible: ytdlService && ytdlService.defaultDownloadType !== "audio"
+      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "vformat"
+      onHovered: function(isHovered) {
+        if (isHovered) root.hoverKey("vformat")
+      }
+      onChanged: function(val) {
+        if (ytdlService) ytdlService.updateSetting("videoFormat", val);
+      }
+    }
+
+    // 4. Audio Format dropdown
+    Dropdown {
+      id: aformatDropdown
+      width: parent.width
+      label: "Audio Format"
+      value: ytdlService ? ytdlService.audioFormat : "mp3"
+      options: [
+        { value: "mp3", label: "MP3" },
+        { value: "m4a", label: "M4A" },
+        { value: "opus", label: "Opus" },
+        { value: "flac", label: "FLAC" },
+        { value: "wav", label: "WAV" }
+      ]
+      visible: ytdlService && ytdlService.defaultDownloadType !== "video"
+      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "aformat"
+      onHovered: function(isHovered) {
+        if (isHovered) root.hoverKey("aformat")
+      }
+      onChanged: function(val) {
+        if (ytdlService) ytdlService.updateSetting("audioFormat", val);
+      }
+    }
+
+    // 5. Download Transcripts toggle row
+    Toggle {
+      id: transcriptsToggle
+      width: parent.width
+      label: "Download Transcripts"
+      description: "Download subtitles/transcripts automatically."
+      checked: ytdlService ? ytdlService.downloadTranscripts : false
+      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "transcripts"
+      onHovered: function(isHovered) {
+        if (isHovered) root.hoverKey("transcripts")
+      }
+      onClicked: {
+        if (ytdlService) {
+          ytdlService.updateSetting("downloadTranscripts", !ytdlService.downloadTranscripts);
+        }
+      }
+    }
+
+    // 6. Transcript languages text input
     Column {
       width: parent.width
-      spacing: Style.space(12)
-      
+      spacing: Style.spacing.labelGap
+      visible: ytdlService && ytdlService.downloadTranscripts
+
       Text {
-        text: "Download Type"
-        color: root.foreground
+        text: "Transcript Languages"
+        color: Qt.darker(root.foreground, 1.4)
         font.family: root.fontFamily
-        font.pixelSize: Style.font.body
+        font.pixelSize: Style.font.caption
         font.bold: true
       }
-      
-      Row {
-        spacing: Style.space(8)
-        
-        Repeater {
-          model: [
-            { value: "video", label: "Video", icon: "󰕧" },
-            { value: "audio", label: "Audio", icon: "󰎆" },
-            { value: "both", label: "Both", icon: "󰼁" }
-          ]
-          
-          delegate: Button {
-            width: Style.space(100)
-            height: Style.space(40)
-            text: modelData.label
-            iconText: modelData.icon
-            foreground: root.foreground
-            accent: root.activeColor
-            fontFamily: root.fontFamily
-            fontSize: Style.font.bodySmall
-            bordered: true
-            selected: root.selectedDownloadType === modelData.value
-            onClicked: {
-              root.selectedDownloadType = modelData.value
-              if (ytdlService) ytdlService.defaultDownloadType = modelData.value
-            }
-          }
+
+      TextField {
+        id: langInput
+        width: parent.width
+        height: Style.spacing.controlHeight
+        text: ytdlService ? ytdlService.transcriptLanguages : "en"
+        placeholderText: "Comma-separated codes (e.g., en,es,fr) or 'all'"
+        hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "languages"
+        onHoveredChanged: if (hovered) root.hoverKey("languages")
+        onAccepted: {
+          if (ytdlService) ytdlService.updateSetting("transcriptLanguages", text);
+          langInput.focus = false;
+          root.inputClosed();
+        }
+        Keys.onEscapePressed: {
+          langInput.focus = false;
+          root.inputClosed();
         }
       }
     }
-    
-    Column {
+
+    // 7. Playlists in separate folder toggle row
+    Toggle {
+      id: playlistFolderToggle
       width: parent.width
-      spacing: Style.space(12)
-      
-      Text {
-        text: "Video Quality"
-        color: root.foreground
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.body
-        font.bold: true
+      label: "Playlist Subfolders"
+      description: "Organize playlist items into a folder named after the playlist."
+      checked: ytdlService ? ytdlService.playlistInSeparateFolder : true
+      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "playlistFolder"
+      onHovered: function(isHovered) {
+        if (isHovered) root.hoverKey("playlistFolder")
       }
-      
-      Flow {
-        width: parent.width
-        spacing: Style.space(8)
-        
-        Repeater {
-          model: ["best", "1080p", "720p", "480p"]
-          
-          delegate: Button {
-            width: Style.space(80)
-            height: Style.space(36)
-            text: modelData
-            foreground: root.foreground
-            accent: root.activeColor
-            fontFamily: root.fontFamily
-            fontSize: Style.font.bodySmall
-            bordered: true
-            selected: root.selectedQuality === modelData
-            onClicked: {
-              root.selectedQuality = modelData
-              if (ytdlService) {
-                ytdlService.selectedQuality = modelData
-                ytdlService.persistQuality()
-                ytdlService.setDefaultQuality(modelData)
-              }
-            }
-          }
+      onClicked: {
+        if (ytdlService) {
+          ytdlService.updateSetting("playlistInSeparateFolder", !ytdlService.playlistInSeparateFolder);
         }
       }
     }
-    
-    Column {
+
+    // 8. Back button at the bottom
+    Button {
+      id: backBtn
       width: parent.width
-      spacing: Style.space(12)
-      
-      Text {
-        text: "Video Format"
-        color: root.foreground
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.body
-        font.bold: true
+      height: Style.spacing.controlHeight
+      text: "Back to downloads"
+      // FIX: icon below
+      iconText: ""
+      fontFamily: root.fontFamily
+      fontSize: Style.font.bodySmall
+      foreground: root.foreground
+      accent: root.activeColor
+      bordered: true
+      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "back"
+      onHovered: function(isHovered) {
+        if (isHovered) root.hoverKey("back")
       }
-      
-      Flow {
-        width: parent.width
-        spacing: Style.space(8)
-        
-        Repeater {
-          model: ["mp4", "mkv", "webm", "avi"]
-          
-          delegate: Button {
-            width: Style.space(70)
-            height: Style.space(36)
-            text: modelData.toUpperCase()
-            foreground: root.foreground
-            accent: root.activeColor
-            fontFamily: root.fontFamily
-            fontSize: Style.font.bodySmall
-            bordered: true
-            selected: root.selectedVideoFormat === modelData
-            onClicked: {
-              root.selectedVideoFormat = modelData
-              if (ytdlService) ytdlService.videoFormat = modelData
-            }
-          }
-        }
-      }
-    }
-    
-    Column {
-      width: parent.width
-      spacing: Style.space(12)
-      
-      Text {
-        text: "Audio Format"
-        color: root.foreground
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.body
-        font.bold: true
-      }
-      
-      Flow {
-        width: parent.width
-        spacing: Style.space(8)
-        
-        Repeater {
-          model: ["mp3", "m4a", "opus", "flac", "wav"]
-          
-          delegate: Button {
-            width: Style.space(70)
-            height: Style.space(36)
-            text: modelData.toUpperCase()
-            foreground: root.foreground
-            accent: root.activeColor
-            fontFamily: root.fontFamily
-            fontSize: Style.font.bodySmall
-            bordered: true
-            selected: root.selectedAudioFormat === modelData
-            onClicked: {
-              root.selectedAudioFormat = modelData
-              if (ytdlService) ytdlService.audioFormat = modelData
-            }
-          }
-        }
-      }
-    }
-    
-    Column {
-      width: parent.width
-      spacing: Style.space(12)
-      
-      RowLayout {
-        width: parent.width
-        spacing: Style.space(8)
-        
-        Text {
-          Layout.fillWidth: true
-          text: "Download Transcripts"
-          color: root.foreground
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.body
-        }
-        
-        Button {
-          implicitWidth: Style.space(48)
-          implicitHeight: Style.space(28)
-          text: root.downloadTranscripts ? "On" : "Off"
-          foreground: root.foreground
-          accent: root.activeColor
-          fontFamily: root.fontFamily
-          fontSize: Style.font.caption
-          bordered: true
-          selected: root.downloadTranscripts
-          onClicked: {
-            root.downloadTranscripts = !root.downloadTranscripts
-            if (ytdlService) ytdlService.downloadTranscripts = root.downloadTranscripts
-          }
-        }
-      }
-      
-      RowLayout {
-        width: parent.width
-        spacing: Style.space(8)
-        visible: root.downloadTranscripts
-        
-        Text {
-          text: "Languages:"
-          color: Qt.darker(root.foreground, 1.3)
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.bodySmall
-        }
-        
-        TextField {
-          id: langInput
-          Layout.fillWidth: true
-          height: Style.space(32)
-          text: root.transcriptLanguages
-          placeholderText: "e.g., en,es,fr"
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.bodySmall
-          foreground: root.foreground
-          accent: root.activeColor
-          onAccepted: {
-            root.transcriptLanguages = text
-            if (ytdlService) ytdlService.transcriptLanguages = text
-          }
-        }
-      }
-    }
-    
-    Column {
-      width: parent.width
-      spacing: Style.space(12)
-      
-      RowLayout {
-        width: parent.width
-        spacing: Style.space(8)
-        
-        Text {
-          Layout.fillWidth: true
-          text: "Playlists in Separate Folders"
-          color: root.foreground
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.body
-        }
-        
-        Button {
-          implicitWidth: Style.space(48)
-          implicitHeight: Style.space(28)
-          text: root.playlistInSeparateFolder ? "On" : "Off"
-          foreground: root.foreground
-          accent: root.activeColor
-          fontFamily: root.fontFamily
-          fontSize: Style.font.caption
-          bordered: true
-          selected: root.playlistInSeparateFolder
-          onClicked: {
-            root.playlistInSeparateFolder = !root.playlistInSeparateFolder
-            if (ytdlService) ytdlService.playlistInSeparateFolder = root.playlistInSeparateFolder
-          }
-        }
-      }
-    }
-    
-    Item {
-      Layout.fillHeight: true
+      onClicked: root.closeRequested()
     }
   }
 }

@@ -81,6 +81,11 @@ Item {
   signal downloadsUpdated()
   signal historyUpdated()
 
+  // Emitted so the panel (injected into the bar widget) can react to IPC
+  // requests; the service itself has no handle on the panel instance.
+  signal openPanelRequested()
+  signal openSettingsRequested(bool open)
+
   readonly property string scriptPath: Qt.resolvedUrl("scripts/ytdl").toString().replace(/^file:\/\//, "")
   readonly property string detectScriptPath: Qt.resolvedUrl("scripts/detect-url-mpri").toString().replace(/^file:\/\//, "")
   readonly property string autoDownloadScriptPath: Qt.resolvedUrl("scripts/auto-download.sh").toString().replace(/^file:\/\//, "")
@@ -136,6 +141,36 @@ Item {
       transcriptLanguages = settings.transcriptLanguages
     if (settings.playlistInSeparateFolder != null)
       playlistInSeparateFolder = !!settings.playlistInSeparateFolder
+  }
+
+  function updateSetting(key, value) {
+    root[key] = value;
+    if (key === "selectedQuality") {
+      root.persistQuality();
+      root.setDefaultQuality(value);
+      return;
+    }
+    if (shell && typeof shell.mutateShellConfig === "function") {
+      shell.mutateShellConfig(function(copy) {
+        if (copy.bar && copy.bar.layout) {
+          var sections = ["left", "center", "right"];
+          for (var si = 0; si < sections.length; si++) {
+            var entries = copy.bar.layout[sections[si]];
+            if (!Array.isArray(entries)) continue;
+            for (var ei = 0; ei < entries.length; ei++) {
+              if (entries[ei] && String(entries[ei].id) === "bibek.ytdl")
+                entries[ei][key] = value;
+            }
+          }
+        }
+        if (Array.isArray(copy.plugins)) {
+          for (var pi = 0; pi < copy.plugins.length; pi++) {
+            if (copy.plugins[pi] && String(copy.plugins[pi].id) === "bibek.ytdl")
+              copy.plugins[pi][key] = value;
+          }
+        }
+      });
+    }
   }
 
   function persistQuality() {
@@ -1114,11 +1149,67 @@ Item {
   IpcHandler {
     target: "ytdl"
     function start(url: string): void { root.startDownload(url) }
+    function startWith(url: string, downloadType: string): void {
+      root.startDownload(url, root.selectedQuality, false, "", downloadType)
+    }
     function cancel(id: string): void { root.cancelDownload(parseInt(id)) }
     function status(): string { return JSON.stringify({downloads: root.downloadCount, active: root.activeCount}) }
     function autoDownload(): string {
       Quickshell.execDetached([autoDownloadScriptPath])
       return JSON.stringify({status: "started", message: "Auto-download triggered"})
+    }
+    function open(): string {
+      root.openPanelRequested()
+      return "ok"
+    }
+    function openSettings(): string {
+      root.openSettingsRequested(true)
+      return "ok"
+    }
+    function closeSettings(): string {
+      root.openSettingsRequested(false)
+      return "ok"
+    }
+    function settings(): string {
+      return JSON.stringify({
+        defaultDownloadType: root.defaultDownloadType,
+        quality: root.selectedQuality,
+        videoFormat: root.videoFormat,
+        audioFormat: root.audioFormat,
+        downloadTranscripts: root.downloadTranscripts,
+        transcriptLanguages: root.transcriptLanguages,
+        playlistInSeparateFolder: root.playlistInSeparateFolder,
+        downloadLocation: root.downloadLocation,
+        cookiesBrowser: root.cookiesBrowser,
+        extraArgs: root.extraArgs,
+        enableHistory: root.enableHistory
+      })
+    }
+
+    // Set one setting over IPC and persist it to shell.json. Values arrive as
+    // strings, so booleans are coerced here; enums are validated before the
+    // property write. Returns the full settings snapshot so callers can
+    // verify in one round-trip.
+    function set(key: string, value: string): string {
+      var enums = {
+        defaultDownloadType: ["video", "audio", "both"],
+        selectedQuality: ["best", "1080p", "720p", "480p"],
+        defaultQuality: ["best", "1080p", "720p", "480p"],
+        videoFormat: ["mp4", "mkv", "webm", "avi"],
+        audioFormat: ["mp3", "m4a", "opus", "flac", "wav"],
+        cookiesBrowser: ["none", "firefox", "chromium", "chrome", "zen", "helium", "glide"]
+      }
+      var bools = ["downloadTranscripts", "playlistInSeparateFolder"]
+      if (enums[key] !== undefined && enums[key].indexOf(String(value)) === -1)
+        return JSON.stringify({error: "invalid value for " + key + " (expected one of: " + enums[key].join(", ") + ")"})
+      if (bools.indexOf(key) !== -1)
+        value = (value === "true" || value === "1" || value === "yes") ? "true" : "false"
+      // defaultQuality is the persisted alias of the live selection.
+      if (key === "defaultQuality") key = "selectedQuality"
+      if (!root.hasOwnProperty(key))
+        return JSON.stringify({error: "unknown key: " + key})
+      root.updateSetting(key, bools.indexOf(key) !== -1 ? (value === "true") : String(value))
+      return this.settings()
     }
     function state(): string {
       var d = root.downloads.map(function(x) {
