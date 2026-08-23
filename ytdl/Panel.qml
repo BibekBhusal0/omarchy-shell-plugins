@@ -22,7 +22,8 @@ Panel {
 
   property string inputUrl: ""
   property string clipboardUrl: ""
-  property string selectedQuality: ytdlService ? ytdlService.selectedQuality : "1080p"
+  
+  property bool settingsPanelVisible: false
 
   // Keyboard cursor model: focusSection × selectedIndex.
   property string focusSection: "input"
@@ -114,19 +115,17 @@ Panel {
 
   function submitUrl() {
     if (!ytdlService || !inputUrl) return
-    ytdlService.startDownload(inputUrl, selectedQuality)
+    ytdlService.startDownload(inputUrl, ytdlService.selectedQuality, false, "", ytdlService.defaultDownloadType)
     inputUrl = ""
     urlInput.text = ""
   }
-
-  function cycleQuality() {
-    if (!ytdlService) return
-    var q = ["best", "1080p", "720p", "480p"]
-    var i = q.indexOf(root.selectedQuality)
-    var next = q[(i + 1) % q.length]
-    ytdlService.selectedQuality = next
-    ytdlService.persistQuality()
-    ytdlService.setDefaultQuality(next)
+  
+  function openSettings() {
+    root.settingsPanelVisible = true
+  }
+  
+  function closeSettings() {
+    root.settingsPanelVisible = false
   }
 
   function focusUrlField() {
@@ -217,7 +216,7 @@ Panel {
       if (ytdlService && !ytdlService.installing) ytdlService.installInTerminal()
     } else if (s === "input") {
       if (root.selectedIndex === 0) root.focusUrlField()
-      else if (root.selectedIndex === 1) root.cycleQuality()
+      else if (root.selectedIndex === 1) root.openSettings()
       else root.submitUrl()
     } else if (s === "detected") {
       if (ytdlService && ytdlService.detectedUrl) {
@@ -288,7 +287,7 @@ Panel {
 
   function handleTextKey(t) {
     if (t === "/") root.focusUrlField()
-    else if (t === "q" || t === "Q") root.cycleQuality()
+    else if (t === "s" || t === "S") root.openSettings()
   }
 
   function scrollToCursor() {
@@ -296,7 +295,7 @@ Panel {
     var item = null
     if (root.focusSection === "input") {
       if (root.selectedIndex === 0 && urlInput) item = urlInput
-      else if (root.selectedIndex === 1 && qualitySelector) item = qualitySelector
+      else if (root.selectedIndex === 1 && settingsBtn) item = settingsBtn
       else if (root.selectedIndex === 2 && downloadManualBtn) item = downloadManualBtn
     } else if (root.focusSection === "detected")
       item = flick.contentItem.parent.detectedColumn
@@ -508,38 +507,23 @@ Panel {
                 Keys.onEscapePressed: root.focusPanel()
               }
 
-              CursorSurface {
-                id: qualitySelector
-                implicitWidth: Style.space(64)
-                implicitHeight: Style.space(36)
+              Button {
+                id: settingsBtn
+                // FIX: icon below
+                iconText: "\uf013"
+                tooltipText: "Download settings"
                 foreground: root.foreground
                 accent: root.activeColor
+                iconSize: Style.font.icon
+                implicitWidth: Style.space(36)
+                implicitHeight: Style.space(36)
+                horizontalPadding: 0
+                verticalPadding: 0
                 hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 1
-
-                property var qualities: ["best", "1080p", "720p", "480p"]
-
-                Text {
-                  anchors.centerIn: parent
-                  text: qualitySelector.qualities[qualitySelector.qualities.indexOf(root.selectedQuality)] || "best"
-                  color: root.foreground
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  font.bold: true
+                onHovered: function(hovered) {
+                  if (hovered) root.focusSectionAt("input", 1)
                 }
-
-                MouseArea {
-                  id: qualityMouse
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("input", 1)
-                  onClicked: root.cycleQuality()
-                }
-
-                PanelToolTip {
-                  visible: qualityMouse.containsMouse
-                  text: "Quality: " + (qualitySelector.qualities[qualitySelector.qualities.indexOf(root.selectedQuality)] || "best")
-                  fontFamily: root.fontFamily
-                }
+                onClicked: root.openSettings()
               }
 
               Button {
@@ -555,13 +539,47 @@ Panel {
                 verticalPadding: 0
                 enabled: root.inputUrl !== ""
                 opacity: enabled ? 1 : 0.35
-                hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 2
+                hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 3
                 onHovered: function(hovered) {
-                  if (hovered) root.focusSectionAt("input", 2)
+                  if (hovered) root.focusSectionAt("input", 3)
                 }
                 onClicked: root.submitUrl()
               }
-            }
+
+              CursorSurface {
+                id: downloadTypeSelector
+                implicitWidth: Style.space(64)
+                implicitHeight: Style.space(36)
+                foreground: root.foreground
+                accent: root.activeColor
+                hasCursor: root.cursorActive && root.focusSection === "input" && root.selectedIndex === 2
+
+                property var types: ["video", "audio", "both"]
+                property var typeIcons: {"video": "󰕧", "audio": "󰎆", "both": "󰼁"}
+
+                Text {
+                  anchors.centerIn: parent
+                  text: downloadTypeSelector.typeIcons[root.selectedDownloadType] || "󰕧"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                }
+
+                MouseArea {
+                  id: typeMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  onContainsMouseChanged: if (containsMouse) root.focusSectionAt("input", 2)
+                  onClicked: root.cycleDownloadType()
+                }
+
+                PanelToolTip {
+                  visible: typeMouse.containsMouse
+                  text: "Type: " + root.selectedDownloadType
+                  fontFamily: root.fontFamily
+                }
+              }
+}
 
             Text {
               visible: root.clipboardUrl !== ""

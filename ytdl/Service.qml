@@ -45,6 +45,7 @@ Item {
   // Playlist resolution state. Enumerated videos are queued into `downloads`
   // like any other download (status "queued") and start as procs free up.
   property string _playlistQuality: "1080p"
+  property string _playlistDownloadType: "video"
   property string _playlistError: ""
 
   // "Playlist detected" preview: name and video count for URLs carrying a
@@ -61,9 +62,15 @@ Item {
 
   property string downloadLocation: "~/Downloads/yt-dlp"
   property string defaultQuality: "1080p"
+  property string defaultDownloadType: "video"
+  property string videoFormat: "mp4"
+  property string audioFormat: "mp3"
   property string cookiesBrowser: "none"
   property string extraArgs: ""
   property bool enableHistory: true
+  property bool downloadTranscripts: false
+  property string transcriptLanguages: "en"
+  property bool playlistInSeparateFolder: true
 
   // Persisted across shell restarts via a small state file.
   property string selectedQuality: "1080p"
@@ -92,8 +99,14 @@ Item {
       property string error: ""
       property int procIdx: -1
       property string _quality: "1080p"
+      property string _downloadType: "video"
+      property string _videoFormat: "mp4"
+      property string _audioFormat: "mp3"
+      property bool _downloadTranscripts: false
+      property string _transcriptLanguages: "en"
       property bool _playlistItem: false
       property bool _playlistPlaceholder: false
+      property string _playlistName: ""
     }
   }
 
@@ -105,12 +118,24 @@ Item {
       defaultQuality = settings.defaultQuality
       if (!root._qualityFromFile) selectedQuality = settings.defaultQuality
     }
+    if (settings.defaultDownloadType)
+      defaultDownloadType = settings.defaultDownloadType
+    if (settings.videoFormat)
+      videoFormat = settings.videoFormat
+    if (settings.audioFormat)
+      audioFormat = settings.audioFormat
     if (settings.cookiesBrowser)
       cookiesBrowser = settings.cookiesBrowser
     if (settings.extraArgs != null)
       extraArgs = settings.extraArgs
     if (settings.enableHistory != null)
       enableHistory = !!settings.enableHistory
+    if (settings.downloadTranscripts != null)
+      downloadTranscripts = !!settings.downloadTranscripts
+    if (settings.transcriptLanguages)
+      transcriptLanguages = settings.transcriptLanguages
+    if (settings.playlistInSeparateFolder != null)
+      playlistInSeparateFolder = !!settings.playlistInSeparateFolder
   }
 
   function persistQuality() {
@@ -333,7 +358,7 @@ Item {
     }
   }
 
-  function startDownload(url, quality, isPlaylistItem, knownTitle) {
+  function startDownload(url, quality, isPlaylistItem, knownTitle, downloadType, playlistName) {
     url = cleanUrl(url)
     if (!url) return
     if (root.isUrlBusy(url)) return
@@ -344,8 +369,20 @@ Item {
 
     var id = Date.now() + Math.floor(Math.random() * 1000)
     var q = quality || defaultQuality
-    var outputTemplate = downloadLocation + "/%(title)s.%(ext)s"
-    var cmd = [scriptPath, "download", url, q, outputTemplate, cookiesBrowser, extraArgs]
+    var dtype = downloadType || defaultDownloadType
+    var vfmt = videoFormat
+    var afmt = audioFormat
+    var subs = downloadTranscripts
+    var subLangs = transcriptLanguages
+    
+    var outputTemplate = downloadLocation
+    if (playlistName && playlistInSeparateFolder) {
+      outputTemplate += "/" + playlistName
+    }
+    outputTemplate += "/%(title)s.%(ext)s"
+    
+    var cmd = [scriptPath, "download", url, q, dtype, vfmt, afmt, 
+               subs ? "yes" : "no", subLangs, outputTemplate, cookiesBrowser, extraArgs]
 
     var d = downloadComp.createObject(root)
     d.dwnId = id
@@ -353,13 +390,16 @@ Item {
     d.title = knownTitle || extractVideoId(url) || url
     d.procIdx = -1
     d._quality = q
+    d._downloadType = dtype
+    d._videoFormat = vfmt
+    d._audioFormat = afmt
+    d._downloadTranscripts = subs
+    d._transcriptLanguages = subLangs
     d._playlistItem = !!isPlaylistItem
+    d._playlistName = playlistName || ""
 
     var procIdx = findFreeProc()
     if (procIdx === -1) {
-      // All three slots busy: sit in the queue until one frees up. Fetch the
-      // title now so the queue shows a real name instead of a video id; the
-      // Destination line only appears once the download actually runs.
       d.status = "queued"
       downloads = downloads.concat([d])
       downloadsUpdated()
@@ -389,8 +429,15 @@ Item {
       var procIdx = findFreeProc()
       if (procIdx === -1) return
       var d = downloads[i]
-      var outputTemplate = downloadLocation + "/%(title)s.%(ext)s"
-      var cmd = [scriptPath, "download", d.url, d._quality, outputTemplate, cookiesBrowser, extraArgs]
+      
+      var outputTemplate = downloadLocation
+      if (d._playlistName && playlistInSeparateFolder) {
+        outputTemplate += "/" + d._playlistName
+      }
+      outputTemplate += "/%(title)s.%(ext)s"
+      
+      var cmd = [scriptPath, "download", d.url, d._quality, d._downloadType, d._videoFormat, d._audioFormat,
+                 d._downloadTranscripts ? "yes" : "no", d._transcriptLanguages, outputTemplate, cookiesBrowser, extraArgs]
       var proc = procAt(procIdx)
       proc.downloadId = d.dwnId
       proc._errBuf = ""
@@ -436,8 +483,9 @@ Item {
   // Resolve a playlist to its individual videos, then queue them as normal
   // downloads (they start as procs free up, like any pasted video). A
   // placeholder entry gives feedback while the flat enumeration runs.
-  function startPlaylist(url, quality) {
+  function startPlaylist(url, quality, downloadType) {
     root._playlistQuality = quality || defaultQuality
+    root._playlistDownloadType = downloadType || defaultDownloadType
     root._playlistError = ""
     var id = Date.now() + Math.floor(Math.random() * 1000)
     var d = downloadComp.createObject(root)
@@ -803,7 +851,7 @@ Item {
               for (var i = 0; i < parsed.length; i++) {
                 var it = parsed[i] || {}
                 if (it.url) {
-                  items.push({ url: it.url, title: it.title || "", quality: root._playlistQuality })
+                  items.push({ url: it.url, title: it.title || "", quality: root._playlistQuality, playlistTitle: it.playlistTitle || "" })
                 }
               }
             }
@@ -830,10 +878,9 @@ Item {
         } else {
           root.downloads = root.removeById(root.downloads, id)
           root.downloadsUpdated()
-          // Queue every video as its own download; up to three start now and
-          // the rest wait for a free slot.
+          var playlistName = items.length > 0 && items[0].playlistTitle ? items[0].playlistTitle : ""
           for (var k = 0; k < items.length; k++)
-            root.startDownload(items[k].url, items[k].quality, true, items[k].title)
+            root.startDownload(items[k].url, items[k].quality, true, items[k].title, root._playlistDownloadType, playlistName)
         }
       }
     }

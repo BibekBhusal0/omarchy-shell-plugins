@@ -135,9 +135,15 @@ case "$CMD" in
   download)
     URL="$1"
     QUALITY="$2"
-    OUTPUT="$3"
-    COOKIE_BROWSER="$4"
-    EXTRA="$5"
+    DOWNLOAD_TYPE="$3"
+    VIDEO_FORMAT="$4"
+    AUDIO_FORMAT="$5"
+    DOWNLOAD_SUBS="$6"
+    SUB_LANGS="$7"
+    OUTPUT="$8"
+    COOKIE_BROWSER="$9"
+    shift 9
+    EXTRA="$1"
 
     # yt-dlp >= 2026.08 lists YouTube's HLS streams as video-only, so the
     # pre-merged "b" selector degrades to 360p (or errors outright on
@@ -156,14 +162,39 @@ case "$CMD" in
       fi
     }
 
+    # Build subtitle args
+    SUB_ARGS=""
+    if [ "$DOWNLOAD_SUBS" = "yes" ]; then
+      SUB_ARGS="--write-subs --write-auto-subs"
+      if [ -n "$SUB_LANGS" ] && [ "$SUB_LANGS" != "all" ]; then
+        SUB_ARGS="$SUB_ARGS --sub-langs $SUB_LANGS"
+      fi
+    fi
+
     # Extra args are trusted from the user config; word-split on purpose.
     # shellcheck disable=SC2086
-    case "$QUALITY" in
-      1080p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
-      720p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
-      480p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
-      audio) run_with_retry --no-playlist --newline $EXTRA -f "ba/b" -o "$OUTPUT" "$URL" ;;
-      *) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
+    case "$DOWNLOAD_TYPE" in
+      video)
+        case "$QUALITY" in
+          1080p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
+        esac
+        ;;
+      audio)
+        run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS -x --audio-format "$AUDIO_FORMAT" -o "$OUTPUT" "$URL"
+        ;;
+      both)
+        case "$QUALITY" in
+          1080p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
+        esac
+        AUDIO_OUTPUT="${OUTPUT%.*}_audio.$AUDIO_FORMAT"
+        run_with_retry --no-playlist --newline $EXTRA -x --audio-format "$AUDIO_FORMAT" -o "$AUDIO_OUTPUT" "$URL"
+        ;;
     esac
     ;;
     
@@ -179,11 +210,11 @@ case "$CMD" in
     URL="$1"
     COOKIE_BROWSER="$2"
     EXTRA="$3"
-    # Flat-resolve the playlist to id/title/url so the service can queue each
+    # Flat-resolve the playlist to id/title/url/playlistTitle so the service can queue each
     # video as its own sequential download.
     # shellcheck disable=SC2086
-    run_with_retry --flat-playlist --print "$(printf '%s\t%s\t%s' '%(id)s' '%(title)s' '%(url)s')" $EXTRA "$URL" |
-      jq -R 'split("\t") | select(length == 3) | {id: .[0], title: .[1], url: .[2]}' |
+    run_with_retry --flat-playlist --print "$(printf '%s\t%s\t%s\t%s' '%(id)s' '%(title)s' '%(url)s' '%(playlist_title)s')" $EXTRA "$URL" |
+      jq -R 'split("\t") | select(length == 4) | {id: .[0], title: .[1], url: .[2], playlistTitle: .[3]}' |
       jq -sc .
     ;;
 
