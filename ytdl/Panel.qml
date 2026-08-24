@@ -1123,6 +1123,7 @@ Panel {
                     text: modelData.status === "done" ? ""
                       : modelData.status === "error" ? ""
                       : modelData.status === "cancelled" ? "󰜺"
+                      : modelData.status === "unavailable" ? ""
                       : ""
                     color: modelData.status === "done" ? "#4ade80"
                       : modelData.status === "error" ? Color.urgent

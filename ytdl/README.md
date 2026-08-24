@@ -11,6 +11,7 @@ https://github.com/user-attachments/assets/8a63333c-689c-4793-9ed7-804d2df5b888
 - **Clipboard detection**: Copy a YouTube link and it is detected automatically in the panel
 - **MPRIS auto-detection**: Detects YouTube videos playing in any browser and offers a one-click download
 - **History**: Past downloads are kept for easy replay
+- **Transcripts**: Automatic subtitle/transcript downloading
 
 ## Requirements
 
@@ -20,6 +21,7 @@ https://github.com/user-attachments/assets/8a63333c-689c-4793-9ed7-804d2df5b888
 - jq (preinstalled on Omarchy)
 - busctl (preinstalled on Omarchy, part of systemd) for MPRIS detection
 - sqlite3 (preinstalled on Omarchy), only for cookie export from Firefox-based browsers (zen, glide)
+- ffmpeg (required for merging video/audio and converting audio formats)
 
 ## Install
 
@@ -60,13 +62,20 @@ o.bind("SUPER SHIFT", "Y", "exec, omarchy shell ytdl autoDownload")
 
 ## Configuration
 
-Options go under the plugin entry in `~/.config/omarchy/shell.json`:
+Options can be customized via the interactive settings panel (click the button displaying the current quality/format summary in the downloader panel) or directly in `~/.config/omarchy/shell.json`:
 
 ```json
 {
   "id": "bibek.ytdl",
   "downloadLocation": "~/Downloads/yt-dlp",
   "defaultQuality": "1080p",
+  "defaultDownloadType": "video",
+  "videoFormat": "mp4",
+  "audioFormat": "mp3",
+  "downloadTranscripts": false,
+  "transcriptLanguages": "en",
+  "playlistInSeparateFolder": true,
+  "enableHistory": true,
   "cookiesBrowser": "none",
   "extraArgs": ""
 }
@@ -75,12 +84,21 @@ Options go under the plugin entry in `~/.config/omarchy/shell.json`:
 | Setting            | Default              | Options                                                           |
 | ------------------ | -------------------- | ----------------------------------------------------------------- |
 | `downloadLocation` | `~/Downloads/yt-dlp` | Any directory path                                                |
-| `defaultQuality`   | `1080p`              | `best`, `1080p`, `720p`, `480p`                                   |
-| `cookiesBrowser`   | `none`               | `none`, `firefox`, `chromium`, `chrome`, `zen`, `helium`, `glide` |
+| `defaultQuality`      | `1080p`              | `best`, `1080p`, `720p`, `480p`                                   |
+| `defaultDownloadType` | `video`              | `video`, `audio`, `both`                                          |
+| `videoFormat`         | `mp4`                | `mp4`, `mkv`, `webm`, `avi`                                       |
+| `audioFormat`         | `mp3`                | `mp3`, `m4a`, `opus`, `flac`, `wav`                               |
+| `playlistInSeparateFolder` | `true`           | `true`, `false`                                                   |
+| `cookiesBrowser`      | `none`               | `none`, `firefox`, `chromium`, `chrome`, `zen`, `helium`, `glide` |
 | `extraArgs`        | (empty)              | Any yt-dlp flags, e.g. `--cookies-from-browser chromium`          |
-| `enableHistory`    | `true`               | `true`, `false`                                                   |
+| `enableHistory`       | `true`               | `true`, `false`                                                   |
+| `downloadTranscripts` | `false`              | `true`, `false`                                                   |
+| `transcriptLanguages` | `en`                 | Comma-separated codes (e.g., en,es,fr) or 'all'                   |
 
-### Fixing YouTube bot detection
+### Download Types
+- **Video**: Downloads video and audio combined.
+- **Audio**: Downloads only audio.
+- **Video & Audio (Both)**: Downloads video and audio separately for better quality/compatibility and splits them into two separate list items in the panel. If transcripts are enabled, they are also downloaded as a third separate item.
 
 If yt-dlp fails with "Sign in to confirm you're not a bot", log into YouTube in your browser and set `cookiesBrowser` to that browser. Cookies are only exported on demand: every download first tries without cookies and only retries with `--cookies-from-browser` if the bot check appears.
 
