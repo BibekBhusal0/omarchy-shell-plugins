@@ -93,7 +93,7 @@ Panel {
   function filterActive(list) {
     var r = []
     for (var i = 0; i < list.length; i++)
-      if (list[i].status === "downloading" || list[i].status === "merging")
+      if (list[i].status === "downloading")
         r.push(list[i])
     return r
   }
@@ -888,8 +888,7 @@ Panel {
                     color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
 
                     Rectangle {
-                      width: modelData.status === "merging" ? parent.width
-                        : Math.max(height, parent.width * (Math.max(0, Math.min(100, modelData.progress)) / 100))
+                      width: Math.max(height, parent.width * (Math.max(0, Math.min(100, modelData.progress)) / 100))
                       height: parent.height
                       radius: parent.radius
                       color: root.activeColor
@@ -904,9 +903,7 @@ Panel {
 
                     Text {
                       Layout.fillWidth: true
-                      text: modelData.status === "merging"
-                        ? "Merging formats\u2026"
-                        : (modelData.speed || "Waiting\u2026")
+                      text: modelData.speed || "Waiting\u2026"
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption

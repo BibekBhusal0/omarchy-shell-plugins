@@ -28,7 +28,7 @@ Item {
   readonly property int activeCount: {
     var n = 0
     for (var i = 0; i < downloads.length; i++) {
-      if (downloads[i].status === "downloading" || downloads[i].status === "merging")
+      if (downloads[i].status === "downloading")
         n++
     }
     return n
@@ -314,7 +314,7 @@ Item {
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
       var s = d.status
-      if (s !== "downloading" && s !== "merging" && s !== "queued") continue
+      if (s !== "downloading" && s !== "queued") continue
       
       // For "both" downloads, check if this specific part (video/audio) is busy
       if (downloadType && labelPrefix && d._labelPrefix) {
@@ -546,7 +546,7 @@ Item {
   function cancelAll() {
     var ids = []
     for (var i = 0; i < downloads.length; i++) {
-      if (downloads[i].status === "downloading" || downloads[i].status === "merging")
+      if (downloads[i].status === "downloading")
         ids.push(downloads[i].dwnId)
     }
     for (var j = 0; j < ids.length; j++)
@@ -834,14 +834,6 @@ Item {
       var afull = alreadyMatch[1].trim()
       var aname = afull.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
       root.updateDownload(id, { title: aname, filepath: afull, progress: 100 })
-      return
-    }
-
-    var mergerRename = line.match(/\[Merger\]\s+Merging formats into "(.+)"/)
-    if (mergerRename) {
-      var mfull = mergerRename[1].trim()
-      var mname = mfull.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
-      root.updateDownload(id, { status: "merging", progress: 100, title: mname, filepath: mfull })
       return
     }
 

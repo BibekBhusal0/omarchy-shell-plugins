@@ -144,17 +144,18 @@ case "$CMD" in
     shift 6
     EXTRA="$7"
 
-    # Format selection uses yt-dlp's automatic merging to avoid FFmpeg issues
-    # in the QML Process environment. No --merge-output-format is used, so yt-dlp
-    # picks the natural container. Extra args are trusted from user config; word-split on purpose.
+    # Format selection uses pre-merged formats to avoid FFmpeg merge issues.
+    # Format strings use b[height<=X]/b which selects best pre-merged format
+    # with the specified height limit, falling back to best available.
+    # Extra args are trusted from user config; word-split on purpose.
     # shellcheck disable=SC2086
     case "$DOWNLOAD_TYPE" in
       video)
         case "$QUALITY" in
-          1080p) run_with_retry --no-playlist --newline $EXTRA -f "bv[height<=1080]+ba/ba/b" -o "$OUTPUT" "$URL" ;;
-          720p) run_with_retry --no-playlist --newline $EXTRA -f "bv[height<=720]+ba/ba/b" -o "$OUTPUT" "$URL" ;;
-          480p) run_with_retry --no-playlist --newline $EXTRA -f "bv[height<=480]+ba/ba/b" -o "$OUTPUT" "$URL" ;;
-          *) run_with_retry --no-playlist --newline $EXTRA -f "bv+ba/ba/b" -o "$OUTPUT" "$URL" ;;
+          1080p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=1080]/b" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=720]/b" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=480]/b" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA -f "b" -o "$OUTPUT" "$URL" ;;
         esac
         ;;
       audio)
@@ -162,10 +163,10 @@ case "$CMD" in
         ;;
       both)
         case "$QUALITY" in
-          1080p) run_with_retry --no-playlist --newline $EXTRA -f "bv[height<=1080]+ba/ba/b" -o "$OUTPUT" "$URL" ;;
-          720p) run_with_retry --no-playlist --newline $EXTRA -f "bv[height<=720]+ba/ba/b" -o "$OUTPUT" "$URL" ;;
-          480p) run_with_retry --no-playlist --newline $EXTRA -f "bv[height<=480]+ba/ba/b" -o "$OUTPUT" "$URL" ;;
-          *) run_with_retry --no-playlist --newline $EXTRA -f "bv+ba/ba/b" -o "$OUTPUT" "$URL" ;;
+          1080p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=1080]/b" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=720]/b" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=480]/b" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA -f "b" -o "$OUTPUT" "$URL" ;;
         esac
         AUDIO_OUTPUT="${OUTPUT%.*}_audio.m4a"
         run_with_retry --no-playlist --newline $EXTRA -x --audio-format m4a -o "$AUDIO_OUTPUT" "$URL"
