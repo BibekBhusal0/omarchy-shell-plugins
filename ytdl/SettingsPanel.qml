@@ -138,7 +138,6 @@ Flickable {
       }
 
       PanelActionButton {
-        // FIX: icon below
         iconText: ""
         tooltipText: "Back to downloads"
         foreground: root.foreground
@@ -319,7 +318,6 @@ Flickable {
       width: parent.width
       height: Style.spacing.controlHeight
       text: "Back to downloads"
-      // FIX: icon below
       iconText: ""
       fontFamily: root.fontFamily
       fontSize: Style.font.bodySmall

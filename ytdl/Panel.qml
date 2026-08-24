@@ -499,7 +499,6 @@ Panel {
 
               Text {
                 anchors.centerIn: parent
-                // FIX: icon below
                 text: ""
                 color: root.foreground
                 font.family: root.fontFamily
@@ -538,7 +537,6 @@ Panel {
               text: root.ytdlService && root.ytdlService.installing
                 ? "Installing yt-dlp\u2026"
                 : "Install yt-dlp"
-              // FIX: icon below
               iconText: root.ytdlService && root.ytdlService.installing ? "" : ""
               iconSpinning: root.ytdlService && root.ytdlService.installing
               fontFamily: root.fontFamily
@@ -610,7 +608,6 @@ Panel {
 
               Button {
                 id: downloadManualBtn
-                // FIX: icon below
                 iconText: ""
                 tooltipText: "Download"
                 foreground: root.foreground
@@ -684,7 +681,6 @@ Panel {
               }
 
               Button {
-                // FIX: icon below
                 iconText: ""
                 tooltipText: "Download this video"
                 foreground: root.foreground
@@ -756,7 +752,6 @@ Panel {
               }
 
               Button {
-                // FIX: icon below
                 iconText: ""
                 tooltipText: "Download the whole playlist"
                 foreground: root.foreground
@@ -797,7 +792,6 @@ Panel {
 
               Text {
                 Layout.fillWidth: true
-                // FIX: icon below
                 text: " Active Downloads (" + root.activeCount + ")"
                 color: root.foreground
                 font.family: root.fontFamily
@@ -807,7 +801,6 @@ Panel {
               }
 
               PanelActionButton {
-                // FIX: icon below
                 iconText: "󰅙"
                 tooltipText: "Cancel all downloads"
                 foreground: root.foreground
@@ -860,7 +853,7 @@ Panel {
 
                     Text {
                       Layout.fillWidth: true
-                      text: modelData.title || "Fetching title\u2026"
+                      text: modelData.displayTitle || modelData.title || "Fetching title\u2026"
                       color: root.foreground
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.bodySmall
@@ -871,7 +864,6 @@ Panel {
 
                     PanelActionButton {
                       id: cancelBtn
-                      // FIX: icon below
                       iconText: ""
                       tooltipText: "Cancel download"
                       foreground: root.foreground
@@ -886,12 +878,13 @@ Panel {
 
                   Rectangle {
                     width: parent.width
-                    height: Style.space(4)
+                    height: Style.space(5)
                     radius: height / 2
                     color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
 
                     Rectangle {
-                      width: Math.max(height, parent.width * (Math.max(0, Math.min(100, modelData.progress)) / 100))
+                      width: modelData.status === "merging" ? parent.width
+                        : Math.max(height, parent.width * (Math.max(0, Math.min(100, modelData.progress)) / 100))
                       height: parent.height
                       radius: parent.radius
                       color: root.activeColor
@@ -900,25 +893,24 @@ Panel {
                     }
                   }
 
-                  Item {
+                  RowLayout {
                     width: parent.width
-                    implicitHeight: Math.max(speedText.implicitHeight, etaText.implicitHeight)
+                    spacing: Style.space(8)
 
                     Text {
-                      id: speedText
-                      anchors.left: parent.left
+                      Layout.fillWidth: true
                       text: modelData.status === "merging"
                         ? "Merging formats\u2026"
                         : (modelData.speed || "Waiting\u2026")
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
+                      elide: Text.ElideRight
+                      maximumLineCount: 1
                     }
 
                     Text {
-                      id: etaText
-                      anchors.right: parent.right
-                      text: modelData.text ? "Time remaining " + modelData.eta : ""
+                      text: modelData.eta ? "ETA " + modelData.eta : ""
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
@@ -947,7 +939,6 @@ Panel {
 
               Text {
                 Layout.fillWidth: true
-                // FIX: icon below
                 text: "󰐑 Queue (" + root.queuedCount + ")"
                 color: root.foreground
                 font.family: root.fontFamily
@@ -957,7 +948,6 @@ Panel {
               }
 
               PanelActionButton {
-                // FIX: icon below
                 iconText: ""
                 tooltipText: "Clear queue"
                 foreground: root.foreground
@@ -1011,7 +1001,7 @@ Panel {
 
                     Text {
                       width: parent.width
-                      text: modelData.title || "Unknown"
+                      text: modelData.displayTitle || modelData.title || "Unknown"
                       color: root.foreground
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.bodySmall
@@ -1032,7 +1022,6 @@ Panel {
                   }
 
                   PanelActionButton {
-                    // FIX: icon below
                     iconText: ""
                     tooltipText: "Remove from queue"
                     foreground: root.foreground
@@ -1066,7 +1055,6 @@ Panel {
 
               Text {
                 Layout.fillWidth: true
-                // FIX: icon below
                 text: " History (" + root.historyCount + ")"
                 color: root.foreground
                 font.family: root.fontFamily
@@ -1076,7 +1064,6 @@ Panel {
               }
 
               PanelActionButton {
-                // FIX: icon below
                 iconText: ""
                 tooltipText: "Clear history"
                 foreground: root.foreground
@@ -1117,7 +1104,7 @@ Panel {
 
                   onClicked: {
                     root.focusSectionAt("history", index)
-                    if (modelData.status === "done") {
+                    if (modelData.status === "done" && modelData._downloadType !== "transcript") {
                       if (ytdlService) ytdlService.playFile(modelData.filepath)
                     } else if (modelData.status === "error" || modelData.status === "cancelled") {
                       if (ytdlService) ytdlService.retryDownload(modelData)
@@ -1133,7 +1120,6 @@ Panel {
 
                   Text {
                     Layout.alignment: Qt.AlignVCenter
-                    // FIX: icon below
                     text: modelData.status === "done" ? ""
                       : modelData.status === "error" ? ""
                       : modelData.status === "cancelled" ? "󰜺"
@@ -1152,7 +1138,7 @@ Panel {
 
                     Text {
                       width: parent.width
-                      text: modelData.title || "Unknown"
+                      text: modelData.displayTitle || modelData.title || "Unknown"
                       color: root.foreground
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.bodySmall
@@ -1165,6 +1151,7 @@ Panel {
                       width: parent.width
                       text: {
                         if (modelData.status === "done") return "Completed"
+                        if (modelData.status === "unavailable") return "Subtitles not available"
                         if (modelData.status === "error") return modelData.error || "Download failed"
                         if (modelData.status === "cancelled") return "Cancelled"
                         return modelData.status
@@ -1184,7 +1171,6 @@ Panel {
 
                     PanelActionButton {
                       visible: modelData.status === "error" || modelData.status === "cancelled"
-                      // FIX: icon below
                       iconText: ""
                       tooltipText: "Retry"
                       foreground: root.foreground
@@ -1198,7 +1184,6 @@ Panel {
 
                     PanelActionButton {
                       visible: modelData.status === "done"
-                      // FIX: icon below
                       iconText: ""
                       tooltipText: "Delete file"
                       foreground: root.foreground
@@ -1211,7 +1196,6 @@ Panel {
                     }
 
                     PanelActionButton {
-                      // FIX: icon below
                       iconText: ""
                       tooltipText: "Remove from history"
                       foreground: root.foreground
@@ -1240,7 +1224,6 @@ Panel {
 
               Text {
                 anchors.centerIn: parent
-                // FIX: icon below
                 text: ""
                 color: Qt.darker(root.foreground, 1.4)
                 font.family: root.fontFamily

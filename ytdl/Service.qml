@@ -112,6 +112,13 @@ Item {
       property bool _playlistItem: false
       property bool _playlistPlaceholder: false
       property string _playlistName: ""
+      // Non-empty only when the same video produces several files at once
+      // (type "both"); rendered as "[Video] Title".
+      property string _labelPrefix: ""
+    property bool _gotSubs: false
+      readonly property string displayTitle: _labelPrefix === ""
+        ? title
+        : "[" + _labelPrefix + "] " + title
     }
   }
 
@@ -133,14 +140,17 @@ Item {
       cookiesBrowser = settings.cookiesBrowser
     if (settings.extraArgs != null)
       extraArgs = settings.extraArgs
+    // Config values can arrive as strings ("false") if an older build ever
+    // persisted one; coerce instead of letting !!"false" be true.
+    function asBool(v) { return v === true || v === "true" }
     if (settings.enableHistory != null)
-      enableHistory = !!settings.enableHistory
+      enableHistory = asBool(settings.enableHistory)
     if (settings.downloadTranscripts != null)
-      downloadTranscripts = !!settings.downloadTranscripts
+      downloadTranscripts = asBool(settings.downloadTranscripts)
     if (settings.transcriptLanguages)
       transcriptLanguages = settings.transcriptLanguages
     if (settings.playlistInSeparateFolder != null)
-      playlistInSeparateFolder = !!settings.playlistInSeparateFolder
+      playlistInSeparateFolder = asBool(settings.playlistInSeparateFolder)
   }
 
   function updateSetting(key, value) {
@@ -212,7 +222,9 @@ Item {
       out.push({
         dwnId: h.dwnId, url: h.url, title: h.title, status: h.status,
         progress: h.progress, speed: h.speed, eta: h.eta,
-        filepath: h.filepath, error: h.error
+        filepath: h.filepath, error: h.error,
+        downloadType: h._downloadType || "", labelPrefix: h._labelPrefix || "",
+        gotSubs: h._gotSubs || false
       })
     }
     return JSON.stringify(out)
@@ -233,6 +245,9 @@ Item {
       d.eta = it.eta || ""
       d.filepath = it.filepath || ""
       d.error = it.error || ""
+      d._downloadType = it.downloadType || ""
+      d._labelPrefix = it.labelPrefix || ""
+      d._gotSubs = !!it.gotSubs
       out.push(d)
     }
     return out
@@ -402,22 +417,40 @@ Item {
       return
     }
 
-    var id = Date.now() + Math.floor(Math.random() * 1000)
-    var q = quality || defaultQuality
     var dtype = downloadType || defaultDownloadType
+    // "both" fetches two separate files for the same video; each becomes its
+    // own list entry with its own progress bar instead of one bar jumping
+    // between streams. Transcripts get a third entry (skipped for playlist
+    // items to avoid doubling every queued video).
+    if (dtype === "both") {
+      root._spawnDownload(url, quality || selectedQuality, "video", "Video", isPlaylistItem, knownTitle, playlistName)
+      root._spawnDownload(url, quality || selectedQuality, "audio", "Audio", isPlaylistItem, knownTitle, playlistName)
+    } else {
+      root._spawnDownload(url, quality || defaultQuality, dtype, "", isPlaylistItem, knownTitle, playlistName)
+    }
+    if (root.downloadTranscripts && !isPlaylistItem) {
+      root._spawnDownload(url, quality || defaultQuality, "transcript", "Transcript", isPlaylistItem, knownTitle, playlistName)
+    }
+  }
+
+  function _spawnDownload(url, quality, downloadType, labelPrefix, isPlaylistItem, knownTitle, playlistName) {
+    var id = Date.now() + Math.floor(Math.random() * 1000)
+    var q = quality
     var vfmt = videoFormat
     var afmt = audioFormat
-    var subs = downloadTranscripts
+    var subs = downloadTranscripts && downloadType !== "audio"
     var subLangs = transcriptLanguages
-    
+
     var outputTemplate = downloadLocation
     if (playlistName && playlistInSeparateFolder) {
       outputTemplate += "/" + playlistName
     }
     outputTemplate += "/%(title)s.%(ext)s"
-    
-    var cmd = [scriptPath, "download", url, q, dtype, vfmt, afmt, 
-               subs ? "yes" : "no", subLangs, outputTemplate, cookiesBrowser, extraArgs]
+
+    // "transcript" maps to the script's subs-only mode; it writes no media.
+    var scriptType = downloadType === "transcript" ? "subs" : downloadType
+    var cmd = [scriptPath, "download", url, q, scriptType, vfmt, afmt,
+               "no", subLangs, outputTemplate, cookiesBrowser, extraArgs]
 
     var d = downloadComp.createObject(root)
     d.dwnId = id
@@ -425,13 +458,14 @@ Item {
     d.title = knownTitle || extractVideoId(url) || url
     d.procIdx = -1
     d._quality = q
-    d._downloadType = dtype
+    d._downloadType = downloadType
     d._videoFormat = vfmt
     d._audioFormat = afmt
     d._downloadTranscripts = subs
     d._transcriptLanguages = subLangs
     d._playlistItem = !!isPlaylistItem
     d._playlistName = playlistName || ""
+    d._labelPrefix = labelPrefix || ""
 
     var procIdx = findFreeProc()
     if (procIdx === -1) {
@@ -470,8 +504,9 @@ Item {
         outputTemplate += "/" + d._playlistName
       }
       outputTemplate += "/%(title)s.%(ext)s"
-      
-      var cmd = [scriptPath, "download", d.url, d._quality, d._downloadType, d._videoFormat, d._audioFormat,
+
+      var qScriptType = d._downloadType === "transcript" ? "subs" : d._downloadType
+      var cmd = [scriptPath, "download", d.url, d._quality, qScriptType, d._videoFormat, d._audioFormat,
                  d._downloadTranscripts ? "yes" : "no", d._transcriptLanguages, outputTemplate, cookiesBrowser, extraArgs]
       var proc = procAt(procIdx)
       proc.downloadId = d.dwnId
@@ -573,7 +608,9 @@ Item {
   function retryDownload(item) {
     if (!item || !item.url) return
     removeHistoryItem(item.dwnId)
-    startDownload(item.url, root.selectedQuality || defaultQuality)
+    // Keep the original type so a retried "both" splits again into its
+    // video/audio entries.
+    startDownload(item.url, root.selectedQuality || defaultQuality, false, "", item._downloadType || "")
   }
 
   function cancelDownload(id) {
@@ -711,7 +748,22 @@ Item {
       var d = downloads[i]
       if (d.dwnId === id) {
         if (exitCode === 0) {
+          if (d._downloadType === "transcript" && !d._gotSubs) {
+            d.status = "unavailable"
+          } else {
+            d.status = "done"
+            d.progress = 100
+          }
+        } else if (d._downloadType === "transcript") {
+          // Subs run died before writing anything; report as unavailable
+          // unless some subtitle file already landed.
+          d.status = d._gotSubs ? "done" : "unavailable"
+        } else if (d.filepath !== "" && d.progress >= 100) {
+          // yt-dlp can exit non-zero on postprocessing warnings (e.g. ffprobe
+          // codec detection) while the file itself is fully written; treat it
+          // as success instead of failing a finished download.
           d.status = "done"
+          d.error = ""
           d.progress = 100
         } else if (d.status !== "cancelled") {
           d.status = "error"
@@ -721,7 +773,7 @@ Item {
         d.procIdx = -1
         downloads = removeById(downloads, id)
         downloadsUpdated()
-        if (d.status === "done" || d.status === "error") {
+        if (d.status === "done" || d.status === "error" || d.status === "unavailable") {
           if (root.enableHistory) {
             history = [d].concat(history)
             root.persistHistory()
@@ -739,6 +791,20 @@ Item {
     line = String(line || "").trim()
     if (!line) return
     var id = proc.downloadId
+
+    // Subs-only runs relay each written subtitle file; seeing one flips the
+    // record from "no subs" to a real completed transcript.
+    if (line.indexOf("SUBFILE ") === 0) {
+      var sp = line.substring(8)
+      for (var si = 0; si < downloads.length; si++) {
+        if (downloads[si].dwnId === id) {
+          downloads[si]._gotSubs = true
+          downloads[si].filepath = sp
+          downloads[si].progress = 100
+        }
+      }
+      return
+    }
 
     var destMatch = line.match(/\[download\]\s+Destination:\s+(.+)/)
     if (destMatch) {
@@ -1199,7 +1265,7 @@ Item {
         audioFormat: ["mp3", "m4a", "opus", "flac", "wav"],
         cookiesBrowser: ["none", "firefox", "chromium", "chrome", "zen", "helium", "glide"]
       }
-      var bools = ["downloadTranscripts", "playlistInSeparateFolder"]
+      var bools = ["downloadTranscripts", "playlistInSeparateFolder", "enableHistory"]
       if (enums[key] !== undefined && enums[key].indexOf(String(value)) === -1)
         return JSON.stringify({error: "invalid value for " + key + " (expected one of: " + enums[key].join(", ") + ")"})
       if (bools.indexOf(key) !== -1)
@@ -1213,10 +1279,10 @@ Item {
     }
     function state(): string {
       var d = root.downloads.map(function(x) {
-        return { id: x.dwnId, url: x.url, title: x.title, status: x.status, progress: x.progress, speed: x.speed, eta: x.eta, filepath: x.filepath }
+        return { id: x.dwnId, url: x.url, title: x.displayTitle, type: x._downloadType, status: x.status, progress: x.progress, speed: x.speed, eta: x.eta, filepath: x.filepath }
       })
       var h = root.history.map(function(x) {
-        return { id: x.dwnId, url: x.url, title: x.title, status: x.status, filepath: x.filepath, error: x.error }
+        return { id: x.dwnId, url: x.url, title: x.displayTitle, type: x._downloadType, status: x.status, filepath: x.filepath, error: x.error }
       })
       return JSON.stringify({ downloads: d, history: h })
     }

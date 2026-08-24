@@ -162,38 +162,55 @@ case "$CMD" in
       fi
     }
 
-    # Build subtitle args
-    SUB_ARGS=""
-    if [ "$DOWNLOAD_SUBS" = "yes" ]; then
-      SUB_ARGS="--write-subs --write-auto-subs"
-      if [ -n "$SUB_LANGS" ] && [ "$SUB_LANGS" != "all" ]; then
-        SUB_ARGS="$SUB_ARGS --sub-langs $SUB_LANGS"
-      fi
-    fi
-
     # Extra args are trusted from the user config; word-split on purpose.
     # shellcheck disable=SC2086
     case "$DOWNLOAD_TYPE" in
       video)
         case "$QUALITY" in
-          1080p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
-          720p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
-          480p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
-          *) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
+          1080p) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
         esac
         ;;
       audio)
-        run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS -x --audio-format "$AUDIO_FORMAT" -o "$OUTPUT" "$URL"
+        run_with_retry --no-playlist --newline $EXTRA -x --audio-format "$AUDIO_FORMAT" -o "$OUTPUT" "$URL"
         ;;
       both)
         case "$QUALITY" in
-          1080p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
-          720p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
-          480p) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
-          *) run_with_retry --no-playlist --newline $EXTRA $SUB_ARGS --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
+          1080p) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA --merge-output-format "$VIDEO_FORMAT" -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
         esac
         AUDIO_OUTPUT="${OUTPUT%.*}_audio.$AUDIO_FORMAT"
         run_with_retry --no-playlist --newline $EXTRA -x --audio-format "$AUDIO_FORMAT" -o "$AUDIO_OUTPUT" "$URL"
+        ;;
+      subs)
+        # Transcript-only run for its own panel item; writes no media. Each
+        # written subtitle file is relayed as a SUBFILE line so the service can
+        # tell "completed transcript" apart from "video has no subtitles".
+        T_ARGS="--write-subs --write-auto-subs"
+        if [ -n "$SUB_LANGS" ] && [ "$SUB_LANGS" != "all" ]; then
+          T_ARGS="$T_ARGS --sub-langs $SUB_LANGS"
+        fi
+        SUBL="$(mktemp)"
+        # shellcheck disable=SC2086
+        run_with_retry --no-playlist --newline $EXTRA $T_ARGS --skip-download -o "$OUTPUT" "$URL" >"$SUBL"
+        while IFS= read -r ln; do
+          case "$ln" in
+            *"Writing video subtitles to: "*)
+              p="${ln#*Writing video subtitles to: }"
+              p="$(printf '%s' "$p" | tr -d '\r')"
+              # yt-dlp logs the .part name before the file is finalized.
+              case "$p" in
+                *.part) [ -f "${p%.part}" ] && p="${p%.part}" ;;
+              esac
+              [ -f "$p" ] && { echo "SUBFILE $p"; }
+              ;;
+          esac
+        done <"$SUBL"
+        rm -f "$SUBL"
         ;;
     esac
     ;;
