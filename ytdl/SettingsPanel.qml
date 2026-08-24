@@ -34,11 +34,11 @@ Flickable {
   onCursorActiveChanged: Qt.callLater(root.scrollToCursor)
 
   // Expose popupOpen so the parent key catcher knows to block keys while a dropdown is active.
-  readonly property bool isPopupOpen: typeDropdown.popupOpen || qualityDropdown.popupOpen || vformatDropdown.popupOpen || aformatDropdown.popupOpen
+  readonly property bool isPopupOpen: typeDropdown.popupOpen || qualityDropdown.popupOpen
 
-  // While the languages field owns focus, every keystroke must reach it
+  // While a text field owns focus, every keystroke must reach it
   // instead of the parent key catcher.
-  readonly property bool isInputActive: langInput.activeFocus
+  readonly property bool isInputActive: langInput.activeFocus || downloadPathInput.activeFocus
 
   // Mouse hover on any control moves the shared cursor so keyboard and
   // pointer highlight stay in sync (the parent owns selectedIndex).
@@ -53,6 +53,7 @@ Flickable {
     if (ytdlService && ytdlService.defaultDownloadType !== "audio") {
       items.push("quality");
     }
+    items.push("downloadPath");
     items.push("transcripts");
     if (ytdlService && ytdlService.downloadTranscripts) {
       items.push("languages");
@@ -73,6 +74,8 @@ Flickable {
       typeDropdown.toggle();
     } else if (itemKey === "quality") {
       qualityDropdown.toggle();
+    } else if (itemKey === "downloadPath") {
+      downloadPathInput.forceActiveFocus();
     } else if (itemKey === "transcripts") {
       if (ytdlService) {
         ytdlService.updateSetting("downloadTranscripts", !ytdlService.downloadTranscripts);
@@ -94,6 +97,7 @@ Flickable {
     var item = null;
     if (itemKey === "type") item = typeDropdown;
     else if (itemKey === "quality") item = qualityDropdown;
+    else if (itemKey === "downloadPath") item = downloadPathInput;
     else if (itemKey === "transcripts") item = transcriptsToggle;
     else if (itemKey === "languages") item = langInput;
     else if (itemKey === "playlistFolder") item = playlistFolderToggle;
@@ -167,6 +171,39 @@ Flickable {
       }
       onChanged: function(val) {
         if (ytdlService) ytdlService.updateSetting("selectedQuality", val);
+      }
+    }
+
+    // Download Path text input
+    Column {
+      width: parent.width
+      spacing: Style.spacing.labelGap
+
+      Text {
+        text: "Download Path"
+        color: Qt.darker(root.foreground, 1.4)
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+      }
+
+      TextField {
+        id: downloadPathInput
+        width: parent.width
+        height: Style.spacing.controlHeight
+        text: ytdlService ? ytdlService.downloadLocation : "~/Downloads/yt-dlp"
+        placeholderText: "~/Downloads/yt-dlp"
+        hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "downloadPath"
+        onHoveredChanged: if (hovered) root.hoverKey("downloadPath")
+        onAccepted: {
+          if (ytdlService && text.trim()) ytdlService.updateSetting("downloadLocation", text.trim());
+          downloadPathInput.focus = false;
+          root.inputClosed();
+        }
+        Keys.onEscapePressed: {
+          downloadPathInput.focus = false;
+          root.inputClosed();
+        }
       }
     }
 
