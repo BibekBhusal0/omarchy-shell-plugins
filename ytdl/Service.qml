@@ -607,9 +607,21 @@ Item {
   function retryDownload(item) {
     if (!item || !item.url) return
     removeHistoryItem(item.dwnId)
-    // Keep the original type so a retried "both" splits again into its
-    // video/audio entries.
-    startDownload(item.url, root.selectedQuality || defaultQuality, false, "", item._downloadType || "")
+    // Keep the original playlist context so a retried playlist item
+    // goes back into its original folder.
+    startDownload(item.url, root.selectedQuality || defaultQuality, item._playlistItem || false, "", item._downloadType || "", item._playlistName || "")
+  }
+
+  function retryAll() {
+    var itemsToRetry = []
+    for (var i = 0; i < history.length; i++) {
+      if (history[i].status === "error" || history[i].status === "cancelled") {
+        itemsToRetry.push(history[i])
+      }
+    }
+    for (var j = 0; j < itemsToRetry.length; j++) {
+      retryDownload(itemsToRetry[j])
+    }
   }
 
   function cancelDownload(id) {

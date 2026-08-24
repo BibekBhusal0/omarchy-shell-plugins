@@ -43,6 +43,12 @@ Panel {
   readonly property var historyItems: ytdlService ? ytdlService.history : []
   readonly property bool playlistSectionVisible: ytdlService && ytdlService.playlistInfoUrl !== ""
   readonly property bool detectedSectionVisible: ytdlService && ytdlService.detectedUrl !== ""
+  readonly property bool hasRetryableItems: {
+    for (var i = 0; i < root.historyItems.length; i++) {
+      if (root.historyItems[i].status === "error" || root.historyItems[i].status === "cancelled") return true
+    }
+    return false
+  }
 
   // Shown on the settings button instead of a bare gear icon so the current
   // quality/format choice is visible at a glance.
@@ -1061,6 +1067,19 @@ Panel {
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 elide: Text.ElideRight
+              }
+
+              PanelActionButton {
+                visible: root.hasRetryableItems
+                iconText: ""
+                tooltipText: "Retry all failed/cancelled"
+                foreground: root.foreground
+                hoverColor: root.activeColor
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: {
+                  if (ytdlService) ytdlService.retryAll()
+                }
               }
 
               PanelActionButton {
