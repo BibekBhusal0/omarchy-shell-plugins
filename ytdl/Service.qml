@@ -744,6 +744,10 @@ Item {
     Quickshell.execDetached(["xdg-open", filepath])
   }
 
+  function autoDownload() {
+    Quickshell.execDetached([autoDownloadScriptPath])
+  }
+
   function onDownloadComplete(id, exitCode) {
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]

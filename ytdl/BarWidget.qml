@@ -91,6 +91,12 @@ BarWidget {
 
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.LeftButton) root.toggle()
+      else if (buttonCode === Qt.RightButton) {
+        if (ytdlService) ytdlService.autoDownload()
+      }
+      else if (buttonCode === Qt.MiddleButton) {
+        if (ytdlService) ytdlService.cancelAll()
+      }
     }
   }
 }
