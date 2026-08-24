@@ -57,7 +57,7 @@ Panel {
     var t = ytdlService.defaultDownloadType
     var q = ytdlService.selectedQuality
     if (t === "audio") return "Audio"
-    if (t === "both") return q + " · Both"
+    if (t === "both") return q + " · Audio"
     return q
   }
 
@@ -914,7 +914,7 @@ Panel {
                     }
 
                     Text {
-                      text: modelData.eta ? "Time remaining" + modelData.eta : ""
+                      text: modelData.eta ? "Time remaining " + modelData.eta : ""
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
