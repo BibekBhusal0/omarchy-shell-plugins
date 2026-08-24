@@ -460,7 +460,7 @@ Item {
       d.status = "queued"
       downloads = downloads.concat([d])
       downloadsUpdated()
-      root._fetchTitle(id, url)
+      if (!knownTitle) root._fetchTitle(id, url)
       return
     }
 
@@ -475,7 +475,7 @@ Item {
     proc.running = true
     d.procIdx = procIdx
 
-    root._fetchTitle(id, url)
+    if (!knownTitle) root._fetchTitle(id, url)
   }
 
   // Start queued downloads on any free procs, in FIFO order. Called whenever a
@@ -505,7 +505,8 @@ Item {
       d.procIdx = procIdx
       d.status = "downloading"
       downloadsUpdated()
-      root._fetchTitle(d.dwnId, d.url)
+      var isKnownTitle = d.title && d.title !== d.url && d.title !== root.extractVideoId(d.url)
+      if (!isKnownTitle) root._fetchTitle(d.dwnId, d.url)
     }
   }
 
