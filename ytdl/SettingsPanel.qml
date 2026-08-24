@@ -123,30 +123,13 @@ Flickable {
     width: parent.width
     spacing: Style.space(14)
 
-    // Header row
-    RowLayout {
-      width: parent.width
-      spacing: Style.space(8)
-
-      Text {
-        Layout.fillWidth: true
-        text: "Downloader Settings"
-        color: root.foreground
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.title
-        font.bold: true
-      }
-
-      PanelActionButton {
-        iconText: ""
-        tooltipText: "Back to downloads"
-        foreground: root.foreground
-        hoverColor: root.activeColor
-        fontFamily: root.fontFamily
-        fontSize: Style.font.body
-        hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "back"
-        onClicked: root.closeRequested()
-      }
+    Text {
+      Layout.fillWidth: true
+      text: "Downloader Settings"
+      color: root.foreground
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.title
+      font.bold: true
     }
 
     Rectangle {
@@ -155,7 +138,7 @@ Flickable {
       color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
     }
 
-    // 1. Download Type dropdown
+    // Download Type dropdown
     Dropdown {
       id: typeDropdown
       width: parent.width
@@ -175,7 +158,7 @@ Flickable {
       }
     }
 
-    // 2. Video Quality dropdown
+    // Video Quality dropdown
     Dropdown {
       id: qualityDropdown
       width: parent.width
@@ -197,7 +180,7 @@ Flickable {
       }
     }
 
-    // 3. Video Format dropdown
+    // Video Format dropdown
     Dropdown {
       id: vformatDropdown
       width: parent.width
@@ -219,7 +202,7 @@ Flickable {
       }
     }
 
-    // 4. Audio Format dropdown
+    // Audio Format dropdown
     Dropdown {
       id: aformatDropdown
       width: parent.width
@@ -242,7 +225,7 @@ Flickable {
       }
     }
 
-    // 5. Download Transcripts toggle row
+    // Download Transcripts toggle row
     Toggle {
       id: transcriptsToggle
       width: parent.width
@@ -260,7 +243,7 @@ Flickable {
       }
     }
 
-    // 6. Transcript languages text input
+    // Transcript languages text input
     Column {
       width: parent.width
       spacing: Style.spacing.labelGap
@@ -294,7 +277,7 @@ Flickable {
       }
     }
 
-    // 7. Playlists in separate folder toggle row
+    // Playlists in separate folder toggle row
     Toggle {
       id: playlistFolderToggle
       width: parent.width
@@ -312,7 +295,7 @@ Flickable {
       }
     }
 
-    // 8. Back button at the bottom
+    // Back button at the bottom
     Button {
       id: backBtn
       width: parent.width

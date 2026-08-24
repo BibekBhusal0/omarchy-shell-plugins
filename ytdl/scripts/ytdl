@@ -138,12 +138,11 @@ case "$CMD" in
     DOWNLOAD_TYPE="$3"
     VIDEO_FORMAT="$4"
     AUDIO_FORMAT="$5"
-    DOWNLOAD_SUBS="$6"
-    SUB_LANGS="$7"
-    OUTPUT="$8"
-    COOKIE_BROWSER="$9"
-    shift 9
-    EXTRA="$1"
+    SUB_LANGS="$6"
+    OUTPUT="$7"
+    COOKIE_BROWSER="$8"
+    shift 8
+    EXTRA="$9"
 
     # yt-dlp >= 2026.08 lists YouTube's HLS streams as video-only, so the
     # pre-merged "b" selector degrades to 360p (or errors outright on

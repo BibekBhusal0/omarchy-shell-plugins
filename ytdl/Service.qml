@@ -113,9 +113,9 @@ Item {
       property bool _playlistPlaceholder: false
       property string _playlistName: ""
       // Non-empty only when the same video produces several files at once
-      // (type "both"); rendered as "[Video] Title".
+      // (type "both" or transcript item); rendered as "[Video] Title".
       property string _labelPrefix: ""
-    property bool _gotSubs: false
+      property bool _gotSubs: false
       readonly property string displayTitle: _labelPrefix === ""
         ? title
         : "[" + _labelPrefix + "] " + title
@@ -450,7 +450,7 @@ Item {
     // "transcript" maps to the script's subs-only mode; it writes no media.
     var scriptType = downloadType === "transcript" ? "subs" : downloadType
     var cmd = [scriptPath, "download", url, q, scriptType, vfmt, afmt,
-               "no", subLangs, outputTemplate, cookiesBrowser, extraArgs]
+               subLangs, outputTemplate, cookiesBrowser, extraArgs]
 
     var d = downloadComp.createObject(root)
     d.dwnId = id
@@ -461,7 +461,6 @@ Item {
     d._downloadType = downloadType
     d._videoFormat = vfmt
     d._audioFormat = afmt
-    d._downloadTranscripts = subs
     d._transcriptLanguages = subLangs
     d._playlistItem = !!isPlaylistItem
     d._playlistName = playlistName || ""
@@ -507,7 +506,7 @@ Item {
 
       var qScriptType = d._downloadType === "transcript" ? "subs" : d._downloadType
       var cmd = [scriptPath, "download", d.url, d._quality, qScriptType, d._videoFormat, d._audioFormat,
-                 d._downloadTranscripts ? "yes" : "no", d._transcriptLanguages, outputTemplate, cookiesBrowser, extraArgs]
+                 d._transcriptLanguages, outputTemplate, cookiesBrowser, extraArgs]
       var proc = procAt(procIdx)
       proc.downloadId = d.dwnId
       proc._errBuf = ""
