@@ -831,6 +831,14 @@ Item {
       return
     }
 
+    var extractMatch = line.match(/\[ExtractAudio\]\s+Destination:\s+(.+)/)
+    if (extractMatch) {
+      var efull = extractMatch[1].trim()
+      var ename = efull.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
+      root.updateDownload(id, { title: ename, filepath: efull })
+      return
+    }
+
     var pctMatch = line.match(/\[download\]\s+([\d.]+)%\s+of\s+~?\s*([\d.]+\S+)\s+at\s+([\d.]+\S+)\s+ETA\s+([\d:]+)/)
     if (pctMatch) {
       root.updateDownload(id, {
@@ -1217,7 +1225,8 @@ Item {
       root.startDownload(url, root.selectedQuality, false, "", downloadType)
     }
     function cancel(id: string): void { root.cancelDownload(parseInt(id)) }
-    function status(): string { return JSON.stringify({downloads: root.downloadCount, active: root.activeCount}) }
+    function status(): string { return JSON.stringify({downloads: root.downloadCount, active: root.activeCount, queued: root.queuedCount}) }
+    function cancelAll(): void { root.cancelAll(); root.clearQueue() }
     function autoDownload(): string {
       Quickshell.execDetached([autoDownloadScriptPath])
       return JSON.stringify({status: "started", message: "Auto-download triggered"})

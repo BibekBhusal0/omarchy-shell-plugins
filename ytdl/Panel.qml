@@ -300,7 +300,8 @@ Panel {
       }
     } else if (s === "history") {
       if (root.selectedIndex === 0) {
-        if (ytdlService) ytdlService.clearHistory()
+        if (root.hasRetryableItems && ytdlService) ytdlService.retryAll()
+        else if (ytdlService) ytdlService.clearHistory()
       } else {
         var h = root.historyItems[root.selectedIndex - 1]
         if (h && ytdlService) {
@@ -1075,6 +1076,7 @@ Panel {
                 hoverColor: root.activeColor
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
+                hasCursor: root.cursorActive && root.focusSection === "history" && root.selectedIndex === 0 && root.hasRetryableItems
                 onClicked: {
                   if (ytdlService) ytdlService.retryAll()
                 }
