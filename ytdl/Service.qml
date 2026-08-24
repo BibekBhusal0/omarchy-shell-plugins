@@ -308,21 +308,31 @@ Item {
   // True when `url` is already downloading, queued, or already downloaded.
   // Matches by video id too, so a watch URL copied with a `list=` param is
   // seen as the same download as its bare-watch twin already in progress.
-  function isUrlBusy(url) {
+  function isUrlBusy(url, downloadType, labelPrefix) {
     url = cleanUrl(url)
     var vid = root.extractVideoId(url)
     for (var i = 0; i < downloads.length; i++) {
       var d = downloads[i]
       var s = d.status
       if (s !== "downloading" && s !== "merging" && s !== "queued") continue
-      if (d.url === url) return true
-      if (vid && root.extractVideoId(d.url) === vid) return true
+      
+      // For "both" downloads, check if this specific part (video/audio) is busy
+      if (downloadType && labelPrefix && d._labelPrefix) {
+        if (d.url === url && d._labelPrefix === labelPrefix) return true
+        if (vid && root.extractVideoId(d.url) === vid && d._labelPrefix === labelPrefix) return true
+      } else {
+        if (d.url === url) return true
+        if (vid && root.extractVideoId(d.url) === vid) return true
+      }
     }
     // Also check history - no point suggesting a video already downloaded
-    for (var j = 0; j < history.length; j++) {
-      var h = history[j]
-      if (h.url === url) return true
-      if (vid && root.extractVideoId(h.url) === vid) return true
+    // But skip history check if retrying a specific part of "both" download
+    if (!labelPrefix) {
+      for (var j = 0; j < history.length; j++) {
+        var h = history[j]
+        if (h.url === url) return true
+        if (vid && root.extractVideoId(h.url) === vid) return true
+      }
     }
     return false
   }
@@ -403,13 +413,14 @@ Item {
   function startDownload(url, quality, isPlaylistItem, knownTitle, downloadType, playlistName) {
     url = cleanUrl(url)
     if (!url) return
-    if (root.isUrlBusy(url)) return
+    var dtype = downloadType || defaultDownloadType
+    // Check if URL is busy, but allow retrying individual parts of "both" downloads
+    if (dtype !== "both" && root.isUrlBusy(url)) return
     if (!isPlaylistItem && root.isPlaylistUrl(url)) {
       root.startPlaylist(url, quality)
       return
     }
 
-    var dtype = downloadType || defaultDownloadType
     // "both" fetches two separate files for the same video; each becomes its
     // own list entry with its own progress bar instead of one bar jumping
     // between streams. Transcripts get a third entry (skipped for playlist
@@ -426,6 +437,9 @@ Item {
   }
 
   function _spawnDownload(url, quality, downloadType, labelPrefix, isPlaylistItem, knownTitle, playlistName) {
+    // Check if this specific part (for "both" downloads) is already busy
+    if (labelPrefix && root.isUrlBusy(url, downloadType, labelPrefix)) return
+    
     var id = Date.now() + Math.floor(Math.random() * 1000)
     var q = quality
     var subs = downloadTranscripts && downloadType !== "audio"
@@ -597,9 +611,9 @@ Item {
   function retryDownload(item) {
     if (!item || !item.url) return
     removeHistoryItem(item.dwnId)
-    // Keep the original playlist context so a retried playlist item
-    // goes back into its original folder.
-    startDownload(item.url, root.selectedQuality || defaultQuality, item._playlistItem || false, "", item._downloadType || "", item._playlistName || "")
+    // Keep the original playlist context and title so a retried item
+    // goes back into its original folder and doesn't re-fetch the title.
+    startDownload(item.url, root.selectedQuality || defaultQuality, item._playlistItem || false, item.title || "", item._downloadType || "", item._playlistName || "")
   }
 
   function retryAll() {

@@ -276,7 +276,7 @@ Panel {
       else root.submitUrl()
     } else if (s === "detected") {
       if (ytdlService && ytdlService.detectedUrl) {
-        ytdlService.startDownload(ytdlService.detectedUrl, ytdlService.selectedQuality, false, "", ytdlService.defaultDownloadType)
+        ytdlService.startDownload(ytdlService.detectedUrl, ytdlService.selectedQuality, false, ytdlService.detectedTitle || "", ytdlService.defaultDownloadType)
         ytdlService.clearDetection()
       }
     } else if (s === "playlist") {
@@ -698,7 +698,7 @@ Panel {
                 hasCursor: root.cursorActive && root.focusSection === "detected"
                 onClicked: {
                   if (ytdlService && ytdlService.detectedUrl) {
-                    ytdlService.startDownload(ytdlService.detectedUrl, ytdlService.selectedQuality, false, "", ytdlService.defaultDownloadType)
+                    ytdlService.startDownload(ytdlService.detectedUrl, ytdlService.selectedQuality, false, ytdlService.detectedTitle || "", ytdlService.defaultDownloadType)
                     ytdlService.clearDetection()
                   }
                 }
