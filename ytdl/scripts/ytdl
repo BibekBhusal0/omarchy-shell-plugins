@@ -133,6 +133,18 @@ run_with_retry() {
   return $RC
 }
 
+MERGE_OK=0
+[ "$(printf '2026.08\n%s\n' "$(yt-dlp --version 2>/dev/null)" | sort -V | head -1)" = "2026.08" ] && MERGE_OK=1
+
+# $1 = max height; empty means best. ba fallback covers audio-only uploads.
+pick_fmt() {
+  if [ "$MERGE_OK" = 1 ]; then
+    [ -n "$1" ] && echo "bv[height<=$1]+ba/ba/b" || echo "bv+ba/ba/b"
+  else
+    [ -n "$1" ] && echo "b[height<=$1]/b" || echo "b"
+  fi
+}
+
 case "$CMD" in
   download)
     URL="$1"
@@ -152,10 +164,10 @@ case "$CMD" in
     case "$DOWNLOAD_TYPE" in
       video)
         case "$QUALITY" in
-          1080p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=1080]/b" -o "$OUTPUT" "$URL" ;;
-          720p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=720]/b" -o "$OUTPUT" "$URL" ;;
-          480p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=480]/b" -o "$OUTPUT" "$URL" ;;
-          *) run_with_retry --no-playlist --newline $EXTRA -f "b" -o "$OUTPUT" "$URL" ;;
+          1080p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
         esac
         ;;
       audio)
@@ -163,10 +175,10 @@ case "$CMD" in
         ;;
       both)
         case "$QUALITY" in
-          1080p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=1080]/b" -o "$OUTPUT" "$URL" ;;
-          720p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=720]/b" -o "$OUTPUT" "$URL" ;;
-          480p) run_with_retry --no-playlist --newline $EXTRA -f "b[height<=480]/b" -o "$OUTPUT" "$URL" ;;
-          *) run_with_retry --no-playlist --newline $EXTRA -f "b" -o "$OUTPUT" "$URL" ;;
+          1080p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 1080)" -o "$OUTPUT" "$URL" ;;
+          720p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 720)" -o "$OUTPUT" "$URL" ;;
+          480p) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt 480)" -o "$OUTPUT" "$URL" ;;
+          *) run_with_retry --no-playlist --newline $EXTRA -f "$(pick_fmt "")" -o "$OUTPUT" "$URL" ;;
         esac
         AUDIO_OUTPUT="${OUTPUT%.*}_audio.m4a"
         run_with_retry --no-playlist --newline $EXTRA -x --audio-format m4a -o "$AUDIO_OUTPUT" "$URL"
