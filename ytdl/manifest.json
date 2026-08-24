@@ -22,8 +22,6 @@
       "downloadLocation": "~/Downloads/yt-dlp",
       "defaultQuality": "1080p",
       "defaultDownloadType": "video",
-      "videoFormat": "mp4",
-      "audioFormat": "mp3",
       "cookiesBrowser": "none",
       "extraArgs": "",
       "enableHistory": true,
@@ -53,22 +51,6 @@
         "options": ["video", "audio", "both"],
         "defaultValue": "video",
         "description": "What to download by default: video only, audio only, or both."
-      },
-      {
-        "key": "videoFormat",
-        "type": "enum",
-        "label": "Video format",
-        "options": ["mp4", "mkv", "webm", "avi"],
-        "defaultValue": "mp4",
-        "description": "Output format for video downloads."
-      },
-      {
-        "key": "audioFormat",
-        "type": "enum",
-        "label": "Audio format",
-        "options": ["mp3", "m4a", "opus", "flac", "wav"],
-        "defaultValue": "mp3",
-        "description": "Output format for audio downloads."
       },
       {
         "key": "downloadTranscripts",

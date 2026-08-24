@@ -63,8 +63,6 @@ Item {
   property string downloadLocation: "~/Downloads/yt-dlp"
   property string defaultQuality: "1080p"
   property string defaultDownloadType: "video"
-  property string videoFormat: "mp4"
-  property string audioFormat: "mp3"
   property string cookiesBrowser: "none"
   property string extraArgs: ""
   property bool enableHistory: true
@@ -105,8 +103,6 @@ Item {
       property int procIdx: -1
       property string _quality: "1080p"
       property string _downloadType: "video"
-      property string _videoFormat: "mp4"
-      property string _audioFormat: "mp3"
       property bool _downloadTranscripts: false
       property string _transcriptLanguages: "en"
       property bool _playlistItem: false
@@ -132,10 +128,6 @@ Item {
     }
     if (settings.defaultDownloadType)
       defaultDownloadType = settings.defaultDownloadType
-    if (settings.videoFormat)
-      videoFormat = settings.videoFormat
-    if (settings.audioFormat)
-      audioFormat = settings.audioFormat
     if (settings.cookiesBrowser)
       cookiesBrowser = settings.cookiesBrowser
     if (settings.extraArgs != null)
@@ -436,8 +428,6 @@ Item {
   function _spawnDownload(url, quality, downloadType, labelPrefix, isPlaylistItem, knownTitle, playlistName) {
     var id = Date.now() + Math.floor(Math.random() * 1000)
     var q = quality
-    var vfmt = videoFormat
-    var afmt = audioFormat
     var subs = downloadTranscripts && downloadType !== "audio"
     var subLangs = transcriptLanguages
 
@@ -449,8 +439,9 @@ Item {
 
     // "transcript" maps to the script's subs-only mode; it writes no media.
     var scriptType = downloadType === "transcript" ? "subs" : downloadType
-    var cmd = [scriptPath, "download", url, q, scriptType, vfmt, afmt,
+    var cmd = [scriptPath, "download", url, q, scriptType,
                subLangs, outputTemplate, cookiesBrowser, extraArgs]
+
 
     var d = downloadComp.createObject(root)
     d.dwnId = id
@@ -459,8 +450,6 @@ Item {
     d.procIdx = -1
     d._quality = q
     d._downloadType = downloadType
-    d._videoFormat = vfmt
-    d._audioFormat = afmt
     d._transcriptLanguages = subLangs
     d._playlistItem = !!isPlaylistItem
     d._playlistName = playlistName || ""
@@ -505,7 +494,7 @@ Item {
       outputTemplate += "/%(title)s.%(ext)s"
 
       var qScriptType = d._downloadType === "transcript" ? "subs" : d._downloadType
-      var cmd = [scriptPath, "download", d.url, d._quality, qScriptType, d._videoFormat, d._audioFormat,
+      var cmd = [scriptPath, "download", d.url, d._quality, qScriptType,
                  d._transcriptLanguages, outputTemplate, cookiesBrowser, extraArgs]
       var proc = procAt(procIdx)
       proc.downloadId = d.dwnId
@@ -769,16 +758,12 @@ Item {
           // Subs run died before writing anything; report as unavailable
           // unless some subtitle file already landed.
           d.status = d._gotSubs ? "done" : "unavailable"
-        } else if (d.filepath !== "" && d.progress >= 100) {
-          // yt-dlp can exit non-zero on postprocessing warnings (e.g. ffprobe
-          // codec detection) while the file itself is fully written; treat it
-          // as success instead of failing a finished download.
-          d.status = "done"
-          d.error = ""
-          d.progress = 100
         } else if (d.status !== "cancelled") {
           d.status = "error"
-          if (!d.error) d.error = "yt-dlp exited with code " + exitCode
+          // Capture the last 20 lines of stderr to show the real cause
+          var errLines = (procAt(d.procIdx)._errBuf || "").split("\n")
+          var lastErrors = errLines.slice(Math.max(errLines.length - 20, 0)).join("\n")
+          d.error = "Failed (Code " + exitCode + "):\n" + lastErrors
           if (d.filepath) Quickshell.execDetached([scriptPath, "cleanup", d.filepath])
         }
         d.procIdx = -1
@@ -1024,7 +1009,6 @@ Item {
           }
         }
       }
-      dlProc0._errBuf = ""
       root.onDownloadComplete(downloadId, exitCode)
       downloadId = -1
       dlProc0._url = ""
@@ -1053,7 +1037,6 @@ Item {
           }
         }
       }
-      dlProc1._errBuf = ""
       root.onDownloadComplete(downloadId, exitCode)
       downloadId = -1
       dlProc1._url = ""
@@ -1081,7 +1064,6 @@ Item {
           }
         }
       }
-      dlProc2._errBuf = ""
       root.onDownloadComplete(downloadId, exitCode)
       downloadId = -1
       dlProc2._url = ""
@@ -1251,8 +1233,6 @@ Item {
       return JSON.stringify({
         defaultDownloadType: root.defaultDownloadType,
         quality: root.selectedQuality,
-        videoFormat: root.videoFormat,
-        audioFormat: root.audioFormat,
         downloadTranscripts: root.downloadTranscripts,
         transcriptLanguages: root.transcriptLanguages,
         playlistInSeparateFolder: root.playlistInSeparateFolder,
@@ -1272,8 +1252,6 @@ Item {
         defaultDownloadType: ["video", "audio", "both"],
         selectedQuality: ["best", "1080p", "720p", "480p"],
         defaultQuality: ["best", "1080p", "720p", "480p"],
-        videoFormat: ["mp4", "mkv", "webm", "avi"],
-        audioFormat: ["mp3", "m4a", "opus", "flac", "wav"],
         cookiesBrowser: ["none", "firefox", "chromium", "chrome", "zen", "helium", "glide"]
       }
       var bools = ["downloadTranscripts", "playlistInSeparateFolder", "enableHistory"]

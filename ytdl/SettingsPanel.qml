@@ -52,10 +52,6 @@ Flickable {
     var items = ["type"];
     if (ytdlService && ytdlService.defaultDownloadType !== "audio") {
       items.push("quality");
-      items.push("vformat");
-    }
-    if (ytdlService && ytdlService.defaultDownloadType !== "video") {
-      items.push("aformat");
     }
     items.push("transcripts");
     if (ytdlService && ytdlService.downloadTranscripts) {
@@ -77,10 +73,6 @@ Flickable {
       typeDropdown.toggle();
     } else if (itemKey === "quality") {
       qualityDropdown.toggle();
-    } else if (itemKey === "vformat") {
-      vformatDropdown.toggle();
-    } else if (itemKey === "aformat") {
-      aformatDropdown.toggle();
     } else if (itemKey === "transcripts") {
       if (ytdlService) {
         ytdlService.updateSetting("downloadTranscripts", !ytdlService.downloadTranscripts);
@@ -102,8 +94,6 @@ Flickable {
     var item = null;
     if (itemKey === "type") item = typeDropdown;
     else if (itemKey === "quality") item = qualityDropdown;
-    else if (itemKey === "vformat") item = vformatDropdown;
-    else if (itemKey === "aformat") item = aformatDropdown;
     else if (itemKey === "transcripts") item = transcriptsToggle;
     else if (itemKey === "languages") item = langInput;
     else if (itemKey === "playlistFolder") item = playlistFolderToggle;
@@ -177,51 +167,6 @@ Flickable {
       }
       onChanged: function(val) {
         if (ytdlService) ytdlService.updateSetting("selectedQuality", val);
-      }
-    }
-
-    // Video Format dropdown
-    Dropdown {
-      id: vformatDropdown
-      width: parent.width
-      label: "Video Format"
-      value: ytdlService ? ytdlService.videoFormat : "mp4"
-      options: [
-        { value: "mp4", label: "MP4" },
-        { value: "mkv", label: "MKV" },
-        { value: "webm", label: "WebM" },
-        { value: "avi", label: "AVI" }
-      ]
-      visible: ytdlService && ytdlService.defaultDownloadType !== "audio"
-      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "vformat"
-      onHovered: function(isHovered) {
-        if (isHovered) root.hoverKey("vformat")
-      }
-      onChanged: function(val) {
-        if (ytdlService) ytdlService.updateSetting("videoFormat", val);
-      }
-    }
-
-    // Audio Format dropdown
-    Dropdown {
-      id: aformatDropdown
-      width: parent.width
-      label: "Audio Format"
-      value: ytdlService ? ytdlService.audioFormat : "mp3"
-      options: [
-        { value: "mp3", label: "MP3" },
-        { value: "m4a", label: "M4A" },
-        { value: "opus", label: "Opus" },
-        { value: "flac", label: "FLAC" },
-        { value: "wav", label: "WAV" }
-      ]
-      visible: ytdlService && ytdlService.defaultDownloadType !== "video"
-      hasCursor: root.cursorActive && root.visibleItems[root.selectedIndex] === "aformat"
-      onHovered: function(isHovered) {
-        if (isHovered) root.hoverKey("aformat")
-      }
-      onChanged: function(val) {
-        if (ytdlService) ytdlService.updateSetting("audioFormat", val);
       }
     }
 

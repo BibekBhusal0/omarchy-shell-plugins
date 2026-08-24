@@ -62,7 +62,7 @@ o.bind("SUPER SHIFT", "Y", "exec, omarchy shell ytdl autoDownload")
 
 ## Configuration
 
-Options can be customized via the interactive settings panel (click the button displaying the current quality/format summary in the downloader panel) or directly in `~/.config/omarchy/shell.json`:
+Options can be customized via the interactive settings panel (click the button displaying the current quality/type summary in the downloader panel) or directly in `~/.config/omarchy/shell.json`:
 
 ```json
 {
@@ -70,8 +70,6 @@ Options can be customized via the interactive settings panel (click the button d
   "downloadLocation": "~/Downloads/yt-dlp",
   "defaultQuality": "1080p",
   "defaultDownloadType": "video",
-  "videoFormat": "mp4",
-  "audioFormat": "mp3",
   "downloadTranscripts": false,
   "transcriptLanguages": "en",
   "playlistInSeparateFolder": true,
@@ -86,8 +84,6 @@ Options can be customized via the interactive settings panel (click the button d
 | `downloadLocation` | `~/Downloads/yt-dlp` | Any directory path                                                |
 | `defaultQuality`      | `1080p`              | `best`, `1080p`, `720p`, `480p`                                   |
 | `defaultDownloadType` | `video`              | `video`, `audio`, `both`                                          |
-| `videoFormat`         | `mp4`                | `mp4`, `mkv`, `webm`, `avi`                                       |
-| `audioFormat`         | `mp3`                | `mp3`, `m4a`, `opus`, `flac`, `wav`                               |
 | `playlistInSeparateFolder` | `true`           | `true`, `false`                                                   |
 | `cookiesBrowser`      | `none`               | `none`, `firefox`, `chromium`, `chrome`, `zen`, `helium`, `glide` |
 | `extraArgs`        | (empty)              | Any yt-dlp flags, e.g. `--cookies-from-browser chromium`          |
@@ -109,7 +105,7 @@ For fine-grained control, set `extraArgs` directly (e.g. `--cookies-from-browser
 If a download fails, test yt-dlp directly in the terminal first:
 
 ```bash
-yt-dlp -f "b[height<=1080]/b" "https://www.youtube.com/watch?v=..."
+yt-dlp -f "b" "https://www.youtube.com/watch?v=..."
 ```
 
 - If the yt-dlp CLI fails, report it upstream at https://github.com/yt-dlp/yt-dlp/issues or ask on the yt-dlp Discord (https://discord.gg/H5MNcFW63r).

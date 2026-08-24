@@ -56,11 +56,9 @@ Panel {
     if (!ytdlService) return ""
     var t = ytdlService.defaultDownloadType
     var q = ytdlService.selectedQuality
-    var vf = String(ytdlService.videoFormat || "").toUpperCase()
-    var af = String(ytdlService.audioFormat || "").toUpperCase()
-    if (t === "audio") return af
-    if (t === "both") return q + " \u00b7 " + vf + "+" + af
-    return q + " \u00b7 " + vf
+    if (t === "audio") return "Audio"
+    if (t === "both") return q + " · Both"
+    return q
   }
 
   property bool _serviceWired: false
@@ -916,7 +914,7 @@ Panel {
                     }
 
                     Text {
-                      text: modelData.eta ? "ETA " + modelData.eta : ""
+                      text: modelData.eta ? "Time remaining" + modelData.eta : ""
                       color: Qt.darker(root.foreground, 1.4)
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
