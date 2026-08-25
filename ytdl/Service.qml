@@ -212,11 +212,13 @@ Item {
     for (var i = 0; i < history.length; i++) {
       var h = history[i]
       out.push({
-        dwnId: h.dwnId, url: h.url, title: h.title, status: h.status,
-        progress: h.progress, speed: h.speed, eta: h.eta,
-        filepath: h.filepath, error: h.error,
-        downloadType: h._downloadType || "", labelPrefix: h._labelPrefix || "",
-        gotSubs: h._gotSubs || false
+        dwnId: h.dwnId,
+        url: h.url,
+        title: h.title,
+        status: h.status,
+        filepath: h.filepath,
+        error: h.error,
+        downloadType: h._downloadType || ""
       })
     }
     return JSON.stringify(out)
@@ -232,14 +234,9 @@ Item {
       d.url = it.url || ""
       d.title = it.title || ""
       d.status = it.status || "error"
-      d.progress = it.progress || 0
-      d.speed = it.speed || ""
-      d.eta = it.eta || ""
       d.filepath = it.filepath || ""
       d.error = it.error || ""
       d._downloadType = it.downloadType || ""
-      d._labelPrefix = it.labelPrefix || ""
-      d._gotSubs = !!it.gotSubs
       out.push(d)
     }
     return out
