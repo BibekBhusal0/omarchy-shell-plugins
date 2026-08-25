@@ -216,7 +216,8 @@ Item {
         status: h.status,
         filepath: h.filepath,
         error: h.error,
-        downloadType: h._downloadType || ""
+        downloadType: h._downloadType || "",
+        labelPrefix: h._labelPrefix || ""
       })
     }
     return JSON.stringify(out)
@@ -235,6 +236,7 @@ Item {
       d.filepath = it.filepath || ""
       d.error = it.error || ""
       d._downloadType = it.downloadType || ""
+      d._labelPrefix = it.labelPrefix || ""
       out.push(d)
     }
     return out
@@ -450,7 +452,13 @@ Item {
     if (playlistName && playlistInSeparateFolder) {
       outputTemplate += "/" + playlistName
     }
-    outputTemplate += "/%(title)s.%(ext)s"
+    // For audio-only downloads, add a suffix to prevent conflicts with video files
+    // yt-dlp's -x flag extracts audio and deletes the intermediate video file
+    if (downloadType === "audio") {
+      outputTemplate += "/%(title)s [audio].%(ext)s"
+    } else {
+      outputTemplate += "/%(title)s.%(ext)s"
+    }
 
     // "transcript" maps to the script's subs-only mode; it writes no media.
     var scriptType = downloadType === "transcript" ? "subs" : downloadType
@@ -506,7 +514,12 @@ Item {
       if (d._playlistName && playlistInSeparateFolder) {
         outputTemplate += "/" + d._playlistName
       }
-      outputTemplate += "/%(title)s.%(ext)s"
+      // For audio-only downloads, add a suffix to prevent conflicts with video files
+      if (d._downloadType === "audio") {
+        outputTemplate += "/%(title)s [audio].%(ext)s"
+      } else {
+        outputTemplate += "/%(title)s.%(ext)s"
+      }
 
       var qScriptType = d._downloadType === "transcript" ? "subs" : d._downloadType
       var cmd = [scriptPath, "download", d.url, d._quality, qScriptType,
@@ -817,6 +830,11 @@ Item {
           downloads[si]._gotSubs = true
           downloads[si].filepath = sp
           downloads[si].progress = 100
+          // Extract title from subtitle filepath if not already set properly
+          if (!downloads[si].title || downloads[si].title === downloads[si].url || downloads[si].title === root.extractVideoId(downloads[si].url)) {
+            var subName = sp.replace(/^.*\//, "").replace(/\.[^.]+\.[^.]+$/, "").replace(/\.[^.]+$/, "")
+            if (subName) downloads[si].title = subName
+          }
         }
       }
       return
