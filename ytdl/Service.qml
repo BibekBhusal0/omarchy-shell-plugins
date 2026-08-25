@@ -313,22 +313,29 @@ Item {
       var s = d.status
       if (s !== "downloading" && s !== "queued") continue
       
-      // For "both" downloads, check if this specific part (video/audio) is busy
-      if (downloadType && labelPrefix && d._labelPrefix) {
-        if (d.url === url && d._labelPrefix === labelPrefix) return true
-        if (vid && root.extractVideoId(d.url) === vid && d._labelPrefix === labelPrefix) return true
+      // Check if this specific format is busy by matching URL + downloadType
+      if (downloadType && d._downloadType) {
+        if (d.url === url && d._downloadType === downloadType) return true
+        if (vid && root.extractVideoId(d.url) === vid && d._downloadType === downloadType) return true
       } else {
         if (d.url === url) return true
         if (vid && root.extractVideoId(d.url) === vid) return true
       }
     }
-    // Also check history - no point suggesting a video already downloaded
-    // But skip history check if retrying a specific part of "both" download
-    if (!labelPrefix) {
+    // Check history - match by URL + downloadType for specific format checks
+    if (downloadType) {
       for (var j = 0; j < history.length; j++) {
         var h = history[j]
-        if (h.url === url) return true
-        if (vid && root.extractVideoId(h.url) === vid) return true
+        if (h.status !== "done") continue
+        if (h.url === url && h._downloadType === downloadType) return true
+        if (vid && root.extractVideoId(h.url) === vid && h._downloadType === downloadType) return true
+      }
+    } else {
+      for (var k = 0; k < history.length; k++) {
+        var h2 = history[k]
+        if (h2.status !== "done") continue
+        if (h2.url === url) return true
+        if (vid && root.extractVideoId(h2.url) === vid) return true
       }
     }
     return false
@@ -411,8 +418,7 @@ Item {
     url = cleanUrl(url)
     if (!url) return
     var dtype = downloadType || defaultDownloadType
-    // Check if URL is busy, but allow retrying individual parts of "both" downloads
-    if (dtype !== "both" && root.isUrlBusy(url)) return
+    // Check if URL is busy (allow different formats of the same video)
     if (!isPlaylistItem && root.isPlaylistUrl(url)) {
       root.startPlaylist(url, quality)
       return
@@ -434,8 +440,8 @@ Item {
   }
 
   function _spawnDownload(url, quality, downloadType, labelPrefix, isPlaylistItem, knownTitle, playlistName) {
-    // Check if this specific part (for "both" downloads) is already busy
-    if (labelPrefix && root.isUrlBusy(url, downloadType, labelPrefix)) return
+    // Check if this specific format is already busy
+    if (root.isUrlBusy(url, downloadType)) return
     
     var id = Date.now() + Math.floor(Math.random() * 1000)
     var q = quality
