@@ -108,8 +108,6 @@ Item {
       property bool _playlistItem: false
       property bool _playlistPlaceholder: false
       property string _playlistName: ""
-      // Non-empty only when the same video produces several files at once
-      // (type "both" or transcript item); rendered as "[Video] Title".
       property string _labelPrefix: ""
       property bool _gotSubs: false
       readonly property string displayTitle: _labelPrefix === ""
@@ -827,24 +825,29 @@ Item {
     var destMatch = line.match(/\[download\]\s+Destination:\s+(.+)/)
     if (destMatch) {
       var full = destMatch[1].trim()
-      var fname = full.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
-      root.updateDownload(id, { title: fname, filepath: full })
+      // Remove yt-dlp format codes like .f251-7 from the filepath
+      // Pattern: .f<digits>-<digits> or .f<digits> before the final extension
+      var cleanPath = full.replace(/\.f\d+(-\d+)?(\.[^.]+)$/, "$2")
+      var fname = cleanPath.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
+      root.updateDownload(id, { title: fname, filepath: cleanPath })
       return
     }
 
     var alreadyMatch = line.match(/\[download\]\s+(.+?)\s+has already been downloaded/)
     if (alreadyMatch) {
       var afull = alreadyMatch[1].trim()
-      var aname = afull.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
-      root.updateDownload(id, { title: aname, filepath: afull, progress: 100 })
+      var cleanPath2 = afull.replace(/\.f\d+(-\d+)?(\.[^.]+)$/, "$2")
+      var aname = cleanPath2.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
+      root.updateDownload(id, { title: aname, filepath: cleanPath2, progress: 100 })
       return
     }
 
     var extractMatch = line.match(/\[ExtractAudio\]\s+Destination:\s+(.+)/)
     if (extractMatch) {
       var efull = extractMatch[1].trim()
-      var ename = efull.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
-      root.updateDownload(id, { title: ename, filepath: efull })
+      var cleanPath3 = efull.replace(/\.f\d+(-\d+)?(\.[^.]+)$/, "$2")
+      var ename = cleanPath3.replace(/^.*\//, "").replace(/\.[^.]+$/, "")
+      root.updateDownload(id, { title: ename, filepath: cleanPath3 })
       return
     }
 
