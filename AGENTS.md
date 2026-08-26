@@ -6,13 +6,13 @@ Use `omarchy` skill before making any changes.
 
 Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with a `manifest.json`, and publishes to its own git repo (see `manifest.json` `homepage`):
 
-| Folder             | Kind                 | Key files                                           |
-| ------------------ | -------------------- | --------------------------------------------------- |
-| `focusd/`          | bar-widget + service | `BarWidget.qml`, `Panel.qml`, `Service.qml`         |
-| `media/`           | bar-widget + service | `BarWidget.qml`, `Service.qml`, `MediaModel.js`     |
-| `obsidian-search/` | menu (overlay)       | `ObsidianSearch.qml`, `search.sh`, `FuzzySearch.js` |
-| `readest/`         | menu (overlay)       | `Readest.qml`, `search.sh`, `FuzzySearch.js`        |
-| `ytdl/`            | bar-widget + service | `BarWidget.qml`, `Panel.qml`, `Service.qml`         |
+| Folder             | Kind                 | Description                                        |
+| ------------------ | -------------------- | -------------------------------------------------- |
+| `focusd/`          | bar-widget + service | Focus timer with progress bar and panel            |
+| `media/`           | bar-widget + service | Media player controls and now-playing info         |
+| `obsidian-search/` | menu (overlay)       | Fuzzy search across Obsidian vaults                |
+| `readest/`         | menu (overlay)       | Fuzzy search across Readest library                |
+| `ytdl/`            | bar-widget + service | YouTube video downloader with clipboard monitoring |
 
 `scripts/publish.sh` + `.github/workflows/publish.yml` push each plugin folder to its standalone repo and cut a `v<version>` release.
 
@@ -71,8 +71,8 @@ To install a plugin from this repo into the live shell:
 - **Prettier** handles JS, JSON, and MD files. Config: `.prettierrc` (2-space indent, double quotes).
 - **qmlformat** (Qt 6) handles QML files. Config: `.qmlformat.ini` (2-space indent).
   - Use `/usr/lib/qt6/bin/qmlformat`, not the Qt 5 version at `/usr/bin/qmlformat`.
-  - Command: `/usr/lib/qt6/bin/qmlformat -i -s .qmlformat.ini $(find . -name '*.qml' ! -path './.git/*')`
-- CI checks formatting on push to `main` and on PRs via `.github/workflows/format.yml`.
+  - Command: `/usr/lib/qt6/bin/qmlformat -i $(find . -name '*.qml' ! -path './.git/*')`
+- CI auto-formats on push to `main` via `.github/workflows/format.yml`: runs prettier and qmlformat, then commits any changes back using `stefanzweifel/git-auto-commit-action`.
 
 ## Plugin conventions
 
