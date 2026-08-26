@@ -29,9 +29,10 @@ To install a plugin from this repo into the live shell:
 
 1. **Copy plugin files** to the user plugins directory:
    ```bash
-   mkdir -p ~/.config/omarchy/plugins/<plugin-id>
-   cp -a <repo>/<plugin-folder>/. ~/.config/omarchy/plugins/<plugin-id>/
+   mkdir -p ~/.config/omarchy/plugins/<plugin-folder-name>
+   cp -a <repo>/<plugin-folder>/. ~/.config/omarchy/plugins/<plugin-folder-name>/
    ```
+   **Important**: Use the folder name (e.g., `focusd`), not the plugin ID from manifest.json (e.g., `bibek.focusd`).
 
 2. **Register the plugin** in `~/.config/omarchy/shell.json`:
    - Add `{"id": "<plugin-id>"}` to the `plugins` array (for services/overlays).
@@ -48,7 +49,7 @@ To install a plugin from this repo into the live shell:
    ```
    Check for errors in the output. If there are QML errors, they will show in the shell output.
 
-5. **Iterate**: Edit files in the repo, re-copy to `~/.config/omarchy/plugins/<id>/`, restart shell, test again. The shell hot-reloads on file save when the plugin dir is a real directory (not a symlink).
+5. **Iterate**: Edit files in the repo, re-copy to `~/.config/omarchy/plugins/<plugin-folder-name>/`, restart shell, test again. The shell hot-reloads on file save when the plugin dir is a real directory (not a symlink).
 
 **Tip**: Use `omarchy-shell shell call <plugin-id> state` to inspect live plugin state for debugging.
 
@@ -58,7 +59,7 @@ To install a plugin from this repo into the live shell:
 - **High-value comments only.** Use comments to break down complex logic: non-obvious constants (like AT-SPI role codes), protocol message formats, timing-sensitive code, or workarounds.
 - **No mdashes in README files.**.
 - **No comments in Code** unless explaining a non-obvious behavior or workaround.
-- **Icon comments required.** Every Nerd Font icon glyph in QML must be preceded by `// FIX: icon below` on the line above it. This marks icons for later review and replacement if needed.
+- **Icon comments required for new/modified components only.** When adding a new QML component or modifying an existing one that uses Nerd Font icon glyphs, add `// FIX: icon below` on the line above the `iconText` property. Do not add this comment to existing, unmodified components that already have icons.
 
 ## Plugin conventions
 
@@ -80,7 +81,7 @@ To install a plugin from this repo into the live shell:
 
 ## Publishing
 
-- Bump `version` in a plugin's `manifest.json`, `publish.sh` skips a plugin if the remote manifest already matches the local version.
+- Bump `version` in a plugin's `manifest.json`, `publish.sh` skips a plugin if the remote manifest already matches the local version. Do not bump version unless user ask to.
 - Publish flow runs on push to `main` or `workflow_dispatch`; needs `PAT_TOKEN` (repo scope) set on the repo. Dry-run locally: `GITHUB_TOKEN=... bash scripts/publish.sh`.
 
 ## Environment notes
