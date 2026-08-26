@@ -266,7 +266,7 @@ Item {
           root.history = root.historyFromJSON(parsed);
           root.historyUpdated();
         }
-      } catch (e) {
+      } catch (e) /* corrupt state file, start with empty history */ {
       }
     }
   }
@@ -783,7 +783,7 @@ Item {
             root.persistHistory();
             root.historyUpdated();
           }
-        } catch (e) {
+        } catch (e) /* malformed prune output, keep history as-is */ {
         }
       }
     }
@@ -1054,7 +1054,7 @@ Item {
                 }
               }
             }
-          } catch (e) {
+          } catch (e) /* malformed enumeration output, treat as empty */ {
           }
         }
         if (items.length === 0) {
