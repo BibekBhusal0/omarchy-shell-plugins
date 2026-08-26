@@ -389,10 +389,11 @@ Panel {
           spacing: Style.space(6)
 
           Button {
-            iconText: "󰒝"
+            iconText: "󰒟"
             foreground: root.shuffleActive ? root.accent : root.foreground
-            horizontalPadding: Style.spacing.controlPaddingX
+            horizontalPadding: Style.spacing.panelGap
             verticalPadding: Style.spacing.controlPaddingY
+            iconSize: Style.font.iconLarge
             enabled: mediaService ? mediaService.playerShuffleSupported(root.activePlayer) : false
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 0
@@ -401,10 +402,11 @@ Panel {
           }
 
           Button {
-            iconText: "󰒮"
+            iconText: ""
             foreground: root.foreground
-            horizontalPadding: Style.spacing.controlPaddingX
+            horizontalPadding: Style.spacing.panelGap
             verticalPadding: Style.spacing.controlPaddingY
+            iconSize: Style.font.iconLarge
             enabled: root.activePlayer && root.activePlayer.canGoPrevious
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 1
@@ -426,10 +428,11 @@ Panel {
           }
 
           Button {
-            iconText: "󰒭"
+            iconText: ""
             foreground: root.foreground
-            horizontalPadding: Style.spacing.controlPaddingX
+            horizontalPadding: Style.spacing.panelGap
             verticalPadding: Style.spacing.controlPaddingY
+            iconSize: Style.font.iconLarge
             enabled: root.activePlayer && root.activePlayer.canGoNext
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 3
@@ -440,8 +443,9 @@ Panel {
           Button {
             iconText: root.repeatState === "one" ? "󰑘" : "󰕇"
             foreground: root.repeatState !== "off" ? root.accent : root.foreground
-            horizontalPadding: Style.spacing.controlPaddingX
+            horizontalPadding: Style.spacing.panelGap
             verticalPadding: Style.spacing.controlPaddingY
+            iconSize: Style.font.iconLarge
             enabled: mediaService ? mediaService.playerLoopSupported(root.activePlayer) : false
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 4
