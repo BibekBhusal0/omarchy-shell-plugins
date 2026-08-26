@@ -35,27 +35,20 @@ Panel {
   readonly property bool isCliamp: activePlayer && mediaService && mediaService.isCliampMpris(activePlayer)
 
   readonly property real positionSeconds: {
-    if (!activePlayer)
-      return 0;
-    if (isCliamp)
-      return activePlayer.position || 0;
-    return activePlayer.position || 0;
+    if (!activePlayer) return 0
+    if (isCliamp) return activePlayer.position || 0
+    return activePlayer.position || 0
   }
   readonly property real lengthSeconds: {
-    if (!activePlayer)
-      return 0;
-    if (isCliamp)
-      return activePlayer.duration || 0;
-    if (isMprisPlayer && activePlayer.lengthSupported)
-      return activePlayer.length || 0;
-    return 0;
+    if (!activePlayer) return 0
+    if (isCliamp) return activePlayer.duration || 0
+    if (isMprisPlayer && activePlayer.lengthSupported) return activePlayer.length || 0
+    return 0
   }
   readonly property bool canSeek: {
-    if (!activePlayer)
-      return false;
-    if (isCliamp)
-      return (activePlayer.duration || 0) > 0;
-    return activePlayer.canSeek === true;
+    if (!activePlayer) return false
+    if (isCliamp) return (activePlayer.duration || 0) > 0
+    return activePlayer.canSeek === true
   }
   readonly property bool hasProgress: canSeek && lengthSeconds > 0
 
@@ -63,12 +56,11 @@ Panel {
   property bool _dragging: false
 
   function formatTime(seconds) {
-    if (!seconds || seconds <= 0)
-      return "0:00";
-    var s = Math.floor(seconds);
-    var m = Math.floor(s / 60);
-    s = s % 60;
-    return m + ":" + (s < 10 ? "0" : "") + s;
+    if (!seconds || seconds <= 0) return "0:00"
+    var s = Math.floor(seconds)
+    var m = Math.floor(s / 60)
+    s = s % 60
+    return m + ":" + (s < 10 ? "0" : "") + s
   }
 
   Timer {
@@ -77,11 +69,9 @@ Panel {
     repeat: true
     running: root.activePlayer && root.activePlayer.isPlaying && root.hasProgress && !root._dragging
     onTriggered: {
-      if (!root.activePlayer || root._dragging)
-        return;
-      if (root.isMprisPlayer)
-        root.activePlayer.positionChanged();
-      root.sliderValue = root.positionSeconds;
+      if (!root.activePlayer || root._dragging) return
+      if (root.isMprisPlayer) root.activePlayer.positionChanged()
+      root.sliderValue = root.positionSeconds
     }
   }
 
@@ -90,194 +80,159 @@ Panel {
   readonly property string repeatState: mediaService ? mediaService.playerRepeatState(activePlayer) : "off"
 
   function open() {
-    cursorActive = true;
-    focusSection = "controls";
-    selectedIndex = initialButton();
-    controller.show();
+    cursorActive = true
+    focusSection = "controls"
+    selectedIndex = initialButton()
+    controller.show()
   }
 
   function close() {
-    controller.hide();
+    controller.hide()
   }
 
   function toggle() {
-    if (opened)
-      close();
-    else
-      open();
+    if (opened) close()
+    else open()
   }
 
   function sourceCount() {
-    return sourcesVisible ? sourcePlayers.length : 0;
+    return sourcesVisible ? sourcePlayers.length : 0
   }
 
   function buttonEnabled(index) {
-    if (index === 0)
-      return mediaService ? mediaService.playerShuffleSupported(activePlayer) : false;
-    if (index === 1)
-      return !!activePlayer && !!activePlayer.canGoPrevious;
-    if (index === 2)
-      return !!activePlayer && (activePlayer.canTogglePlaying || activePlayer.canPlay || activePlayer.canPause);
-    if (index === 3)
-      return !!activePlayer && !!activePlayer.canGoNext;
-    if (index === 4)
-      return mediaService ? mediaService.playerLoopSupported(activePlayer) : false;
-    return false;
+    if (index === 0) return mediaService ? mediaService.playerShuffleSupported(activePlayer) : false
+    if (index === 1) return !!activePlayer && !!activePlayer.canGoPrevious
+    if (index === 2) return !!activePlayer
+      && (activePlayer.canTogglePlaying || activePlayer.canPlay || activePlayer.canPause)
+    if (index === 3) return !!activePlayer && !!activePlayer.canGoNext
+    if (index === 4) return mediaService ? mediaService.playerLoopSupported(activePlayer) : false
+    return false
   }
 
   function enabledButtonIndices() {
-    var list = [];
-    for (var i = 0; i < 5; i++)
-      if (buttonEnabled(i))
-        list.push(i);
-    return list;
+    var list = []
+    for (var i = 0; i < 5; i++) if (buttonEnabled(i)) list.push(i)
+    return list
   }
 
   function firstEnabledButton() {
-    var inds = enabledButtonIndices();
-    return inds.length > 0 ? inds[0] : 2;
+    var inds = enabledButtonIndices()
+    return inds.length > 0 ? inds[0] : 2
   }
 
   function lastEnabledButton() {
-    var inds = enabledButtonIndices();
-    return inds.length > 0 ? inds[inds.length - 1] : 2;
+    var inds = enabledButtonIndices()
+    return inds.length > 0 ? inds[inds.length - 1] : 2
   }
 
   function initialButton() {
-    return buttonEnabled(2) ? 2 : firstEnabledButton();
+    return buttonEnabled(2) ? 2 : firstEnabledButton()
   }
 
   function moveCursor(dx, dy) {
     if (!sourcesVisible && focusSection === "sources") {
-      focusSection = "controls";
-      selectedIndex = initialButton();
+      focusSection = "controls"
+      selectedIndex = initialButton()
     }
     if (!cursorActive) {
-      cursorActive = true;
-      focusSection = "controls";
-      selectedIndex = initialButton();
-      return;
+      cursorActive = true
+      focusSection = "controls"
+      selectedIndex = initialButton()
+      return
     }
-    var dir = dx !== 0 ? dx : dy;
-    if (dir === 0)
-      return;
+    var dir = dx !== 0 ? dx : dy
+    if (dir === 0) return
     if (focusSection === "controls") {
-      var inds = enabledButtonIndices();
+      var inds = enabledButtonIndices()
       if (inds.length === 0) {
         if (sourcesVisible) {
-          focusSection = "sources";
-          selectedIndex = dir > 0 ? 0 : sourceCount() - 1;
+          focusSection = "sources"
+          selectedIndex = dir > 0 ? 0 : sourceCount() - 1
         }
-        return;
+        return
       }
-      var first = inds[0];
-      var last = inds[inds.length - 1];
+      var first = inds[0]
+      var last = inds[inds.length - 1]
       if (dir > 0) {
         if (selectedIndex >= last) {
           if (sourcesVisible) {
-            focusSection = "sources";
-            selectedIndex = 0;
-          } else
-            selectedIndex = first;
+            focusSection = "sources"
+            selectedIndex = 0
+          } else selectedIndex = first
         } else {
-          for (var i = 0; i < inds.length; i++)
-            if (inds[i] > selectedIndex) {
-              selectedIndex = inds[i];
-              break;
-            }
+          for (var i = 0; i < inds.length; i++) if (inds[i] > selectedIndex) { selectedIndex = inds[i]; break }
         }
       } else {
         if (selectedIndex <= first) {
           if (sourcesVisible) {
-            focusSection = "sources";
-            selectedIndex = sourceCount() - 1;
-          } else
-            selectedIndex = last;
+            focusSection = "sources"
+            selectedIndex = sourceCount() - 1
+          } else selectedIndex = last
         } else {
-          for (var k = inds.length - 1; k >= 0; k--)
-            if (inds[k] < selectedIndex) {
-              selectedIndex = inds[k];
-              break;
-            }
+          for (var k = inds.length - 1; k >= 0; k--) if (inds[k] < selectedIndex) { selectedIndex = inds[k]; break }
         }
       }
     } else {
-      var n = sourceCount();
-      if (n <= 0)
-        return;
+      var n = sourceCount()
+      if (n <= 0) return
       if (dir > 0) {
-        if (selectedIndex < n - 1)
-          selectedIndex += 1;
+        if (selectedIndex < n - 1) selectedIndex += 1
         else {
-          focusSection = "controls";
-          selectedIndex = firstEnabledButton();
+          focusSection = "controls"
+          selectedIndex = firstEnabledButton()
         }
       } else {
-        if (selectedIndex > 0)
-          selectedIndex -= 1;
+        if (selectedIndex > 0) selectedIndex -= 1
         else {
-          focusSection = "controls";
-          selectedIndex = lastEnabledButton();
+          focusSection = "controls"
+          selectedIndex = lastEnabledButton()
         }
       }
     }
   }
 
   function activateCursor() {
-    if (!cursorActive || !mediaService)
-      return;
+    if (!cursorActive || !mediaService) return
     if (focusSection === "controls") {
-      if (!buttonEnabled(selectedIndex))
-        return;
-      var key = mediaService.playerKey(activePlayer);
-      if (selectedIndex === 0)
-        mediaService.toggleShuffle(key);
-      else if (selectedIndex === 1)
-        mediaService.runAction("previous", false, key);
-      else if (selectedIndex === 2)
-        mediaService.runAction("playPause", false, key);
-      else if (selectedIndex === 3)
-        mediaService.runAction("next", false, key);
-      else if (selectedIndex === 4)
-        mediaService.cycleRepeat(key);
+      if (!buttonEnabled(selectedIndex)) return
+      var key = mediaService.playerKey(activePlayer)
+      if (selectedIndex === 0) mediaService.toggleShuffle(key)
+      else if (selectedIndex === 1) mediaService.runAction("previous", false, key)
+      else if (selectedIndex === 2) mediaService.runAction("playPause", false, key)
+      else if (selectedIndex === 3) mediaService.runAction("next", false, key)
+      else if (selectedIndex === 4) mediaService.cycleRepeat(key)
     } else if (focusSection === "sources") {
-      var player = sourcePlayers[selectedIndex];
-      if (player)
-        mediaService.selectPlayer(mediaService.playerKey(player));
-      focusSection = "controls";
-      selectedIndex = initialButton();
+      var player = sourcePlayers[selectedIndex]
+      if (player) mediaService.selectPlayer(mediaService.playerKey(player))
+      focusSection = "controls"
+      selectedIndex = initialButton()
     }
   }
 
   function runAction(action) {
-    if (mediaService)
-      mediaService.runAction(action, false, mediaService.playerKey(activePlayer));
+    if (mediaService) mediaService.runAction(action, false, mediaService.playerKey(activePlayer))
   }
 
   function toggleShuffle() {
-    if (mediaService)
-      mediaService.toggleShuffle(mediaService.playerKey(activePlayer));
+    if (mediaService) mediaService.toggleShuffle(mediaService.playerKey(activePlayer))
   }
 
   function cycleRepeat() {
-    if (mediaService)
-      mediaService.cycleRepeat(mediaService.playerKey(activePlayer));
+    if (mediaService) mediaService.cycleRepeat(mediaService.playerKey(activePlayer))
   }
 
   function controlHovered(index, hovered) {
-    if (!hovered || !buttonEnabled(index))
-      return;
-    cursorActive = true;
-    focusSection = "controls";
-    selectedIndex = index;
+    if (!hovered || !buttonEnabled(index)) return
+    cursorActive = true
+    focusSection = "controls"
+    selectedIndex = index
   }
 
   function sourceHovered(index, hovered) {
-    if (!hovered)
-      return;
-    cursorActive = true;
-    focusSection = "sources";
-    selectedIndex = index;
+    if (!hovered) return
+    cursorActive = true
+    focusSection = "sources"
+    selectedIndex = index
   }
 
   KeyboardPanel {
@@ -294,18 +249,11 @@ Panel {
       id: keyCatcher
       anchors.fill: parent
 
-      onMoveRequested: function (dx, dy) {
-        root.moveCursor(dx, dy);
-      }
+      onMoveRequested: function(dx, dy) { root.moveCursor(dx, dy) }
       onActivateRequested: root.activateCursor()
       onCloseRequested: root.close()
-      onTabRequested: function (direction) {
-        root.moveCursor(0, direction);
-      }
-      onTextKey: function (t) {
-        if (t === "q")
-          root.close();
-      }
+      onTabRequested: function(direction) { root.moveCursor(0, direction) }
+      onTextKey: function(t) { if (t === "q") root.close() }
 
       Column {
         id: content
@@ -408,26 +356,20 @@ Panel {
             knobColor: root.foreground
             anchors.verticalCenter: parent.verticalCenter
 
-            onMoved: function (val) {
-              root._dragging = true;
-              root.sliderValue = val;
+            onMoved: function(val) {
+              root._dragging = true
+              root.sliderValue = val
             }
-            onReleased: function (val) {
-              root.sliderValue = val;
-              if (!root.activePlayer) {
-                root._dragging = false;
-                return;
-              }
+            onReleased: function(val) {
+              root.sliderValue = val
+              if (!root.activePlayer) { root._dragging = false; return }
               if (root.isMprisPlayer) {
-                var delta = val - root.activePlayer.position;
-                if (Math.abs(delta) > 0.1)
-                  root.activePlayer.seek(delta);
+                var delta = val - root.activePlayer.position
+                if (Math.abs(delta) > 0.1) root.activePlayer.seek(delta)
               } else if (root.isCliamp) {
-                Quickshell.execDetached(["cliamp", "seek", String(Math.floor(val))]);
+                Quickshell.execDetached(["cliamp", "seek", String(Math.floor(val))])
               }
-              Qt.callLater(function () {
-                  root._dragging = false;
-                });
+              Qt.callLater(function() { root._dragging = false })
             }
           }
 
@@ -455,9 +397,7 @@ Panel {
             enabled: mediaService ? mediaService.playerShuffleSupported(root.activePlayer) : false
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 0
-            onHovered: function (hovered) {
-              root.controlHovered(0, hovered);
-            }
+            onHovered: function(hovered) { root.controlHovered(0, hovered) }
             onClicked: root.toggleShuffle()
           }
 
@@ -470,9 +410,7 @@ Panel {
             enabled: root.activePlayer && root.activePlayer.canGoPrevious
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 1
-            onHovered: function (hovered) {
-              root.controlHovered(1, hovered);
-            }
+            onHovered: function(hovered) { root.controlHovered(1, hovered) }
             onClicked: root.runAction("previous")
           }
 
@@ -485,9 +423,7 @@ Panel {
             enabled: root.activePlayer && (root.activePlayer.canTogglePlaying || root.activePlayer.canPlay || root.activePlayer.canPause)
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 2
-            onHovered: function (hovered) {
-              root.controlHovered(2, hovered);
-            }
+            onHovered: function(hovered) { root.controlHovered(2, hovered) }
             onClicked: root.runAction("playPause")
           }
 
@@ -500,9 +436,7 @@ Panel {
             enabled: root.activePlayer && root.activePlayer.canGoNext
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 3
-            onHovered: function (hovered) {
-              root.controlHovered(3, hovered);
-            }
+            onHovered: function(hovered) { root.controlHovered(3, hovered) }
             onClicked: root.runAction("next")
           }
 
@@ -515,9 +449,7 @@ Panel {
             enabled: mediaService ? mediaService.playerLoopSupported(root.activePlayer) : false
             visible: enabled
             hasCursor: root.cursorActive && root.focusSection === "controls" && root.selectedIndex === 4
-            onHovered: function (hovered) {
-              root.controlHovered(4, hovered);
-            }
+            onHovered: function(hovered) { root.controlHovered(4, hovered) }
             onClicked: root.cycleRepeat()
           }
         }
@@ -542,7 +474,8 @@ Panel {
               required property int index
 
               readonly property var player: modelData
-              readonly property bool selected: root.activePlayer && player && root.mediaService.playerKey(root.activePlayer) === root.mediaService.playerKey(player)
+              readonly property bool selected: root.activePlayer && player
+                && root.mediaService.playerKey(root.activePlayer) === root.mediaService.playerKey(player)
               readonly property bool hasCursor: root.cursorActive && root.focusSection === "sources" && index === root.selectedIndex
               readonly property string sourceTitle: player ? (player.trackTitle || player.identity || player.desktopEntry || "Media source") : "Media source"
               readonly property string sourceDetail: player && player.trackArtist ? player.trackArtist : (player && player.identity ? player.identity : "")
@@ -551,7 +484,8 @@ Panel {
               height: sourceInner.implicitHeight + Style.space(10)
               radius: Style.spacing.labelGap
               color: hasCursor ? Style.hoverFillFor(root.foreground, root.accent) : "transparent"
-              borderSpec: hasCursor ? Border.controlSpec("hover-cursor", root.foreground, root.accent) : Border.none()
+              borderSpec: hasCursor ? Border.controlSpec("hover-cursor", root.foreground, root.accent)
+                : Border.none()
 
               Row {
                 id: sourceInner
@@ -605,10 +539,9 @@ Panel {
                 cursorShape: Qt.PointingHandCursor
                 onEntered: root.sourceHovered(sourceRow.index, true)
                 onClicked: {
-                  if (root.mediaService)
-                    root.mediaService.selectPlayer(root.mediaService.playerKey(sourceRow.player));
-                  root.focusSection = "controls";
-                  root.selectedIndex = root.initialButton();
+                  if (root.mediaService) root.mediaService.selectPlayer(root.mediaService.playerKey(sourceRow.player))
+                  root.focusSection = "controls"
+                  root.selectedIndex = root.initialButton()
                 }
               }
             }

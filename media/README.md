@@ -35,11 +35,11 @@ omarchy plugin add https://github.com/BibekBhusal0/omarchy-media.git --enable
 
 The bar widget appears automatically while something is playing:
 
-| Action | Effect |
-| ------ | ------ |
-| Left click | Play/pause |
-| Middle click | Next track |
-| Right click | Toggle the popup |
+| Action           | Effect                |
+| ---------------- | --------------------- |
+| Left click       | Play/pause            |
+| Middle click     | Next track            |
+| Right click      | Toggle the popup      |
 | Scroll up / down | Previous / next track |
 
 ### Popup

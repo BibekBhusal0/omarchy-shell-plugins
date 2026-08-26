@@ -41,88 +41,75 @@ Item {
   readonly property bool loopSupported: available
 
   function run(cmd) {
-    Quickshell.execDetached(["cliamp", cmd]);
+    Quickshell.execDetached(["cliamp", cmd])
   }
 
-  function play() {
-    run("play");
-  }
-  function pause() {
-    run("pause");
-  }
-  function togglePlaying() {
-    run("toggle");
-  }
-  function next() {
-    run("next");
-  }
-  function previous() {
-    run("prev");
-  }
+  function play() { run("play") }
+  function pause() { run("pause") }
+  function togglePlaying() { run("toggle") }
+  function next() { run("next") }
+  function previous() { run("prev") }
   function setShuffle(on) {
-    Quickshell.execDetached(["cliamp", "shuffle", on ? "on" : "off"]);
+    Quickshell.execDetached(["cliamp", "shuffle", on ? "on" : "off"])
   }
   function setRepeat(mode) {
-    Quickshell.execDetached(["cliamp", "repeat", mode]);
+    Quickshell.execDetached(["cliamp", "repeat", mode])
   }
 
   function poll() {
-    statusProc.running = false;
-    statusProc.collected = "";
-    statusProc.command = ["cliamp", "status", "--json"];
-    statusProc.running = true;
+    statusProc.running = false
+    statusProc.collected = ""
+    statusProc.command = ["cliamp", "status", "--json"]
+    statusProc.running = true
   }
 
   function parseStatus(raw) {
-    var text = String(raw || "").trim();
-    var data = {};
+    var text = String(raw || "").trim()
+    var data = {}
     if (text !== "") {
       try {
-        data = JSON.parse(text);
+        data = JSON.parse(text)
       } catch (error) {
-        console.warn("Cliamp: ignoring invalid status:", error);
+        console.warn("Cliamp: ignoring invalid status:", error)
       }
     }
     if (data.ok !== true) {
-      clear();
-      return;
+      clear()
+      return
     }
-    available = true;
-    var newState = String(data.state || "stopped");
-    var track = data.track || {};
-    state = newState;
-    isPlaying = newState === "playing";
-    trackTitle = String(track.title || "");
-    trackArtist = String(track.artist || "");
-    trackAlbum = String(track.album || "");
-    trackArtUrl = String(track.artUrl || "");
-    playlist = String(data.playlist || "");
-    position = Number(data.position) || 0;
-    duration = Number(data.duration) || 0;
-    volume = Number(data.volume) || 0;
-    shuffle = data.shuffle === true;
-    var repeatRaw = String(data.repeat || "").toLowerCase();
-    if (repeatRaw.indexOf("one") !== -1)
-      repeat = "one";
-    else if (repeatRaw.indexOf("all") !== -1)
-      repeat = "all";
-    else
-      repeat = "off";
+    available = true
+    var newState = String(data.state || "stopped")
+    var track = data.track || {}
+    state = newState
+    isPlaying = newState === "playing"
+    trackTitle = String(track.title || "")
+    trackArtist = String(track.artist || "")
+    trackAlbum = String(track.album || "")
+    trackArtUrl = String(track.artUrl || "")
+    playlist = String(data.playlist || "")
+    position = Number(data.position) || 0
+    duration = Number(data.duration) || 0
+    volume = Number(data.volume) || 0
+    shuffle = data.shuffle === true
+    var repeatRaw = String(data.repeat || "").toLowerCase()
+    if (repeatRaw.indexOf("one") !== -1) repeat = "one"
+    else if (repeatRaw.indexOf("all") !== -1) repeat = "all"
+    else repeat = "off"
   }
 
   function clear() {
-    available = false;
-    isPlaying = false;
-    trackTitle = "";
-    trackArtist = "";
-    trackAlbum = "";
-    trackArtUrl = "";
-    playlist = "";
-    position = 0;
-    duration = 0;
-    volume = 0;
-    shuffle = false;
-    repeat = "off";
+    available = false
+    isPlaying = false
+    trackTitle = ""
+    trackArtist = ""
+    trackAlbum = ""
+    trackArtUrl = ""
+    playlist = ""
+    position = 0
+    duration = 0
+    volume = 0
+    shuffle = false
+    repeat = "off"
   }
 
   Timer {
@@ -137,15 +124,13 @@ Item {
     id: statusProc
     property string collected: ""
     stdout: SplitParser {
-      onRead: function (data) {
-        statusProc.collected += data + "\n";
-      }
+      onRead: function(data) { statusProc.collected += data + "\n" }
     }
-    onExited: function (exitCode) {
+    onExited: function(exitCode) {
       if (exitCode === 0 && String(statusProc.collected).trim() !== "")
-        root.parseStatus(statusProc.collected);
+        root.parseStatus(statusProc.collected)
       else
-        root.clear();
+        root.clear()
     }
   }
 

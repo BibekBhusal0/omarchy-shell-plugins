@@ -77,15 +77,7 @@
         "key": "cookiesBrowser",
         "type": "enum",
         "label": "Cookies from browser",
-        "options": [
-          "none",
-          "firefox",
-          "chromium",
-          "chrome",
-          "zen",
-          "helium",
-          "glide"
-        ],
+        "options": ["none", "firefox", "chromium", "chrome", "zen", "helium", "glide"],
         "defaultValue": "none",
         "description": "Browser to pull cookies from to bypass YouTube bot detection. Use 'none' if you have no issues."
       },
