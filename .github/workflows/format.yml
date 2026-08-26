@@ -1,0 +1,41 @@
+name: Format
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install tools
+        run: |
+          npm install -g prettier
+          sudo apt-get update
+          sudo apt-get install -y qt6-declarative-dev-tools || \
+          sudo apt-get install -y qml6format
+
+      - name: Format
+        run: |
+          prettier --write "**/*.{js,json,md}"
+          find . -name "*.qml" ! -path './.git/*' -exec /usr/lib/qt6/bin/qmlformat -i {} +
+
+      - name: Commit and push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-format code"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"

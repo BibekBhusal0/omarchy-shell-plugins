@@ -28,10 +28,12 @@ QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **
 To install a plugin from this repo into the live shell:
 
 1. **Copy plugin files** to the user plugins directory:
+
    ```bash
    mkdir -p ~/.config/omarchy/plugins/<plugin-folder-name>
    cp -a <repo>/<plugin-folder>/. ~/.config/omarchy/plugins/<plugin-folder-name>/
    ```
+
    **Important**: Use the folder name (e.g., `focusd`), not the plugin ID from manifest.json (e.g., `bibek.focusd`).
 
 2. **Register the plugin** in `~/.config/omarchy/shell.json`:
@@ -39,14 +41,17 @@ To install a plugin from this repo into the live shell:
    - For bar widgets, also add `{"id": "<plugin-id>"}` to `bar.layout.right` (or `left`/`center`).
 
 3. **Restart the shell** to load changes:
+
    ```bash
    omarchy-restart-shell
    ```
 
 4. **Test the plugin** by summoning it:
+
    ```bash
    omarchy-shell shell summon <plugin-id>
    ```
+
    Check for errors in the output. If there are QML errors, they will show in the shell output.
 
 5. **Iterate**: Edit files in the repo, re-copy to `~/.config/omarchy/plugins/<plugin-folder-name>/`, restart shell, test again. The shell hot-reloads on file save when the plugin dir is a real directory (not a symlink).
@@ -60,6 +65,14 @@ To install a plugin from this repo into the live shell:
 - **No mdashes in README files.**.
 - **No comments in Code** unless explaining a non-obvious behavior or workaround.
 - **Icon comments required for new/modified components only.** When adding a new QML component or modifying an existing one that uses Nerd Font icon glyphs, add `// FIX: icon below` on the line above the `iconText` property. Do not add this comment to existing, unmodified components that already have icons.
+
+## Formatting
+
+- **Prettier** handles JS, JSON, and MD files. Config: `.prettierrc` (2-space indent, double quotes).
+- **qmlformat** (Qt 6) handles QML files. Config: `.qmlformat.ini` (2-space indent).
+  - Use `/usr/lib/qt6/bin/qmlformat`, not the Qt 5 version at `/usr/bin/qmlformat`.
+  - Command: `/usr/lib/qt6/bin/qmlformat -i -s .qmlformat.ini $(find . -name '*.qml' ! -path './.git/*')`
+- CI checks formatting on push to `main` and on PRs via `.github/workflows/format.yml`.
 
 ## Plugin conventions
 
