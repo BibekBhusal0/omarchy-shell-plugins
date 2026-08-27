@@ -77,8 +77,11 @@ Item {
     var list = [0, 1];
     if (hasMedia) {
       list.push(2);
+      if (mediaPopupVisible) {
+        list.push(3, 4, 5);
+      }
     }
-    list.push(3, 4, 5);
+    list.push(6, 7, 8);
     return list;
   }
 
@@ -105,10 +108,28 @@ Item {
     } else if (focusIndex === 2) {
       root.mediaPopupVisible = !root.mediaPopupVisible;
     } else if (focusIndex === 3) {
-      root.suspendRequested();
+      if (root.activeMprisPlayer && root.activeMprisPlayer.canGoPrevious)
+        root.activeMprisPlayer.previous();
+      root.wakeRequested();
     } else if (focusIndex === 4) {
-      root.shutdownRequested();
+      if (!root.activeMprisPlayer)
+        return;
+      if (root.activeMprisPlayer.isPlaying && root.activeMprisPlayer.canPause)
+        root.activeMprisPlayer.pause();
+      else if (!root.activeMprisPlayer.isPlaying && root.activeMprisPlayer.canPlay)
+        root.activeMprisPlayer.play();
+      else if (root.activeMprisPlayer.canTogglePlaying)
+        root.activeMprisPlayer.togglePlaying();
+      root.wakeRequested();
     } else if (focusIndex === 5) {
+      if (root.activeMprisPlayer && root.activeMprisPlayer.canGoNext)
+        root.activeMprisPlayer.next();
+      root.wakeRequested();
+    } else if (focusIndex === 6) {
+      root.suspendRequested();
+    } else if (focusIndex === 7) {
+      root.shutdownRequested();
+    } else if (focusIndex === 8) {
       root.rebootRequested();
     }
   }
@@ -147,6 +168,14 @@ Item {
   }
 
   onPasswordTextChanged: syncPasswordText()
+  onMediaPopupVisibleChanged: {
+    if (!mediaPopupVisible && focusIndex >= 3 && focusIndex <= 5)
+      focusIndex = 2;
+  }
+  onFocusIndexChanged: {
+    if (mediaPopupVisible && focusIndex !== 2 && (focusIndex < 3 || focusIndex > 5))
+      mediaPopupVisible = false;
+  }
   onInputEnabledChanged: {
     if (inputEnabled)
       Qt.callLater(forcePasswordFocus);
@@ -304,10 +333,10 @@ Item {
       color: Color.popups.background
       borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, 1, "border-alpha")
       radius: Style.cornerRadius
-      topPadding: 14
-      bottomPadding: 14
-      leftPadding: 16
-      rightPadding: 16
+      topPadding: 10
+      bottomPadding: 10
+      leftPadding: 12
+      rightPadding: 12
 
       Row {
         id: mediaPopupContent
@@ -317,11 +346,10 @@ Item {
         spacing: 12
 
         BorderSurface {
-          width: 52
-          height: 52
+          width: 72
+          height: 72
           radius: Style.cornerRadius
           color: Qt.rgba(0, 0, 0, 0.3)
-          borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, 1, "border-alpha")
           anchors.verticalCenter: parent.verticalCenter
 
           Image {
@@ -345,7 +373,7 @@ Item {
         }
 
         Column {
-          width: parent.width - 64
+          width: parent.width - 84
           anchors.verticalCenter: parent.verticalCenter
           spacing: 4
 
@@ -376,11 +404,12 @@ Item {
               id: mediaPrevBtn
               implicitWidth: 36
               implicitHeight: 36
-              fontSize: Style.font.body
+              iconSize: Style.font.iconLarge
               background: "transparent"
               foreground: Color.popups.text
               horizontalPadding: 0
               verticalPadding: 0
+              hasCursor: root.focusIndex === 3
               // FIX: icon below
               iconText: "󰒮"
               onClicked: {
@@ -394,11 +423,12 @@ Item {
               id: mediaPlayPauseBtn
               implicitWidth: 36
               implicitHeight: 36
-              fontSize: Style.font.body
+              iconSize: Style.font.iconLarge
               background: "transparent"
               foreground: Color.popups.text
               horizontalPadding: 0
               verticalPadding: 0
+              hasCursor: root.focusIndex === 4
               // FIX: icon below
               iconText: root.isMediaPlaying ? "󰏤" : "󰐊"
               onClicked: {
@@ -418,11 +448,12 @@ Item {
               id: mediaNextBtn
               implicitWidth: 36
               implicitHeight: 36
-              fontSize: Style.font.body
+              iconSize: Style.font.iconLarge
               background: "transparent"
               foreground: Color.popups.text
               horizontalPadding: 0
               verticalPadding: 0
+              hasCursor: root.focusIndex === 5
               // FIX: icon below
               iconText: "󰒭"
               onClicked: {
@@ -603,7 +634,7 @@ Item {
         bordered: true
         horizontalPadding: 20
         verticalPadding: 10
-        hasCursor: root.focusIndex === 3
+        hasCursor: root.focusIndex === 6
         onClicked: root.suspendRequested()
       }
 
@@ -615,7 +646,7 @@ Item {
         bordered: true
         horizontalPadding: 20
         verticalPadding: 10
-        hasCursor: root.focusIndex === 4
+        hasCursor: root.focusIndex === 7
         onClicked: root.shutdownRequested()
       }
 
@@ -627,7 +658,7 @@ Item {
         bordered: true
         horizontalPadding: 20
         verticalPadding: 10
-        hasCursor: root.focusIndex === 5
+        hasCursor: root.focusIndex === 8
         onClicked: root.rebootRequested()
       }
     }
