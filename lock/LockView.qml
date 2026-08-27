@@ -302,7 +302,6 @@ Item {
 
     Button {
       id: mediaCornerBtn
-      // FIX: icon below
       iconText: "󰝚"
       text: root.mediaTitle
       visible: root.hasMedia
@@ -410,8 +409,7 @@ Item {
               horizontalPadding: 0
               verticalPadding: 0
               hasCursor: root.focusIndex === 3
-              // FIX: icon below
-              iconText: "󰒮"
+              iconText: ""
               onClicked: {
                 root.wakeRequested();
                 if (root.activeMprisPlayer && root.activeMprisPlayer.canGoPrevious)
@@ -429,7 +427,6 @@ Item {
               horizontalPadding: 0
               verticalPadding: 0
               hasCursor: root.focusIndex === 4
-              // FIX: icon below
               iconText: root.isMediaPlaying ? "󰏤" : "󰐊"
               onClicked: {
                 root.wakeRequested();
@@ -454,8 +451,7 @@ Item {
               horizontalPadding: 0
               verticalPadding: 0
               hasCursor: root.focusIndex === 5
-              // FIX: icon below
-              iconText: "󰒭"
+              iconText: ""
               onClicked: {
                 root.wakeRequested();
                 if (root.activeMprisPlayer && root.activeMprisPlayer.canGoNext)
@@ -629,7 +625,6 @@ Item {
       Button {
         id: sleepButton
         text: "Sleep"
-        // FIX: icon below
         iconText: "󰤄"
         bordered: true
         horizontalPadding: 20
@@ -641,7 +636,6 @@ Item {
       Button {
         id: shutdownButton
         text: "Shutdown"
-        // FIX: icon below
         iconText: "󰐥"
         bordered: true
         horizontalPadding: 20
@@ -653,7 +647,6 @@ Item {
       Button {
         id: restartButton
         text: "Restart"
-        // FIX: icon below
         iconText: "󰜉"
         bordered: true
         horizontalPadding: 20
