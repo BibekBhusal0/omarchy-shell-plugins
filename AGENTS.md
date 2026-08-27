@@ -9,6 +9,7 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 | Folder             | Kind                 | Description                                        |
 | ------------------ | -------------------- | -------------------------------------------------- |
 | `focusd/`          | bar-widget + service | Focus timer with progress bar and panel            |
+| `lock/`            | service              | Lock screen with date/time, media, power controls  |
 | `media/`           | bar-widget + service | Media player controls and now-playing info         |
 | `obsidian-search/` | menu (overlay)       | Fuzzy search across Obsidian vaults                |
 | `readest/`         | menu (overlay)       | Fuzzy search across Readest library                |
@@ -78,10 +79,12 @@ To install a plugin from this repo into the live shell:
 
 - `manifest.json` is the schema source of truth: `kinds`, `entryPoints`, and `barWidget.schema`/`defaults` define what the shell reads. New configurable options must be added there.
 - Settings helpers are inherited from the shell's `Panel`/`BarWidget` base (see `/usr/share/omarchy/shell/Ui/Panel.qml:39`): `setting(name, fallback)` reads `settings[name]`. Dotted keys like `icons.work` work.
+- **Keyboard navigation required:** Interactive components (panels, lock screen overlays, controls) must support full keyboard navigation (Tab/Shift+Tab, Arrow keys, Enter/Space activation, Esc).
 
 ## Plugin specifics
 
 - **focusd**: `Service.qml` drives the external `focusd` CLI (must be on `$PATH`) via `Quickshell.execDetached(["focusd", "toggle"])`. Timer state flows to the UI from the daemon. Bar icons are Nerd Font codepoints. Default config (`progressBarStyle`, `icons`) is in `manifest.json` `barWidget.defaults`; README documents it.
+- **lock**: clone of built-in `omarchy.lock` (manifest id `bibek.lock`, `omarchy.clonedFrom` set). Adds big customizable date/time text, power control buttons (shutdown, restart, sleep), MPRIS media player controls, forgot password prompt with top warning display, and full keyboard navigation across all controls. Built-in `omarchy.lock` is disabled via `disabledPlugins`.
 - **media**: clone of the built-in `omarchy.media` (manifest id `bibek.media`, `omarchy.clonedFrom` set). The built-in is disabled via `disabledPlugins` so its IPC `media` target doesn't collide. `BarWidget.qml` must look up the service by the clone id (`firstPartyServiceFor("bibek.media")`), not the built-in id.
 - **obsidian-search / readest**: rely on `fd` + `jq` and `FuzzySearch.js`. Obsidian vault path defaults to the first vault in `~/.config/obsidian/obsidian.json`; Readest defaults to the Readest data dir under `~/.var/app/com.bilingify.readest/`. Both are overridable via `vaultPath` / `libraryPath` in the plugin entry of `~/.config/omarchy/shell.json`.
 - **ytdl**: yt-dlp video downloader. Service manages downloads via Process objects, monitors clipboard for YouTube URLs when a browser is focused. Download format args must NOT use `bestvideo+bestaudio` style selectors (causes HTTP 403 on YouTube) -- use `b[height<=X]/b` fallback chains or omit format for "best". Browser detection list must include `zen`, `helium`, `glide`. YouTube bot detection is bypassed via `cookiesBrowser`/`extraArgs` settings; Firefox-based browsers (zen, glide) lock their cookie DB while running so the shell `export_cookies()` in the `ytdl` script merges the sqlite+wal (via `PRAGMA wal_checkpoint`) and dedupes with a window function, and the script auto-selects the profile that has a logged-in SID. Helium is Chromium-based (cookies passed via profile dir).

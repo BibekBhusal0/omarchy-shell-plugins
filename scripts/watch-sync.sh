@@ -6,7 +6,7 @@ PLUGINS_DIR="$HOME/.config/omarchy/plugins"
 
 inotifywait -m -r -q -e close_write,create,delete,move \
   --format '%w%f' \
-  "$REPO_DIR"/focusd "$REPO_DIR"/obsidian-search "$REPO_DIR"/readest "$REPO_DIR"/ytdl "$REPO_DIR"/media |
+  "$REPO_DIR"/focusd "$REPO_DIR"/obsidian-search "$REPO_DIR"/readest "$REPO_DIR"/ytdl "$REPO_DIR"/media "$REPO_DIR"/lock |
 while IFS= read -r path; do
   rel="${path#$REPO_DIR/}"
   [[ "$rel" == */* ]] || continue

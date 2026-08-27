@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "bibek.lock",
+  "name": "Lock Screen",
+  "version": "1.0.0",
+  "author": "Bibek Bhusal",
+  "description": "Quickshell session lock clone with date/time, power controls, and forgot password prompt.",
+  "kinds": ["service"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.lock"
+  },
+  "defaults": {
+    "timeFormat": "hh:mm AP",
+    "dateFormat": "dddd, MMMM d"
+  },
+  "schema": [
+    {
+      "key": "timeFormat",
+      "type": "string",
+      "label": "Time format",
+      "defaultValue": "hh:mm AP",
+      "description": "Format string for lock screen time text"
+    },
+    {
+      "key": "dateFormat",
+      "type": "string",
+      "label": "Date format",
+      "defaultValue": "dddd, MMMM d",
+      "description": "Format string for lock screen date text"
+    }
+  ]
+}
