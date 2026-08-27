@@ -77,8 +77,13 @@ Item {
     var list = [0, 1];
     if (hasMedia) {
       list.push(2);
-      if (mediaPopupVisible) {
-        list.push(3, 4, 5);
+      if (mediaPopupVisible && activeMprisPlayer) {
+        if (activeMprisPlayer.canGoPrevious)
+          list.push(3);
+        if (activeMprisPlayer.canPlay || activeMprisPlayer.canPause || activeMprisPlayer.canTogglePlaying)
+          list.push(4);
+        if (activeMprisPlayer.canGoNext)
+          list.push(5);
       }
     }
     list.push(6, 7, 8);
@@ -167,10 +172,22 @@ Item {
     forgotPasswordSleepTimer.restart();
   }
 
+  function ensureFocusValid() {
+    if (activeIndices().indexOf(focusIndex) === -1) {
+      if (focusIndex >= 3 && focusIndex <= 5 && hasMedia)
+        focusIndex = 2;
+      else
+        focusIndex = 0;
+    }
+  }
+
   onPasswordTextChanged: syncPasswordText()
+  onActiveMprisPlayerChanged: ensureFocusValid()
+  onHasMediaChanged: ensureFocusValid()
   onMediaPopupVisibleChanged: {
     if (!mediaPopupVisible && focusIndex >= 3 && focusIndex <= 5)
       focusIndex = 2;
+    ensureFocusValid();
   }
   onFocusIndexChanged: {
     if (mediaPopupVisible && focusIndex !== 2 && (focusIndex < 3 || focusIndex > 5))
@@ -401,6 +418,7 @@ Item {
 
             Button {
               id: mediaPrevBtn
+              visible: root.activeMprisPlayer ? root.activeMprisPlayer.canGoPrevious : false
               implicitWidth: 36
               implicitHeight: 36
               iconSize: Style.font.iconLarge
@@ -419,6 +437,7 @@ Item {
 
             Button {
               id: mediaPlayPauseBtn
+              visible: root.activeMprisPlayer ? (root.activeMprisPlayer.canPlay || root.activeMprisPlayer.canPause || root.activeMprisPlayer.canTogglePlaying) : false
               implicitWidth: 36
               implicitHeight: 36
               iconSize: Style.font.iconLarge
@@ -443,6 +462,7 @@ Item {
 
             Button {
               id: mediaNextBtn
+              visible: root.activeMprisPlayer ? root.activeMprisPlayer.canGoNext : false
               implicitWidth: 36
               implicitHeight: 36
               iconSize: Style.font.iconLarge
