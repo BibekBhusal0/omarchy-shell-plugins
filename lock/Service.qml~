@@ -50,11 +50,13 @@ Item {
   function realScreenCount() {
     var screens = Quickshell.screens || [];
     var count = 0;
+
     for (var i = 0; i < screens.length; i++) {
       var screen = screens[i];
       if (screen && screen.name && screen.width > 0 && screen.height > 0)
         count += 1;
     }
+
     return count;
   }
 
@@ -84,6 +86,7 @@ Item {
         pendingSessionLockTimer.start();
       return;
     }
+
     pendingSessionLock = false;
     pendingSessionLockTimer.stop();
     sessionLock.locked = true;
@@ -96,6 +99,7 @@ Item {
       strandedLockResolved = true;
       return;
     }
+
     strandedLockCheckProc.running = true;
   }
 
@@ -142,15 +146,18 @@ Item {
       logEvent("lock-denied: missing-pam");
       return false;
     }
+
     resetAuthenticationState();
     lockRequested = true;
     armBlankTimer();
     logEvent("lock-requested");
     queueSessionLock();
+
     Qt.callLater(function () {
-        root.refreshBackground();
-        root.refreshFingerprintStatus();
-      });
+      root.refreshBackground();
+      root.refreshFingerprintStatus();
+    });
+
     return true;
   }
 
@@ -193,10 +200,12 @@ Item {
     pendingPassword = password;
     failureMessage = "";
     authenticatingPassword = true;
+
     if (!passwordPam.start()) {
       handlePasswordFailure();
       return;
     }
+
     Qt.callLater(respondToPasswordPrompt);
   }
 
@@ -230,6 +239,7 @@ Item {
 
   function handleFingerprintFinished(result) {
     fingerprintAuthenticating = false;
+
     if (!lockRequested)
       return;
     if (result === PamResult.Success) {
@@ -256,11 +266,13 @@ Item {
 
     onLockStateChanged: {
       root.logEvent("session-locked=" + locked);
+
       if (locked) {
         root.pendingSessionLock = false;
         sessionLockStabilizeTimer.stop();
         pendingSessionLockTimer.stop();
       }
+
       if (!locked && root.lockRequested) {
         root.lockRequested = false;
         root.pendingSessionLock = false;
@@ -360,6 +372,7 @@ Item {
     onCompleted: function (result) {
       root.authenticatingPassword = false;
       root.pendingPassword = "";
+
       if (!root.lockRequested)
         return;
       if (result === PamResult.Success)
@@ -434,6 +447,7 @@ Item {
       if (exitCode === 2)
         return;
       root.strandedLockResolved = true;
+
       root.strandedLock = exitCode === 0 && !root.locked && !root.lockRequested;
       root.recoverStrandedLock();
     }
@@ -501,6 +515,7 @@ Item {
     target: Quickshell
     function onScreensChanged() {
       root.requestSessionLock();
+
       strandedLockRetryTimer.rearm();
       root.checkStrandedLock();
     }
@@ -556,18 +571,18 @@ Item {
 
     function status(): string {
       return JSON.stringify({
-          "locked": root.locked,
-          "requested": root.lockRequested,
-          "pending": root.pendingSessionLock,
-          "sessionLocked": sessionLock.locked,
-          "secure": sessionLock.secure,
-          "realScreens": root.realScreenCount(),
-          "passwordPam": root.passwordPamConfigured,
-          "fingerprint": root.fingerprintConfigured,
-          "authenticating": root.authenticating,
-          "lastEvent": root.lastEvent,
-          "lastEventAt": root.lastEventAt
-        });
+        locked: root.locked,
+        requested: root.lockRequested,
+        pending: root.pendingSessionLock,
+        sessionLocked: sessionLock.locked,
+        secure: sessionLock.secure,
+        realScreens: root.realScreenCount(),
+        passwordPam: root.passwordPamConfigured,
+        fingerprint: root.fingerprintConfigured,
+        authenticating: root.authenticating,
+        lastEvent: root.lastEvent,
+        lastEventAt: root.lastEventAt
+      });
     }
 
     function preview(): string {
