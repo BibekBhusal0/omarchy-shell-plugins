@@ -107,7 +107,7 @@ Item {
           "icon": "󰂚",
           "label": parts[0],
           "detail": parts[1],
-          "action": "flatpak run com.bilingify.readest -- '" + parts[2].replace(/'/g, "'\\''") + "'",
+          "action": "readest '" + parts[2].replace(/'/g, "'\\''") + "'",
           "cover": cover,
           "title": parts[0],
           "domain": parts[1],
