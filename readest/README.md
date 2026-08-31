@@ -31,7 +31,7 @@ Type to filter, Enter opens the selected book in Readest, Escape closes.
 
 ## Configuration
 
-The library is read from `~/.var/app/com.bilingify.readest/data/com.bilingify.readest/Readest/Books` by default. Override it under the plugin entry in `~/.config/omarchy/shell.json`:
+The library is read from `~/.local/share/com.bilingify.readest/Readest/Books` by default. Override it under the plugin entry in `~/.config/omarchy/shell.json`:
 
 ```json
 "plugins": [

@@ -5,12 +5,12 @@
 #
 # Usage: search.sh [LIBRARY_DIR]
 # The library directory may be given as an argument; otherwise the default
-# Flatpak Readest data location is used.
+# Pacman Readest data location is used.
 
 home="$HOME"
 lib_dir="${1:-}"
 if [[ -z "$lib_dir" ]]; then
-  lib_dir="$home/.var/app/com.bilingify.readest/data/com.bilingify.readest/Readest/Books"
+  lib_dir="$home/.local/share/com.bilingify.readest/Readest/Books"
 fi
 lib_json="$lib_dir/library.json"
 
