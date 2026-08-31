@@ -10,6 +10,7 @@ Item {
   id: root
 
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
+  property var shell: null
   property var manifest: null
   property bool opened: false
   property string filterText: ""
@@ -18,8 +19,12 @@ Item {
   property var items: []
   property var allItems: []
   property string searchScript: root.manifest && root.manifest.__sourceDir ? root.manifest.__sourceDir + "/search.sh" : ""
+  property string readestCmd: "readest"
 
-  // Shares the [menu] surface tokens so themes style it like the menu.
+  Component.onCompleted: {
+    root.detectReadestCmd();
+  }
+
   property color background: Color.menu.background
   property color foreground: Color.menu.text
   property color border: Color.menu.border
@@ -50,6 +55,11 @@ Item {
     Qt.callLater(function () {
         keyCatcher.forceActiveFocus();
       });
+  }
+
+  function detectReadestCmd() {
+    detectProc.command = ["sh", "-c", "command -v readest || (flatpak list 2>/dev/null | grep -q com.bilingify.readest && echo 'flatpak run com.bilingify.readest')"];
+    detectProc.running = true;
   }
 
   function close() {
@@ -107,7 +117,6 @@ Item {
           "icon": "󰂚",
           "label": parts[0],
           "detail": parts[1],
-          "action": "readest '" + parts[2].replace(/'/g, "'\\''") + "'",
           "cover": cover,
           "title": parts[0],
           "domain": parts[1],
@@ -117,7 +126,6 @@ Item {
     return rows;
   }
 
-  // Client-side fuzzy ranking on every keystroke; no per-key process spawn.
   function filter() {
     var shown = root.filterText.trim() ? FuzzySearch.search(root.filterText, root.allItems) : root.allItems.slice();
     root.items = shown;
@@ -176,9 +184,15 @@ Item {
     if (index < 0 || index >= displayModel.count)
       return;
     var row = displayModel.get(index);
-    var action = row.action;
+    var bookPath = row.link;
     root.opened = false;
-    Util.execDetached(action);
+    var isFlatpak = root.readestCmd.indexOf("flatpak") !== -1;
+    if (isFlatpak) {
+      launchProc.command = ["flatpak", "run", "com.bilingify.readest", bookPath];
+    } else {
+      launchProc.command = ["readest", bookPath];
+    }
+    launchProc.running = true;
   }
 
   ListModel {
@@ -200,6 +214,21 @@ Item {
       root.allItems = root.parseResults(searchProc.collected);
       root.filter();
     }
+  }
+
+  Process {
+    id: detectProc
+    stdout: SplitParser {
+      onRead: function (data) {
+        var cmd = data.trim();
+        if (cmd)
+          root.readestCmd = cmd;
+      }
+    }
+  }
+
+  Process {
+    id: launchProc
   }
 
   PointerMoveGate {

@@ -13,6 +13,7 @@ lib_dir="${1:-}"
 if [[ -z "$lib_dir" ]]; then
   lib_dir="$home/.local/share/com.bilingify.readest/Readest/Books"
 fi
+lib_dir="${lib_dir/#\~/$home}"
 lib_json="$lib_dir/library.json"
 
 [[ -f "$lib_json" ]] || exit 0
