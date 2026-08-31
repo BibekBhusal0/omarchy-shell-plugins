@@ -31,6 +31,7 @@ jobs:
         run: |
           prettier --write "**/*.{js,json,md}"
           find . -name "*.qml" ! -path './.git/*' -exec /usr/lib/qt6/bin/qmlformat -i {} +
+          find . -name "*~" -delete
 
       - name: Commit and push
         uses: stefanzweifel/git-auto-commit-action@v5
