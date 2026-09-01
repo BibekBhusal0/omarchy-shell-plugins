@@ -27,9 +27,16 @@ Panel {
   property string installError: ""
   readonly property string installFailurePath: String(Quickshell.env("XDG_RUNTIME_DIR") || "") + "/focusd-panel-install.failed"
 
-  readonly property bool stopVisible: timerService ? timerService.active : false
+  property string currentPage: "timer"
+  property bool checkingUpdate: false
+  property bool updateAvailable: false
+  property string latestVersion: ""
+
+  readonly property bool resetVisible: timerService ? timerService.active : false
+  readonly property bool addTimeVisible: timerService ? (timerService.active && timerService.hasAddMinutesFeature) : false
 
   function open() {
+    currentPage = "timer";
     selectedAction = 0;
     cursorActive = true;
     controller.show();
@@ -50,7 +57,16 @@ Panel {
   function actionCount() {
     if (!root.installed)
       return 1;
-    return (!!root.timerService && !root.timerService.stopped) ? 3 : 2;
+    if (currentPage === "info")
+      return 3;
+    var count = 2;
+    if (!!root.timerService && !root.timerService.stopped)
+      count += 1;
+    if (root.resetVisible)
+      count += 1;
+    if (root.addTimeVisible)
+      count += 1;
+    return count;
   }
 
   function selectAction(delta) {
@@ -59,7 +75,7 @@ Panel {
       selectedAction = 0;
       return;
     }
-    if (!timerService) {
+    if (!timerService && currentPage === "timer") {
       selectedAction = 0;
       return;
     }
@@ -74,12 +90,34 @@ Panel {
     }
     if (!timerService)
       return;
-    if (selectedAction === 0 && !timerService.stopped)
+    if (currentPage === "info") {
+      if (selectedAction === 0)
+        Qt.openUrlExternally("https://github.com/BibekBhusal0/focusd");
+      else if (selectedAction === 1)
+        Quickshell.execDetached(["focusd", "settings"]);
+      else if (selectedAction === 2)
+        Quickshell.execDetached(["focusd", "stats"]);
+      return;
+    }
+    var idx = 0;
+    if (selectedAction === idx && !timerService.stopped) {
       timerService.togglePause();
-    else if (selectedAction === 1 && !timerService.stopped)
+      return;
+    }
+    idx++;
+    if (selectedAction === idx && !timerService.stopped) {
       timerService.skip();
-    else if (selectedAction === 2 && root.stopVisible)
+      return;
+    }
+    idx++;
+    if (root.resetVisible && selectedAction === idx) {
       timerService.stop();
+      return;
+    }
+    if (root.resetVisible)
+      idx++;
+    if (root.addTimeVisible && selectedAction === idx)
+      timerService.addMinutes(5);
   }
 
   function actionHovered(index, hovered) {
@@ -120,7 +158,26 @@ Panel {
     installTimeout.restart();
   }
 
-  Component.onCompleted: root.checkInstallation()
+  function checkForUpdates() {
+    if (!root.installed || !whichProcess.running) {
+      root.checkingUpdate = true;
+      updateCheckProcess.command = ["sh", "-c", "command -v yay >/dev/null 2>&1 && yay -Qu focusd 2>/dev/null | grep -q '^focusd' && echo 'update' || echo 'current'"];
+      updateCheckProcess.running = true;
+    }
+  }
+
+  function updateFocusd() {
+    if (root.installed) {
+      var updateCmd = "if command -v yay >/dev/null 2>&1; then " + "alacritty -e sh -c 'yay -S focusd && echo \"\" && echo \"Update complete. Restarting daemon...\" && sleep 2 && focusd --stop-daemon && focusd -d && echo \"Done! Press Enter to close.\" && read'; " + "else " + "mkdir -p \"$HOME/.local/bin\" && " + "tmp=$(mktemp) && " + "curl -fsSL \"" + focusdDownloadUrl + "\" -o \"$tmp\" && " + "actual=$(sha256sum \"$tmp\" | awk '{print $1}') && " + "if [ \"$actual\" = \"" + focusdSha256 + "\" ]; then " + "  mv \"$tmp\" \"$HOME/.local/bin/focusd\" && chmod +x \"$HOME/.local/bin/focusd\" && " + "  focusd --stop-daemon && focusd -d; " + "else " + "  rm -f \"$tmp\"; " + "fi; " + "fi";
+      Quickshell.execDetached(["sh", "-c", updateCmd]);
+      root.close();
+    }
+  }
+
+  Component.onCompleted: {
+    root.checkInstallation();
+    Qt.callLater(root.checkForUpdates);
+  }
 
   KeyboardPanel {
     id: panel
@@ -143,7 +200,14 @@ Panel {
           root.selectAction(dy);
       }
       onActivateRequested: root.activateSelected()
-      onCloseRequested: root.close()
+      onCloseRequested: {
+        if (root.currentPage === "info") {
+          root.currentPage = "timer";
+          root.selectedAction = 0;
+        } else {
+          root.close();
+        }
+      }
       onTabRequested: function (direction) {
         root.switchPanel(direction);
       }
@@ -200,7 +264,7 @@ Panel {
           Button {
             width: parent.width
             text: root.installing ? "Installing focusd…" : "Install focusd"
-            iconText: root.installing ? "" : "󰏔"
+            iconText: root.installing ? "" : "󰏔"
             iconSpinning: root.installing
             fontFamily: root.fontFamily
             fontSize: Style.font.body
@@ -233,132 +297,340 @@ Panel {
           }
         }
 
-        LinearFace {
+        Column {
+          visible: root.installed && root.currentPage === "timer"
           width: parent.width
-          visible: root.installed && root.progressBarStyle !== "circular"
-        }
+          spacing: Style.space(18)
 
-        CircularFace {
-          width: parent.width
-          visible: root.installed && root.progressBarStyle === "circular"
+          Column {
+            visible: root.updateAvailable
+            width: parent.width
+            spacing: Style.space(8)
+
+            Row {
+              width: parent.width
+              spacing: Style.space(8)
+
+              Text {
+                text: ""
+                color: root.activeColor
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+              }
+
+              Text {
+                text: "Update available"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Item {
+                width: 1
+                height: 1
+                Layout.fillWidth: true
+              }
+
+              Button {
+                text: "Update"
+                iconText: "󰚰"
+                foreground: root.foreground
+                accent: root.activeColor
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: root.updateFocusd()
+              }
+            }
+
+            Rectangle {
+              width: parent.width
+              height: 1
+              color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+            }
+          }
+
+          LinearFace {
+            width: parent.width
+            visible: root.progressBarStyle !== "circular"
+          }
+
+          CircularFace {
+            width: parent.width
+            visible: root.progressBarStyle === "circular"
+          }
+
+          Column {
+            width: parent.width
+            spacing: Style.space(10)
+
+            Row {
+              width: parent.width
+              spacing: Style.space(20)
+
+              Column {
+                width: (parent.width - parent.spacing) / 2
+                spacing: Style.spacing.labelGap
+                InfoPair {
+                  icon: ""
+                  label: "Streak"
+                  value: (root.timerService ? root.timerService.currentStreak : 0) + "d"
+                }
+                InfoPair {
+                  icon: "󰓾"
+                  label: "Goal"
+                  value: root.timerService ? root.timerService.dailyGoal : "—"
+                }
+              }
+
+              Column {
+                width: (parent.width - parent.spacing) / 2
+                spacing: Style.spacing.labelGap
+                InfoPair {
+                  icon: ""
+                  label: "Sessions today"
+                  value: root.timerService ? String(root.timerService.sessionsToday) : "0"
+                }
+                InfoPair {
+                  icon: "󰔟"
+                  label: "Focused today"
+                  value: root.timerService ? root.timerService.focusedToday : "—"
+                }
+              }
+            }
+          }
+
+          Row {
+            id: actions
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Style.space(10)
+            readonly property real buttonSize: Style.space(42)
+
+            Button {
+              id: pauseButton
+              implicitWidth: actions.buttonSize
+              implicitHeight: actions.buttonSize
+              width: actions.buttonSize
+              height: actions.buttonSize
+              iconText: root.timerService && root.timerService.paused ? "" : "󰏤"
+              tooltipText: root.timerService && root.timerService.paused ? "Resume session" : "Pause session"
+              foreground: root.foreground
+              accent: root.activeColor
+              iconSize: Style.font.iconLarge
+              horizontalPadding: 0
+              verticalPadding: 0
+              enabled: !!root.timerService && !root.timerService.stopped
+              opacity: enabled ? 1 : 0.35
+              hasCursor: root.cursorActive && root.selectedAction === 0
+              onHovered: function (value) {
+                root.actionHovered(0, value);
+              }
+              onClicked: if (root.timerService)
+                root.timerService.togglePause()
+            }
+
+            Button {
+              id: skipButton
+              implicitWidth: actions.buttonSize
+              implicitHeight: actions.buttonSize
+              width: actions.buttonSize
+              height: actions.buttonSize
+              iconText: "󰒭"
+              tooltipText: "Skip to " + (root.timerService ? root.timerService.nextSessionLabel : "next session")
+              foreground: root.foreground
+              accent: root.activeColor
+              iconSize: Style.font.iconLarge
+              horizontalPadding: 0
+              verticalPadding: 0
+              enabled: !!root.timerService && !root.timerService.stopped
+              opacity: enabled ? 1 : 0.35
+              hasCursor: root.cursorActive && root.selectedAction === 1
+              onHovered: function (value) {
+                root.actionHovered(1, value);
+              }
+              onClicked: if (root.timerService)
+                root.timerService.skip()
+            }
+
+            Button {
+              id: resetButton
+              visible: root.resetVisible
+              implicitWidth: actions.buttonSize
+              implicitHeight: actions.buttonSize
+              width: actions.buttonSize
+              height: actions.buttonSize
+              iconText: "󰑖"
+              tooltipText: "Reset session"
+              foreground: root.foreground
+              accent: root.activeColor
+              iconSize: Style.font.iconLarge
+              horizontalPadding: 0
+              verticalPadding: 0
+              enabled: root.resetVisible
+              opacity: enabled ? 1 : 0.35
+              hasCursor: root.cursorActive && root.selectedAction === 2
+              onHovered: function (value) {
+                root.actionHovered(2, value);
+              }
+              onClicked: if (root.timerService)
+                root.timerService.stop()
+            }
+
+            Button {
+              id: addTimeButton
+              visible: root.addTimeVisible
+              implicitWidth: actions.buttonSize
+              implicitHeight: actions.buttonSize
+              width: actions.buttonSize
+              height: actions.buttonSize
+              iconText: "󰐖"
+              tooltipText: "Add 5 minutes"
+              foreground: root.foreground
+              accent: root.activeColor
+              iconSize: Style.font.iconLarge
+              horizontalPadding: 0
+              verticalPadding: 0
+              enabled: root.addTimeVisible
+              opacity: enabled ? 1 : 0.35
+              hasCursor: root.cursorActive && root.selectedAction === (root.resetVisible ? 3 : 2)
+              onHovered: function (value) {
+                root.actionHovered(root.resetVisible ? 3 : 2, value);
+              }
+              onClicked: if (root.timerService)
+                root.timerService.addMinutes(5)
+            }
+          }
+
+          Item {
+            width: parent.width
+            height: Style.space(28)
+
+            Button {
+              anchors.centerIn: parent
+              implicitWidth: Style.space(28)
+              implicitHeight: Style.space(28)
+              iconText: ""
+              tooltipText: "Info and settings"
+              foreground: root.foreground
+              accent: root.activeColor
+              iconSize: Style.font.body
+              horizontalPadding: 0
+              verticalPadding: 0
+              hasCursor: root.cursorActive && root.selectedAction === root.actionCount() - 1
+              onHovered: function (value) {
+                root.actionHovered(root.actionCount() - 1, value);
+              }
+              onClicked: {
+                root.currentPage = "info";
+                root.selectedAction = 0;
+              }
+            }
+          }
         }
 
         Column {
-          visible: root.installed
+          visible: root.installed && root.currentPage === "info"
           width: parent.width
-          spacing: Style.space(10)
+          spacing: Style.space(16)
 
-          Row {
+          Text {
             width: parent.width
-            spacing: Style.space(20)
-
-            Column {
-              width: (parent.width - parent.spacing) / 2
-              spacing: Style.spacing.labelGap
-              InfoPair {
-                icon: ""
-                label: "Streak"
-                value: (root.timerService ? root.timerService.currentStreak : 0) + "d"
-              }
-              InfoPair {
-                icon: "󰓾"
-                label: "Goal"
-                value: root.timerService ? root.timerService.dailyGoal : "—"
-              }
-            }
-
-            Column {
-              width: (parent.width - parent.spacing) / 2
-              spacing: Style.spacing.labelGap
-              InfoPair {
-                icon: ""
-                label: "Sessions today"
-                value: root.timerService ? String(root.timerService.sessionsToday) : "0"
-              }
-              InfoPair {
-                icon: "󰔟"
-                label: "Focused today"
-                value: root.timerService ? root.timerService.focusedToday : "—"
-              }
-            }
-          }
-        }
-
-        Row {
-          id: actions
-          visible: root.installed
-          anchors.horizontalCenter: parent.horizontalCenter
-          spacing: Style.space(10)
-          readonly property real buttonSize: Style.space(42)
-
-          Button {
-            id: pauseButton
-            implicitWidth: actions.buttonSize
-            implicitHeight: actions.buttonSize
-            width: actions.buttonSize
-            height: actions.buttonSize
-            iconText: root.timerService && root.timerService.paused ? "" : "󰏤"
-            tooltipText: root.timerService && root.timerService.paused ? "Resume session" : "Pause session"
-            foreground: root.foreground
-            accent: root.activeColor
-            iconSize: Style.font.iconLarge
-            horizontalPadding: 0
-            verticalPadding: 0
-            enabled: !!root.timerService && !root.timerService.stopped
-            opacity: enabled ? 1 : 0.35
-            hasCursor: root.cursorActive && root.selectedAction === 0
-            onHovered: function (value) {
-              root.actionHovered(0, value);
-            }
-            onClicked: if (root.timerService)
-              root.timerService.togglePause()
+            text: "Focusd Info"
+            color: root.foreground
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.title
+            font.bold: true
           }
 
-          Button {
-            id: skipButton
-            implicitWidth: actions.buttonSize
-            implicitHeight: actions.buttonSize
-            width: actions.buttonSize
-            height: actions.buttonSize
-            iconText: "󰒭"
-            tooltipText: "Skip to " + (root.timerService ? root.timerService.nextSessionLabel : "next session")
-            foreground: root.foreground
-            accent: root.activeColor
-            iconSize: Style.font.iconLarge
-            horizontalPadding: 0
-            verticalPadding: 0
-            enabled: !!root.timerService && !root.timerService.stopped
-            opacity: enabled ? 1 : 0.35
-            hasCursor: root.cursorActive && root.selectedAction === 1
-            onHovered: function (value) {
-              root.actionHovered(1, value);
+          Column {
+            width: parent.width
+            spacing: Style.space(8)
+
+            Text {
+              width: parent.width
+              text: "This plugin integrates with the Focusd CLI pomodoro timer. Configure timer durations, view detailed statistics, and track your focus history using the Focusd TUI."
+              color: Qt.darker(root.foreground, 1.4)
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              wrapMode: Text.WordWrap
             }
-            onClicked: if (root.timerService)
-              root.timerService.skip()
+
+            Text {
+              visible: root.timerService && root.timerService.focusdVersion !== ""
+              width: parent.width
+              text: "Version: " + (root.timerService ? root.timerService.focusdVersion : "")
+              color: Qt.darker(root.foreground, 1.4)
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+            }
           }
 
-          Button {
-            id: stopButton
-            implicitWidth: actions.buttonSize
-            implicitHeight: actions.buttonSize
-            width: actions.buttonSize
-            height: actions.buttonSize
-            iconText: "󰛉"
-            tooltipText: "Stop session"
-            foreground: root.foreground
-            accent: root.activeColor
-            iconSize: Style.font.iconLarge
-            horizontalPadding: 0
-            verticalPadding: 0
-            visible: !!root.timerService && !root.timerService.stopped
-            enabled: !!root.timerService && !root.timerService.stopped
-            opacity: enabled ? 1 : 0.35
-            hasCursor: root.cursorActive && root.selectedAction === 2
-            onHovered: function (value) {
-              root.actionHovered(2, value);
+          Column {
+            width: parent.width
+            spacing: Style.space(10)
+
+            Button {
+              width: parent.width
+              text: "View on GitHub"
+              iconText: ""
+              foreground: root.foreground
+              accent: root.activeColor
+              fontFamily: root.fontFamily
+              fontSize: Style.font.body
+              bordered: true
+              hasCursor: root.cursorActive && root.selectedAction === 0
+              onHovered: function (value) {
+                root.actionHovered(0, value);
+              }
+              onClicked: Qt.openUrlExternally("https://github.com/BibekBhusal0/focusd")
             }
-            onClicked: if (root.timerService)
-              root.timerService.stop()
+
+            Button {
+              width: parent.width
+              text: "Open Settings (TUI)"
+              iconText: ""
+              foreground: root.foreground
+              accent: root.activeColor
+              fontFamily: root.fontFamily
+              fontSize: Style.font.body
+              bordered: true
+              hasCursor: root.cursorActive && root.selectedAction === 1
+              onHovered: function (value) {
+                root.actionHovered(1, value);
+              }
+              onClicked: Quickshell.execDetached(["focusd", "settings"])
+            }
+
+            Button {
+              width: parent.width
+              text: "View Stats (TUI)"
+              iconText: "󰄮"
+              foreground: root.foreground
+              accent: root.activeColor
+              fontFamily: root.fontFamily
+              fontSize: Style.font.body
+              bordered: true
+              hasCursor: root.cursorActive && root.selectedAction === 2
+              onHovered: function (value) {
+                root.actionHovered(2, value);
+              }
+              onClicked: Quickshell.execDetached(["focusd", "stats"])
+            }
+          }
+
+          Rectangle {
+            width: parent.width
+            height: 1
+            color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
+          }
+
+          Text {
+            width: parent.width
+            text: "Press Esc to return to timer"
+            color: Qt.darker(root.foreground, 1.6)
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            horizontalAlignment: Text.AlignHCenter
           }
         }
       }
@@ -417,7 +689,7 @@ Panel {
 
       Text {
         id: heroIcon
-        text: root.timerService ? root.timerService.icon : ""
+        text: root.timerService ? root.timerService.icon : ""
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.display
@@ -496,6 +768,39 @@ Panel {
         }
       }
     }
+
+    Row {
+      anchors.horizontalCenter: parent.horizontalCenter
+      spacing: Style.space(8)
+
+      Repeater {
+        model: root.timerService ? root.timerService.workSessionsBeforeLongBreak : 4
+
+        Rectangle {
+          required property int index
+          readonly property int currentRound: root.timerService ? (root.timerService.completedSessions % (root.timerService.workSessionsBeforeLongBreak || 4)) : 0
+          readonly property bool isDone: index < currentRound
+          readonly property bool isCurrent: index === currentRound
+
+          width: isCurrent ? Style.space(18) : Style.space(8)
+          height: Style.space(8)
+          radius: Style.space(4)
+          color: isDone || (isCurrent && root.timerService && root.timerService.running) ? root.activeColor : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
+
+          Behavior on width  {
+            NumberAnimation {
+              duration: 150
+              easing.type: Easing.OutCubic
+            }
+          }
+          Behavior on color  {
+            ColorAnimation {
+              duration: 150
+            }
+          }
+        }
+      }
+    }
   }
 
   component CircularFace: Item {
@@ -562,6 +867,21 @@ Panel {
 
   Process {
     id: installerProcess
+  }
+
+  Process {
+    id: updateCheckProcess
+    stdout: StdioCollector {
+      id: updateCheckOutput
+      waitForEnd: true
+    }
+    onExited: function (exitCode) {
+      root.checkingUpdate = false;
+      if (exitCode === 0) {
+        var output = String(updateCheckOutput.text || "").trim();
+        root.updateAvailable = output === "update";
+      }
+    }
   }
 
   Timer {
