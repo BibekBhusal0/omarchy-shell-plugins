@@ -84,9 +84,9 @@ Panel {
       if (selectedAction === 0)
         Qt.openUrlExternally("https://github.com/BibekBhusal0/focusd");
       else if (selectedAction === 1)
-        Quickshell.execDetached(["focusd", "settings"]);
+        Quickshell.execDetached(["omarchy-launch-tui", "focusd", "settings"]);
       else if (selectedAction === 2)
-        Quickshell.execDetached(["focusd", "stats"]);
+        Quickshell.execDetached(["omarchy-launch-tui", "focusd", "stats"]);
       return;
     }
     var idx = 0;
@@ -158,8 +158,8 @@ Panel {
 
   function updateFocusd() {
     if (root.installed) {
-      var updateCmd = "if command -v yay >/dev/null 2>&1; then " + "alacritty -e sh -c 'yay -S focusd && echo \"\" && echo \"Update complete. Restarting daemon...\" && sleep 2 && focusd --stop-daemon && focusd -d && echo \"Done! Press Enter to close.\" && read'; " + "else " + "mkdir -p \"$HOME/.local/bin\" && " + "tmp=$(mktemp) && " + "curl -fsSL \"" + focusdDownloadUrl + "\" -o \"$tmp\" && " + "actual=$(sha256sum \"$tmp\" | awk '{print $1}') && " + "if [ \"$actual\" = \"" + focusdSha256 + "\" ]; then " + "  mv \"$tmp\" \"$HOME/.local/bin/focusd\" && chmod +x \"$HOME/.local/bin/focusd\" && " + "  focusd --stop-daemon && focusd -d; " + "else " + "  rm -f \"$tmp\"; " + "fi; " + "fi";
-      Quickshell.execDetached(["sh", "-c", updateCmd]);
+      var updateCmd = "if command -v yay >/dev/null 2>&1; then " + "yay -S focusd && echo \"\" && echo \"Update complete. Restarting daemon...\" && focusd --stop-daemon && focusd -d && echo \"Done! Press Enter to close.\" && read; " + "else " + "mkdir -p \"$HOME/.local/bin\" && " + "tmp=$(mktemp) && " + "curl -fsSL \"" + focusdDownloadUrl + "\" -o \"$tmp\" && " + "actual=$(sha256sum \"$tmp\" | awk '{print $1}') && " + "if [ \"$actual\" = \"" + focusdSha256 + "\" ]; then " + "  mv \"$tmp\" \"$HOME/.local/bin/focusd\" && chmod +x \"$HOME/.local/bin/focusd\" && " + "  focusd --stop-daemon && focusd -d; " + "else " + "  rm -f \"$tmp\"; " + "fi; " + "fi";
+      Quickshell.execDetached(["omarchy", "launch", "floating", "terminal", "with", "presentation", "sh", "-c", updateCmd]);
       root.close();
     }
   }
