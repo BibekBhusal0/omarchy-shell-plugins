@@ -150,11 +150,11 @@ Column {
       implicitHeight: actions.buttonSize
       width: actions.buttonSize
       height: actions.buttonSize
-      iconText: root.timerService && root.timerService.paused ? "" : "󰏤"
+      iconText: root.timerService && root.timerService.paused ? "󰐊" : "󰏤"
       tooltipText: root.timerService && root.timerService.paused ? "Resume session" : "Pause session"
       foreground: root.foreground
       accent: root.activeColor
-      iconSize: Style.font.iconLarge
+      iconSize: Style.font.iconLarge + 4
       horizontalPadding: 0
       verticalPadding: 0
       enabled: !!root.timerService && !root.timerService.stopped
@@ -173,7 +173,7 @@ Column {
       implicitHeight: actions.buttonSize
       width: actions.buttonSize
       height: actions.buttonSize
-      iconText: "󰒭"
+      iconText: ""
       tooltipText: "Skip to " + (root.timerService ? root.timerService.nextSessionLabel : "next session")
       foreground: root.foreground
       accent: root.activeColor
@@ -197,7 +197,7 @@ Column {
       implicitHeight: actions.buttonSize
       width: actions.buttonSize
       height: actions.buttonSize
-      iconText: "󰑖"
+      iconText: ""
       tooltipText: "Reset session"
       foreground: root.foreground
       accent: root.activeColor
@@ -221,7 +221,7 @@ Column {
       implicitHeight: actions.buttonSize
       width: actions.buttonSize
       height: actions.buttonSize
-      iconText: "󰐖"
+      iconText: ""
       tooltipText: "Add 5 minutes"
       foreground: root.foreground
       accent: root.activeColor
@@ -247,7 +247,7 @@ Column {
       anchors.right: parent.right
       implicitWidth: Style.space(28)
       implicitHeight: Style.space(28)
-      iconText: ""
+      iconText: ""
       tooltipText: "Info and settings"
       foreground: root.foreground
       accent: root.activeColor

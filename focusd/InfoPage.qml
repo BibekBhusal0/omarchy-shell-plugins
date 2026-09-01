@@ -58,7 +58,7 @@ Column {
     Button {
       width: parent.width
       text: "View on GitHub"
-      iconText: ""
+      iconText: ""
       foreground: root.foreground
       accent: root.activeColor
       fontFamily: root.fontFamily
@@ -74,7 +74,7 @@ Column {
     Button {
       width: parent.width
       text: "Open Settings (TUI)"
-      iconText: ""
+      iconText: ""
       foreground: root.foreground
       accent: root.activeColor
       fontFamily: root.fontFamily
@@ -90,7 +90,7 @@ Column {
     Button {
       width: parent.width
       text: "View Stats (TUI)"
-      iconText: "󰄮"
+      iconText: ""
       foreground: root.foreground
       accent: root.activeColor
       fontFamily: root.fontFamily
