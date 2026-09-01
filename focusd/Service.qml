@@ -22,12 +22,18 @@ Item {
   property string focusedToday: "0s"
   property string dailyGoal: ""
   property int currentStreak: 0
+  property int workSessionsBeforeLongBreak: 4
+  property int completedSessions: 0
+  property bool hasSessionData: false
+
+  property string focusdVersion: ""
+  property bool versionChecked: false
+  readonly property string requiredVersionForAddMinutes: "0.2.1"
+  readonly property bool hasAddMinutesFeature: versionChecked && compareVersions(focusdVersion, requiredVersionForAddMinutes) >= 0
 
   readonly property bool stopped: status === "stopped"
   readonly property bool running: status === "running"
   readonly property bool paused: status === "paused"
-  // A session has made progress (started or has elapsed time) vs. a fresh,
-  // never-started timer.
   readonly property bool active: !stopped && (running || progress > 0)
 
   // Icons shown in the bar, keyed like waybar's format-icons. Customizable
@@ -91,11 +97,42 @@ Item {
     Quickshell.execDetached(["focusd", "reset"]);
   }
 
+  function addMinutes(minutes) {
+    if (stopped || !hasAddMinutesFeature)
+      return;
+    Quickshell.execDetached(["focusd", "--add-minutes", String(minutes)]);
+  }
+
+  function compareVersions(v1, v2) {
+    if (!v1 || !v2)
+      return 0;
+    var parts1 = String(v1).replace(/^v/, "").split(".");
+    var parts2 = String(v2).replace(/^v/, "").split(".");
+    for (var i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      var p1 = Number(parts1[i]) || 0;
+      var p2 = Number(parts2[i]) || 0;
+      if (p1 > p2)
+        return 1;
+      if (p1 < p2)
+        return -1;
+    }
+    return 0;
+  }
+
   function poll() {
     stateProc.running = false;
     stateProc.collected = "";
     stateProc.command = ["focusd", "status"];
     stateProc.running = true;
+  }
+
+  function checkVersion() {
+    if (!root.versionChecked && !versionProc.running) {
+      versionProc.running = false;
+      versionProc.collected = "";
+      versionProc.command = ["focusd", "--version"];
+      versionProc.running = true;
+    }
   }
 
   function parseState(raw) {
@@ -126,6 +163,11 @@ Item {
     root.focusedToday = String(state.focused_today || "");
     root.dailyGoal = String(state.daily_goal || "");
     root.currentStreak = Number(state.current_streak) || 0;
+    if (state.work_sessions_before_long_break !== undefined)
+      root.workSessionsBeforeLongBreak = Number(state.work_sessions_before_long_break) || 4;
+    if (state.completed_sessions !== undefined)
+      root.completedSessions = Number(state.completed_sessions) || 0;
+    root.hasSessionData = state.work_sessions_before_long_break !== undefined && state.completed_sessions !== undefined;
   }
 
   function sessionLabelFor(key) {
@@ -169,5 +211,28 @@ Item {
     }
   }
 
-  Component.onCompleted: root.poll()
+  Process {
+    id: versionProc
+    property string collected: ""
+    stdout: SplitParser {
+      onRead: function (data) {
+        versionProc.collected += data;
+      }
+    }
+    onExited: function (exitCode) {
+      if (exitCode === 0) {
+        var output = String(versionProc.collected || "").trim();
+        var match = output.match(/focusd\s+(\d+\.\d+\.\d+)/);
+        if (match && match[1]) {
+          root.focusdVersion = match[1];
+          root.versionChecked = true;
+        }
+      }
+    }
+  }
+
+  Component.onCompleted: {
+    root.poll();
+    root.checkVersion();
+  }
 }

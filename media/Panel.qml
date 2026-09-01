@@ -426,8 +426,8 @@ Panel {
                 Quickshell.execDetached(["cliamp", "seek", String(Math.floor(val))]);
               }
               Qt.callLater(function () {
-                  root._dragging = false;
-                });
+                root._dragging = false;
+              });
             }
           }
 
