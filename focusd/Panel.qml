@@ -51,6 +51,8 @@ Panel {
     cursorActive = true;
     controller.show();
     root.checkInstallation();
+    if (root.installed)
+      root.checkForUpdates();
   }
 
   function close() {
@@ -199,10 +201,7 @@ Panel {
     }
   }
 
-  Component.onCompleted: {
-    root.checkInstallation();
-    Qt.callLater(root.checkForUpdates);
-  }
+  Component.onCompleted: root.checkInstallation()
 
   KeyboardPanel {
     id: panel
@@ -416,6 +415,7 @@ Panel {
         root.installing = false;
         installPoll.stop();
         installTimeout.stop();
+        Qt.callLater(root.checkForUpdates);
       } else if (exitCode === 2 && root.installing) {
         root.installing = false;
         installPoll.stop();
