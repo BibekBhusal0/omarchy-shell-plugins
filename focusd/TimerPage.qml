@@ -4,7 +4,7 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 
-Column {
+Item {
   id: root
 
   property var timerService: null
@@ -24,9 +24,14 @@ Column {
   signal actionHovered(int index, bool hovered)
 
   width: parent.width
-  spacing: Style.space(18)
+  height: contentColumn.implicitHeight
 
   Column {
+    id: contentColumn
+    width: parent.width
+    spacing: Style.space(18)
+
+    Column {
     visible: root.updateAvailable
     width: parent.width
     spacing: Style.space(8)
@@ -238,9 +243,12 @@ Column {
         root.timerService.addMinutes(5)
     }
   }
+  }
 
   Item {
-    width: parent.width
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    width: Style.space(28)
     height: Style.space(28)
 
     Button {
