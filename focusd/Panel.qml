@@ -35,9 +35,7 @@ Panel {
   readonly property bool addTimeVisible: timerService ? (timerService.active && timerService.hasAddMinutesFeature) : false
 
   function timerActionCount() {
-    var count = 2;
-    if (!!root.timerService && !root.timerService.stopped)
-      count += 1;
+    var count = 3;
     if (root.resetVisible)
       count += 1;
     if (root.addTimeVisible)
@@ -134,10 +132,12 @@ Panel {
       root.selectedAction = 0;
       return;
     }
-    idx++;
-    if (root.updateAvailable && selectedAction === idx) {
-      root.updateFocusd();
-      return;
+    if (root.updateAvailable) {
+      idx++;
+      if (selectedAction === idx) {
+        root.updateFocusd();
+        return;
+      }
     }
   }
 

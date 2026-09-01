@@ -248,7 +248,7 @@ Item {
         verticalPadding: 0
         enabled: root.addTimeVisible
         opacity: enabled ? 1 : 0.35
-        hasCursor: root.cursorActive && root.selectedAction === (root.resetVisible ? 3 : 2)
+        hasCursor: root.cursorActive && root.selectedAction === (root.resetVisible ? 3 : 2) && root.addTimeVisible
         onHovered: function (value) {
           root.actionHovered(root.resetVisible ? 3 : 2, value);
         }
@@ -275,9 +275,9 @@ Item {
       iconSize: Style.font.body
       horizontalPadding: 0
       verticalPadding: 0
-      hasCursor: root.cursorActive && root.selectedAction === root.totalActionCount - 2
+      hasCursor: root.cursorActive && root.selectedAction === root.totalActionCount - (root.updateAvailable ? 2 : 1)
       onHovered: function (value) {
-        root.actionHovered(root.totalActionCount - 2, value);
+        root.actionHovered(root.totalActionCount - (root.updateAvailable ? 2 : 1), value);
       }
       onClicked: root.infoRequested()
     }
