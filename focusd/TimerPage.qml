@@ -32,217 +32,217 @@ Item {
     spacing: Style.space(18)
 
     Column {
-    visible: root.updateAvailable
-    width: parent.width
-    spacing: Style.space(8)
-
-    RowLayout {
+      visible: root.updateAvailable
       width: parent.width
       spacing: Style.space(8)
 
-      Text {
-        text: ""
-        color: root.activeColor
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.body
+      RowLayout {
+        width: parent.width
+        spacing: Style.space(8)
+
+        Text {
+          text: ""
+          color: root.activeColor
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.body
+        }
+
+        Text {
+          text: "Update available"
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+        }
+
+        Item {
+          Layout.fillWidth: true
+          implicitHeight: 1
+        }
+
+        Button {
+          text: "Update"
+          iconText: "󰚰"
+          foreground: root.foreground
+          accent: root.activeColor
+          fontFamily: root.fontFamily
+          fontSize: Style.font.bodySmall
+          onClicked: root.updateRequested()
+        }
       }
 
-      Text {
-        text: "Update available"
-        color: root.foreground
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.bodySmall
+      Rectangle {
+        width: parent.width
+        height: 1
+        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
       }
+    }
 
-      Item {
-        Layout.fillWidth: true
-        implicitHeight: 1
+    LinearFace {
+      width: parent.width
+      visible: root.progressBarStyle !== "circular"
+      timerService: root.timerService
+      foreground: root.foreground
+      activeColor: root.activeColor
+      fontFamily: root.fontFamily
+    }
+
+    CircularFace {
+      width: parent.width
+      visible: root.progressBarStyle === "circular"
+      timerService: root.timerService
+      foreground: root.foreground
+      activeColor: root.activeColor
+      fontFamily: root.fontFamily
+    }
+
+    Column {
+      width: parent.width
+      spacing: Style.space(10)
+
+      Row {
+        width: parent.width
+        spacing: Style.space(20)
+
+        Column {
+          width: (parent.width - parent.spacing) / 2
+          spacing: Style.spacing.labelGap
+          InfoPair {
+            icon: ""
+            label: "Streak"
+            value: (root.timerService ? root.timerService.currentStreak : 0) + "d"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+          InfoPair {
+            icon: "󰓾"
+            label: "Goal"
+            value: root.timerService ? root.timerService.dailyGoal : "—"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+        }
+
+        Column {
+          width: (parent.width - parent.spacing) / 2
+          spacing: Style.spacing.labelGap
+          InfoPair {
+            icon: ""
+            label: "Sessions today"
+            value: root.timerService ? String(root.timerService.sessionsToday) : "0"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+          InfoPair {
+            icon: "󰔟"
+            label: "Focused today"
+            value: root.timerService ? root.timerService.focusedToday : "—"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+        }
+      }
+    }
+
+    Row {
+      id: actions
+      anchors.horizontalCenter: parent.horizontalCenter
+      spacing: Style.space(10)
+      readonly property real buttonSize: Style.space(42)
+
+      Button {
+        id: pauseButton
+        implicitWidth: actions.buttonSize
+        implicitHeight: actions.buttonSize
+        width: actions.buttonSize
+        height: actions.buttonSize
+        iconText: root.timerService && root.timerService.paused ? "󰐊" : "󰏤"
+        tooltipText: root.timerService && root.timerService.paused ? "Resume session" : "Pause session"
+        foreground: root.foreground
+        accent: root.activeColor
+        iconSize: Style.font.iconLarge + 4
+        horizontalPadding: 0
+        verticalPadding: 0
+        enabled: !!root.timerService && !root.timerService.stopped
+        opacity: enabled ? 1 : 0.35
+        hasCursor: root.cursorActive && root.selectedAction === 0
+        onHovered: function (value) {
+          root.actionHovered(0, value);
+        }
+        onClicked: if (root.timerService)
+          root.timerService.togglePause()
       }
 
       Button {
-        text: "Update"
-        iconText: "󰚰"
+        id: skipButton
+        implicitWidth: actions.buttonSize
+        implicitHeight: actions.buttonSize
+        width: actions.buttonSize
+        height: actions.buttonSize
+        iconText: ""
+        tooltipText: "Skip to " + (root.timerService ? root.timerService.nextSessionLabel : "next session")
         foreground: root.foreground
         accent: root.activeColor
-        fontFamily: root.fontFamily
-        fontSize: Style.font.bodySmall
-        onClicked: root.updateRequested()
-      }
-    }
-
-    Rectangle {
-      width: parent.width
-      height: 1
-      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
-    }
-  }
-
-  LinearFace {
-    width: parent.width
-    visible: root.progressBarStyle !== "circular"
-    timerService: root.timerService
-    foreground: root.foreground
-    activeColor: root.activeColor
-    fontFamily: root.fontFamily
-  }
-
-  CircularFace {
-    width: parent.width
-    visible: root.progressBarStyle === "circular"
-    timerService: root.timerService
-    foreground: root.foreground
-    activeColor: root.activeColor
-    fontFamily: root.fontFamily
-  }
-
-  Column {
-    width: parent.width
-    spacing: Style.space(10)
-
-    Row {
-      width: parent.width
-      spacing: Style.space(20)
-
-      Column {
-        width: (parent.width - parent.spacing) / 2
-        spacing: Style.spacing.labelGap
-        InfoPair {
-          icon: ""
-          label: "Streak"
-          value: (root.timerService ? root.timerService.currentStreak : 0) + "d"
-          foreground: root.foreground
-          fontFamily: root.fontFamily
+        iconSize: Style.font.iconLarge
+        horizontalPadding: 0
+        verticalPadding: 0
+        enabled: !!root.timerService && !root.timerService.stopped
+        opacity: enabled ? 1 : 0.35
+        hasCursor: root.cursorActive && root.selectedAction === 1
+        onHovered: function (value) {
+          root.actionHovered(1, value);
         }
-        InfoPair {
-          icon: "󰓾"
-          label: "Goal"
-          value: root.timerService ? root.timerService.dailyGoal : "—"
-          foreground: root.foreground
-          fontFamily: root.fontFamily
+        onClicked: if (root.timerService)
+          root.timerService.skip()
+      }
+
+      Button {
+        id: resetButton
+        visible: root.resetVisible
+        implicitWidth: actions.buttonSize
+        implicitHeight: actions.buttonSize
+        width: actions.buttonSize
+        height: actions.buttonSize
+        iconText: ""
+        tooltipText: "Reset session"
+        foreground: root.foreground
+        accent: root.activeColor
+        iconSize: Style.font.iconLarge
+        horizontalPadding: 0
+        verticalPadding: 0
+        enabled: root.resetVisible
+        opacity: enabled ? 1 : 0.35
+        hasCursor: root.cursorActive && root.selectedAction === 2
+        onHovered: function (value) {
+          root.actionHovered(2, value);
         }
+        onClicked: if (root.timerService)
+          root.timerService.stop()
       }
 
-      Column {
-        width: (parent.width - parent.spacing) / 2
-        spacing: Style.spacing.labelGap
-        InfoPair {
-          icon: ""
-          label: "Sessions today"
-          value: root.timerService ? String(root.timerService.sessionsToday) : "0"
-          foreground: root.foreground
-          fontFamily: root.fontFamily
+      Button {
+        id: addTimeButton
+        visible: root.addTimeVisible
+        implicitWidth: actions.buttonSize
+        implicitHeight: actions.buttonSize
+        width: actions.buttonSize
+        height: actions.buttonSize
+        iconText: ""
+        tooltipText: "Add 5 minutes"
+        foreground: root.foreground
+        accent: root.activeColor
+        iconSize: Style.font.iconLarge
+        horizontalPadding: 0
+        verticalPadding: 0
+        enabled: root.addTimeVisible
+        opacity: enabled ? 1 : 0.35
+        hasCursor: root.cursorActive && root.selectedAction === (root.resetVisible ? 3 : 2)
+        onHovered: function (value) {
+          root.actionHovered(root.resetVisible ? 3 : 2, value);
         }
-        InfoPair {
-          icon: "󰔟"
-          label: "Focused today"
-          value: root.timerService ? root.timerService.focusedToday : "—"
-          foreground: root.foreground
-          fontFamily: root.fontFamily
-        }
+        onClicked: if (root.timerService)
+          root.timerService.addMinutes(5)
       }
     }
-  }
-
-  Row {
-    id: actions
-    anchors.horizontalCenter: parent.horizontalCenter
-    spacing: Style.space(10)
-    readonly property real buttonSize: Style.space(42)
-
-    Button {
-      id: pauseButton
-      implicitWidth: actions.buttonSize
-      implicitHeight: actions.buttonSize
-      width: actions.buttonSize
-      height: actions.buttonSize
-      iconText: root.timerService && root.timerService.paused ? "󰐊" : "󰏤"
-      tooltipText: root.timerService && root.timerService.paused ? "Resume session" : "Pause session"
-      foreground: root.foreground
-      accent: root.activeColor
-      iconSize: Style.font.iconLarge + 4
-      horizontalPadding: 0
-      verticalPadding: 0
-      enabled: !!root.timerService && !root.timerService.stopped
-      opacity: enabled ? 1 : 0.35
-      hasCursor: root.cursorActive && root.selectedAction === 0
-      onHovered: function (value) {
-        root.actionHovered(0, value);
-      }
-      onClicked: if (root.timerService)
-        root.timerService.togglePause()
-    }
-
-    Button {
-      id: skipButton
-      implicitWidth: actions.buttonSize
-      implicitHeight: actions.buttonSize
-      width: actions.buttonSize
-      height: actions.buttonSize
-      iconText: ""
-      tooltipText: "Skip to " + (root.timerService ? root.timerService.nextSessionLabel : "next session")
-      foreground: root.foreground
-      accent: root.activeColor
-      iconSize: Style.font.iconLarge
-      horizontalPadding: 0
-      verticalPadding: 0
-      enabled: !!root.timerService && !root.timerService.stopped
-      opacity: enabled ? 1 : 0.35
-      hasCursor: root.cursorActive && root.selectedAction === 1
-      onHovered: function (value) {
-        root.actionHovered(1, value);
-      }
-      onClicked: if (root.timerService)
-        root.timerService.skip()
-    }
-
-    Button {
-      id: resetButton
-      visible: root.resetVisible
-      implicitWidth: actions.buttonSize
-      implicitHeight: actions.buttonSize
-      width: actions.buttonSize
-      height: actions.buttonSize
-      iconText: ""
-      tooltipText: "Reset session"
-      foreground: root.foreground
-      accent: root.activeColor
-      iconSize: Style.font.iconLarge
-      horizontalPadding: 0
-      verticalPadding: 0
-      enabled: root.resetVisible
-      opacity: enabled ? 1 : 0.35
-      hasCursor: root.cursorActive && root.selectedAction === 2
-      onHovered: function (value) {
-        root.actionHovered(2, value);
-      }
-      onClicked: if (root.timerService)
-        root.timerService.stop()
-    }
-
-    Button {
-      id: addTimeButton
-      visible: root.addTimeVisible
-      implicitWidth: actions.buttonSize
-      implicitHeight: actions.buttonSize
-      width: actions.buttonSize
-      height: actions.buttonSize
-      iconText: ""
-      tooltipText: "Add 5 minutes"
-      foreground: root.foreground
-      accent: root.activeColor
-      iconSize: Style.font.iconLarge
-      horizontalPadding: 0
-      verticalPadding: 0
-      enabled: root.addTimeVisible
-      opacity: enabled ? 1 : 0.35
-      hasCursor: root.cursorActive && root.selectedAction === (root.resetVisible ? 3 : 2)
-      onHovered: function (value) {
-        root.actionHovered(root.resetVisible ? 3 : 2, value);
-      }
-      onClicked: if (root.timerService)
-        root.timerService.addMinutes(5)
-    }
-  }
   }
 
   Item {
