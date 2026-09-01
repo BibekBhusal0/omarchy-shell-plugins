@@ -26,8 +26,9 @@ Item {
   property int completedSessions: 0
 
   property string focusdVersion: ""
-  readonly property string requiredVersion: "0.2.1"
-  readonly property bool hasAddMinutesFeature: compareVersions(focusdVersion, requiredVersion) >= 0
+  property bool versionChecked: false
+  readonly property string requiredVersionForAddMinutes: "0.2.1"
+  readonly property bool hasAddMinutesFeature: versionChecked && compareVersions(focusdVersion, requiredVersionForAddMinutes) >= 0
 
   readonly property bool stopped: status === "stopped"
   readonly property bool running: status === "running"
@@ -124,6 +125,15 @@ Item {
     stateProc.running = true;
   }
 
+  function checkVersion() {
+    if (!root.versionChecked && !versionProc.running) {
+      versionProc.running = false;
+      versionProc.collected = "";
+      versionProc.command = ["focusd", "--version"];
+      versionProc.running = true;
+    }
+  }
+
   function parseState(raw) {
     var text = String(raw || "").trim();
     if (!text) {
@@ -152,10 +162,10 @@ Item {
     root.focusedToday = String(state.focused_today || "");
     root.dailyGoal = String(state.daily_goal || "");
     root.currentStreak = Number(state.current_streak) || 0;
-    root.workSessionsBeforeLongBreak = Number(state.work_sessions_before_long_break) || 4;
-    root.completedSessions = Number(state.completed_sessions) || 0;
-    if (state.version)
-      root.focusdVersion = String(state.version);
+    if (state.work_sessions_before_long_break !== undefined)
+      root.workSessionsBeforeLongBreak = Number(state.work_sessions_before_long_break) || 4;
+    if (state.completed_sessions !== undefined)
+      root.completedSessions = Number(state.completed_sessions) || 0;
   }
 
   function sessionLabelFor(key) {
@@ -178,7 +188,11 @@ Item {
     interval: 1000
     repeat: true
     running: true
-    onTriggered: root.poll()
+    onTriggered: {
+      root.poll();
+      if (!root.versionChecked)
+        root.checkVersion();
+    }
   }
 
   Process {
@@ -199,5 +213,28 @@ Item {
     }
   }
 
-  Component.onCompleted: root.poll()
+  Process {
+    id: versionProc
+    property string collected: ""
+    stdout: SplitParser {
+      onRead: function (data) {
+        versionProc.collected += data;
+      }
+    }
+    onExited: function (exitCode) {
+      if (exitCode === 0) {
+        var output = String(versionProc.collected || "").trim();
+        var match = output.match(/focusd\s+(\d+\.\d+\.\d+)/);
+        if (match && match[1]) {
+          root.focusdVersion = match[1];
+          root.versionChecked = true;
+        }
+      }
+    }
+  }
+
+  Component.onCompleted: {
+    root.poll();
+    root.checkVersion();
+  }
 }
