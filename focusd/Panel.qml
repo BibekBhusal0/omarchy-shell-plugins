@@ -202,11 +202,16 @@ Panel {
   }
 
   function updateFocusd() {
-    if (root.installed) {
-      var updateCmd = "if command -v yay >/dev/null 2>&1; then " + "yay -S focusd && echo \"\" && echo \"Update complete. Restarting daemon...\" && focusd --stop-daemon && focusd -d && echo \"Done! Press Enter to close.\" && read; " + "else " + "mkdir -p \"$HOME/.local/bin\" && " + "tmp=$(mktemp) && " + "curl -fsSL \"" + focusdDownloadUrl + "\" -o \"$tmp\" && " + "actual=$(sha256sum \"$tmp\" | awk '{print $1}') && " + "if [ \"$actual\" = \"" + focusdSha256 + "\" ]; then " + "  mv \"$tmp\" \"$HOME/.local/bin/focusd\" && chmod +x \"$HOME/.local/bin/focusd\" && " + "  focusd --stop-daemon && focusd -d; " + "else " + "  rm -f \"$tmp\"; " + "fi; " + "fi";
-      Quickshell.execDetached(["omarchy", "launch", "floating", "terminal", "with", "presentation", "sh", "-c", updateCmd]);
+    if (!root.installed)
+      return;
+    if (root.isYayPackage) {
+      Quickshell.execDetached(["omarchy", "launch", "floating", "terminal", "with", "presentation", "sh", "-c", "yay -S focusd && echo 'Restarting daemon...' && focusd --stop-daemon && focusd -d && echo 'Done! Press Enter to close.' && read"]);
       root.close();
+      return;
     }
+    updateDownloadProc.command = ["sh", "-c", "INSTALLED_PATH=$(which focusd) && " + "tmp=$(mktemp) && curl -fsSL \"" + focusdDownloadUrl + "\" -o \"$tmp\" && actual=$(sha256sum \"$tmp\" | awk '{print $1}') && " + "if [ \"$actual\" != \"" + focusdSha256 + "\" ]; then rm -f \"$tmp\" && echo 'checksum_failed'; exit 1; fi && " + "if mv \"$tmp\" \"$INSTALLED_PATH\" 2>/dev/null; then " + "  chmod +x \"$INSTALLED_PATH\" && focusd --stop-daemon && focusd -d && echo 'updated'; " + "else " + "  echo \"needs_sudo $tmp\"; " + "fi"];
+    updateDownloadProc.running = true;
+    root.close();
   }
 
   Component.onCompleted: root.checkInstallation()
@@ -457,6 +462,32 @@ Panel {
         if (match && match[1]) {
           var installedVersion = "v" + match[1];
           root.updateAvailable = root.compareVersions(root.pinnedVersion, installedVersion) > 0;
+        }
+      }
+    }
+  }
+
+  Process {
+    id: yayCheckProcess
+    stdout: SplitParser {
+      onRead: function (data) {}
+    }
+    onExited: function (exitCode) {
+      root.isYayPackage = exitCode === 0;
+    }
+  }
+
+  Process {
+    id: updateDownloadProc
+    stdout: SplitParser {
+      onRead: function (data) {
+        var msg = String(data || "").trim();
+        if (msg === "updated")
+          root.checkForUpdates();
+        else if (msg.indexOf("needs_sudo") === 0) {
+          var tmpPath = msg.split(" ")[1];
+          var sudoCmd = "INSTALLED_PATH=$(which focusd) && " + "sudo mv \"" + tmpPath + "\" \"$INSTALLED_PATH\" && sudo chmod +x \"$INSTALLED_PATH\" && " + "focusd --stop-daemon && focusd -d && echo 'Done! Press Enter to close.' && read";
+          Quickshell.execDetached(["omarchy", "launch", "floating", "terminal", "with", "presentation", "sh", "-c", sudoCmd]);
         }
       }
     }
