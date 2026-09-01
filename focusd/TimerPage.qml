@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import qs.Commons
 import qs.Ui
@@ -14,24 +15,13 @@ Column {
   property bool updateAvailable: false
   property bool cursorActive: false
   property int selectedAction: 0
-
-  readonly property bool resetVisible: timerService ? timerService.active : false
-  readonly property bool addTimeVisible: timerService ? (timerService.active && timerService.hasAddMinutesFeature) : false
+  property bool resetVisible: false
+  property bool addTimeVisible: false
+  property int totalActionCount: 2
 
   signal updateRequested
   signal infoRequested
   signal actionHovered(int index, bool hovered)
-
-  function actionCount() {
-    var count = 2;
-    if (!!root.timerService && !root.timerService.stopped)
-      count += 1;
-    if (root.resetVisible)
-      count += 1;
-    if (root.addTimeVisible)
-      count += 1;
-    return count;
-  }
 
   width: parent.width
   spacing: Style.space(18)
@@ -41,7 +31,7 @@ Column {
     width: parent.width
     spacing: Style.space(8)
 
-    Row {
+    RowLayout {
       width: parent.width
       spacing: Style.space(8)
 
@@ -57,13 +47,11 @@ Column {
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
-        anchors.verticalCenter: parent.verticalCenter
       }
 
       Item {
-        width: 1
-        height: 1
         Layout.fillWidth: true
+        implicitHeight: 1
       }
 
       Button {
@@ -256,7 +244,7 @@ Column {
     height: Style.space(28)
 
     Button {
-      anchors.centerIn: parent
+      anchors.right: parent.right
       implicitWidth: Style.space(28)
       implicitHeight: Style.space(28)
       iconText: ""
@@ -266,9 +254,9 @@ Column {
       iconSize: Style.font.body
       horizontalPadding: 0
       verticalPadding: 0
-      hasCursor: root.cursorActive && root.selectedAction === root.actionCount() - 1
+      hasCursor: root.cursorActive && root.selectedAction === root.totalActionCount - 1
       onHovered: function (value) {
-        root.actionHovered(root.actionCount() - 1, value);
+        root.actionHovered(root.totalActionCount - 1, value);
       }
       onClicked: root.infoRequested()
     }

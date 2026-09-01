@@ -30,7 +30,20 @@ Panel {
   property string currentPage: "timer"
   property bool checkingUpdate: false
   property bool updateAvailable: false
-  property string latestVersion: ""
+
+  readonly property bool resetVisible: timerService ? timerService.active : false
+  readonly property bool addTimeVisible: timerService ? (timerService.active && timerService.hasAddMinutesFeature) : false
+
+  function timerActionCount() {
+    var count = 2;
+    if (!!root.timerService && !root.timerService.stopped)
+      count += 1;
+    if (root.resetVisible)
+      count += 1;
+    if (root.addTimeVisible)
+      count += 1;
+    return count;
+  }
 
   function open() {
     currentPage = "timer";
@@ -56,7 +69,7 @@ Panel {
       return 1;
     if (currentPage === "info")
       return 3;
-    return timerPage.actionCount();
+    return root.timerActionCount();
   }
 
   function selectAction(delta) {
@@ -100,14 +113,22 @@ Panel {
       return;
     }
     idx++;
-    if (timerPage.resetVisible && selectedAction === idx) {
+    if (root.resetVisible && selectedAction === idx) {
       timerService.stop();
       return;
     }
-    if (timerPage.resetVisible)
+    if (root.resetVisible)
       idx++;
-    if (timerPage.addTimeVisible && selectedAction === idx)
+    if (root.addTimeVisible && selectedAction === idx) {
       timerService.addMinutes(5);
+      return;
+    }
+    if (root.addTimeVisible)
+      idx++;
+    if (selectedAction === idx) {
+      root.currentPage = "info";
+      root.selectedAction = 0;
+    }
   }
 
   function actionHovered(index, hovered) {
