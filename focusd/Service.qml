@@ -188,11 +188,7 @@ Item {
     interval: 1000
     repeat: true
     running: true
-    onTriggered: {
-      root.poll();
-      if (!root.versionChecked)
-        root.checkVersion();
-    }
+    onTriggered: root.poll()
   }
 
   Process {
