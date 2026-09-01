@@ -12,6 +12,12 @@ Panel {
   property var hostWidget: null
   readonly property var barIdentity: hostWidget || root
 
+  function switchPanel(direction) {
+    if (bar && typeof bar.switchPanelFrom === "function")
+      return bar.switchPanelFrom(hostWidget || root, direction)
+    return false
+  }
+
   readonly property var mediaService: bar?.shell?.firstPartyServiceFor("bibek.media")
   readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
   readonly property var sourcePlayers: mediaService ? mediaService.sourcePlayers : []
@@ -300,7 +306,7 @@ Panel {
       onActivateRequested: root.activateCursor()
       onCloseRequested: root.close()
       onTabRequested: function (direction) {
-        root.moveCursor(0, direction);
+        root.switchPanel(direction);
       }
       onTextKey: function (t) {
         if (t === "q")
