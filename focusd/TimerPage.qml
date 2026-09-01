@@ -95,6 +95,13 @@ Item {
       fontFamily: root.fontFamily
     }
 
+    SessionDots {
+      anchors.horizontalCenter: parent.horizontalCenter
+      timerService: root.timerService
+      foreground: root.foreground
+      activeColor: root.activeColor
+    }
+
     Column {
       width: parent.width
       spacing: Style.space(10)
@@ -418,39 +425,6 @@ Item {
         }
       }
     }
-
-    Row {
-      anchors.horizontalCenter: parent.horizontalCenter
-      spacing: Style.space(8)
-
-      Repeater {
-        model: timerService ? timerService.workSessionsBeforeLongBreak : 4
-
-        Rectangle {
-          required property int index
-          readonly property int currentRound: timerService ? (timerService.completedSessions % (timerService.workSessionsBeforeLongBreak || 4)) : 0
-          readonly property bool isDone: index < currentRound
-          readonly property bool isCurrent: index === currentRound
-
-          width: isCurrent ? Style.space(18) : Style.space(8)
-          height: Style.space(8)
-          radius: Style.space(4)
-          color: isDone || (isCurrent && timerService && timerService.running) ? activeColor : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.25)
-
-          Behavior on width {
-            NumberAnimation {
-              duration: 150
-              easing.type: Easing.OutCubic
-            }
-          }
-          Behavior on color {
-            ColorAnimation {
-              duration: 150
-            }
-          }
-        }
-      }
-    }
   }
 
   component CircularFace: Item {
@@ -491,6 +465,42 @@ Item {
         color: activeColor
         font.family: fontFamily
         font.pixelSize: Style.font.title
+      }
+    }
+  }
+
+  component SessionDots: Row {
+    property var timerService: null
+    property color foreground: Color.popups.text
+    property color activeColor: Color.accent
+
+    spacing: Style.space(8)
+
+    Repeater {
+      model: timerService ? timerService.workSessionsBeforeLongBreak : 4
+
+      Rectangle {
+        required property int index
+        readonly property int currentRound: timerService ? (timerService.completedSessions % (timerService.workSessionsBeforeLongBreak || 4)) : 0
+        readonly property bool isDone: index < currentRound
+        readonly property bool isCurrent: index === currentRound
+
+        width: isCurrent ? Style.space(18) : Style.space(8)
+        height: Style.space(8)
+        radius: Style.space(4)
+        color: isDone || (isCurrent && timerService && timerService.running) ? activeColor : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.25)
+
+        Behavior on width {
+          NumberAnimation {
+            duration: 150
+            easing.type: Easing.OutCubic
+          }
+        }
+        Behavior on color {
+          ColorAnimation {
+            duration: 150
+          }
+        }
       }
     }
   }
