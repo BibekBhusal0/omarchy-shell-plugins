@@ -22,12 +22,16 @@ Item {
   property string focusedToday: "0s"
   property string dailyGoal: ""
   property int currentStreak: 0
+  property int workSessionsBeforeLongBreak: 4
+  property int completedSessions: 0
+
+  property string focusdVersion: ""
+  readonly property string requiredVersion: "0.2.1"
+  readonly property bool hasAddMinutesFeature: compareVersions(focusdVersion, requiredVersion) >= 0
 
   readonly property bool stopped: status === "stopped"
   readonly property bool running: status === "running"
   readonly property bool paused: status === "paused"
-  // A session has made progress (started or has elapsed time) vs. a fresh,
-  // never-started timer.
   readonly property bool active: !stopped && (running || progress > 0)
 
   // Icons shown in the bar, keyed like waybar's format-icons. Customizable
@@ -91,6 +95,28 @@ Item {
     Quickshell.execDetached(["focusd", "reset"]);
   }
 
+  function addMinutes(minutes) {
+    if (stopped || !hasAddMinutesFeature)
+      return;
+    Quickshell.execDetached(["focusd", "--add-minutes", String(minutes)]);
+  }
+
+  function compareVersions(v1, v2) {
+    if (!v1 || !v2)
+      return 0;
+    var parts1 = String(v1).replace(/^v/, "").split(".");
+    var parts2 = String(v2).replace(/^v/, "").split(".");
+    for (var i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      var p1 = Number(parts1[i]) || 0;
+      var p2 = Number(parts2[i]) || 0;
+      if (p1 > p2)
+        return 1;
+      if (p1 < p2)
+        return -1;
+    }
+    return 0;
+  }
+
   function poll() {
     stateProc.running = false;
     stateProc.collected = "";
@@ -126,6 +152,10 @@ Item {
     root.focusedToday = String(state.focused_today || "");
     root.dailyGoal = String(state.daily_goal || "");
     root.currentStreak = Number(state.current_streak) || 0;
+    root.workSessionsBeforeLongBreak = Number(state.work_sessions_before_long_break) || 4;
+    root.completedSessions = Number(state.completed_sessions) || 0;
+    if (state.version)
+      root.focusdVersion = String(state.version);
   }
 
   function sessionLabelFor(key) {
