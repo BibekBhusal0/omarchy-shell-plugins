@@ -67,6 +67,10 @@ Item {
           accent: root.activeColor
           fontFamily: root.fontFamily
           fontSize: Style.font.bodySmall
+          hasCursor: root.cursorActive && root.selectedAction === root.totalActionCount - 1
+          onHovered: function (value) {
+            root.actionHovered(root.totalActionCount - 1, value);
+          }
           onClicked: root.updateRequested()
         }
       }
@@ -271,9 +275,9 @@ Item {
       iconSize: Style.font.body
       horizontalPadding: 0
       verticalPadding: 0
-      hasCursor: root.cursorActive && root.selectedAction === root.totalActionCount - 1
+      hasCursor: root.cursorActive && root.selectedAction === root.totalActionCount - 2
       onHovered: function (value) {
-        root.actionHovered(root.totalActionCount - 1, value);
+        root.actionHovered(root.totalActionCount - 2, value);
       }
       onClicked: root.infoRequested()
     }

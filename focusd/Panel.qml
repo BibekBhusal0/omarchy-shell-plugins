@@ -42,6 +42,8 @@ Panel {
       count += 1;
     if (root.addTimeVisible)
       count += 1;
+    if (root.updateAvailable)
+      count += 1;
     return count;
   }
 
@@ -130,6 +132,12 @@ Panel {
     if (selectedAction === idx) {
       root.currentPage = "info";
       root.selectedAction = 0;
+      return;
+    }
+    idx++;
+    if (root.updateAvailable && selectedAction === idx) {
+      root.updateFocusd();
+      return;
     }
   }
 
