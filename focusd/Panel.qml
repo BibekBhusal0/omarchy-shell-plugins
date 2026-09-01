@@ -760,7 +760,7 @@ Panel {
         color: root.foreground
         width: Math.max(progressTrack.height, progressTrack.width * (root.timerService ? root.timerService.progress : 0))
 
-        Behavior on width  {
+        Behavior on width {
           NumberAnimation {
             duration: 320
             easing.type: Easing.OutCubic
@@ -787,13 +787,13 @@ Panel {
           radius: Style.space(4)
           color: isDone || (isCurrent && root.timerService && root.timerService.running) ? root.activeColor : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.25)
 
-          Behavior on width  {
+          Behavior on width {
             NumberAnimation {
               duration: 150
               easing.type: Easing.OutCubic
             }
           }
-          Behavior on color  {
+          Behavior on color {
             ColorAnimation {
               duration: 150
             }
