@@ -17,6 +17,7 @@ Item {
   property int selectedAction: 0
   property bool resetVisible: false
   property bool addTimeVisible: false
+  property bool hasSessionData: false
   property int totalActionCount: 2
 
   signal updateRequested
@@ -96,6 +97,7 @@ Item {
     }
 
     SessionDots {
+      visible: root.hasSessionData
       anchors.horizontalCenter: parent.horizontalCenter
       timerService: root.timerService
       foreground: root.foreground

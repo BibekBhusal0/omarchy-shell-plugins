@@ -24,6 +24,7 @@ Item {
   property int currentStreak: 0
   property int workSessionsBeforeLongBreak: 4
   property int completedSessions: 0
+  property bool hasSessionData: false
 
   property string focusdVersion: ""
   property bool versionChecked: false
@@ -166,6 +167,7 @@ Item {
       root.workSessionsBeforeLongBreak = Number(state.work_sessions_before_long_break) || 4;
     if (state.completed_sessions !== undefined)
       root.completedSessions = Number(state.completed_sessions) || 0;
+    root.hasSessionData = state.work_sessions_before_long_break !== undefined && state.completed_sessions !== undefined;
   }
 
   function sessionLabelFor(key) {

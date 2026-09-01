@@ -358,6 +358,9 @@ Panel {
             item.addTimeVisible = Qt.binding(function () {
               return root.addTimeVisible;
             });
+            item.hasSessionData = Qt.binding(function () {
+              return root.timerService ? root.timerService.hasSessionData : false;
+            });
             item.totalActionCount = Qt.binding(function () {
               return root.timerActionCount();
             });
