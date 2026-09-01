@@ -131,9 +131,9 @@ Panel {
     whichProcess.running = true;
   }
 
-  readonly property string focusdVersion: "v0.2.0"
-  readonly property string focusdSha256: "13538979d894f5b8f665a0a392598a78e94078939fec478246329b37521a8595"
-  readonly property string focusdDownloadUrl: "https://github.com/BibekBhusal0/focusd/releases/download/" + focusdVersion + "/focusd-linux-x86_64"
+  readonly property string pinnedVersion: "v0.2.12"
+  readonly property string focusdSha256: "0604761c25c6c15f75b73fb60b252d18ff835f4454dbe5bcbee442093f8fa0ad"
+  readonly property string focusdDownloadUrl: "https://github.com/BibekBhusal0/focusd/releases/download/" + pinnedVersion + "/focusd-linux-x86_64"
 
   function installCommand() {
     return "rm -f \"$XDG_RUNTIME_DIR/focusd-panel-install.failed\"; status=0; " + "mkdir -p \"$HOME/.local/bin\" && " + "tmp=$(mktemp) && " + "curl -fsSL \"" + focusdDownloadUrl + "\" -o \"$tmp\" && " + "actual=$(sha256sum \"$tmp\" | awk '{print $1}') && " + "if [ \"$actual\" = \"" + focusdSha256 + "\" ]; then " + "  mv \"$tmp\" \"$HOME/.local/bin/focusd\" && chmod +x \"$HOME/.local/bin/focusd\"; " + "else " + "  rm -f \"$tmp\"; status=1; " + "fi " + "|| status=$?; " + "if (( status != 0 )); then printf '%s\\n' \"$status\" > \"$XDG_RUNTIME_DIR/focusd-panel-install.failed\"; fi; " + "(exit \"$status\")";
@@ -149,11 +149,25 @@ Panel {
   }
 
   function checkForUpdates() {
-    if (!root.installed || !whichProcess.running) {
-      root.checkingUpdate = true;
-      updateCheckProcess.command = ["sh", "-c", "command -v yay >/dev/null 2>&1 && yay -Qu focusd 2>/dev/null | grep -q '^focusd' && echo 'update' || echo 'current'"];
-      updateCheckProcess.running = true;
+    if (!root.installed || root.checkingUpdate)
+      return;
+    root.checkingUpdate = true;
+    versionCheckProcess.command = ["focusd", "--version"];
+    versionCheckProcess.running = true;
+  }
+
+  function compareVersions(v1, v2) {
+    var parts1 = String(v1).replace(/^v/, "").split(".");
+    var parts2 = String(v2).replace(/^v/, "").split(".");
+    for (var i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      var p1 = Number(parts1[i]) || 0;
+      var p2 = Number(parts2[i]) || 0;
+      if (p1 > p2)
+        return 1;
+      if (p1 < p2)
+        return -1;
     }
+    return 0;
   }
 
   function updateFocusd() {
@@ -398,16 +412,20 @@ Panel {
   }
 
   Process {
-    id: updateCheckProcess
+    id: versionCheckProcess
     stdout: StdioCollector {
-      id: updateCheckOutput
+      id: versionCheckOutput
       waitForEnd: true
     }
     onExited: function (exitCode) {
       root.checkingUpdate = false;
       if (exitCode === 0) {
-        var output = String(updateCheckOutput.text || "").trim();
-        root.updateAvailable = output === "update";
+        var output = String(versionCheckOutput.text || "").trim();
+        var match = output.match(/focusd\s+(\d+\.\d+\.\d+)/);
+        if (match && match[1]) {
+          var installedVersion = "v" + match[1];
+          root.updateAvailable = root.compareVersions(root.pinnedVersion, installedVersion) > 0;
+        }
       }
     }
   }
