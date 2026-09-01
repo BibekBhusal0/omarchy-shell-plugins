@@ -14,8 +14,8 @@ Panel {
 
   function switchPanel(direction) {
     if (bar && typeof bar.switchPanelFrom === "function")
-      return bar.switchPanelFrom(hostWidget || root, direction)
-    return false
+      return bar.switchPanelFrom(hostWidget || root, direction);
+    return false;
   }
 
   readonly property var mediaService: bar?.shell?.firstPartyServiceFor("bibek.media")
