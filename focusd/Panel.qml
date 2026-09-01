@@ -287,37 +287,81 @@ Panel {
           }
         }
 
-        TimerPage {
-          id: timerPage
-          visible: root.installed && root.currentPage === "timer"
-          timerService: root.timerService
-          foreground: root.foreground
-          activeColor: root.activeColor
-          fontFamily: root.fontFamily
-          progressBarStyle: root.progressBarStyle
-          updateAvailable: root.updateAvailable
-          cursorActive: root.cursorActive
-          selectedAction: root.selectedAction
-          onUpdateRequested: root.updateFocusd()
-          onInfoRequested: {
-            root.currentPage = "info";
-            root.selectedAction = 0;
-          }
-          onActionHovered: function (index, hovered) {
-            root.actionHovered(index, hovered);
+        Loader {
+          id: timerPageLoader
+          width: parent.width
+          active: root.installed && root.currentPage === "timer"
+          visible: active
+          source: "TimerPage.qml"
+          onLoaded: {
+            item.timerService = Qt.binding(function () {
+              return root.timerService;
+            });
+            item.foreground = Qt.binding(function () {
+              return root.foreground;
+            });
+            item.activeColor = Qt.binding(function () {
+              return root.activeColor;
+            });
+            item.fontFamily = Qt.binding(function () {
+              return root.fontFamily;
+            });
+            item.progressBarStyle = Qt.binding(function () {
+              return root.progressBarStyle;
+            });
+            item.updateAvailable = Qt.binding(function () {
+              return root.updateAvailable;
+            });
+            item.cursorActive = Qt.binding(function () {
+              return root.cursorActive;
+            });
+            item.selectedAction = Qt.binding(function () {
+              return root.selectedAction;
+            });
+            item.resetVisible = Qt.binding(function () {
+              return root.resetVisible;
+            });
+            item.addTimeVisible = Qt.binding(function () {
+              return root.addTimeVisible;
+            });
+            item.totalActionCount = Qt.binding(function () {
+              return root.timerActionCount();
+            });
+            item.updateRequested.connect(root.updateFocusd);
+            item.infoRequested.connect(function () {
+              root.currentPage = "info";
+              root.selectedAction = 0;
+            });
+            item.actionHovered.connect(root.actionHovered);
           }
         }
 
-        InfoPage {
-          visible: root.installed && root.currentPage === "info"
-          timerService: root.timerService
-          foreground: root.foreground
-          activeColor: root.activeColor
-          fontFamily: root.fontFamily
-          cursorActive: root.cursorActive
-          selectedAction: root.selectedAction
-          onActionHovered: function (index, hovered) {
-            root.actionHovered(index, hovered);
+        Loader {
+          id: infoPageLoader
+          width: parent.width
+          active: root.installed && root.currentPage === "info"
+          visible: active
+          source: "InfoPage.qml"
+          onLoaded: {
+            item.timerService = Qt.binding(function () {
+              return root.timerService;
+            });
+            item.foreground = Qt.binding(function () {
+              return root.foreground;
+            });
+            item.activeColor = Qt.binding(function () {
+              return root.activeColor;
+            });
+            item.fontFamily = Qt.binding(function () {
+              return root.fontFamily;
+            });
+            item.cursorActive = Qt.binding(function () {
+              return root.cursorActive;
+            });
+            item.selectedAction = Qt.binding(function () {
+              return root.selectedAction;
+            });
+            item.actionHovered.connect(root.actionHovered);
           }
         }
       }
