@@ -423,7 +423,7 @@ Item {
         color: foreground
         width: Math.max(progressTrack.height, progressTrack.width * (timerService ? timerService.progress : 0))
 
-        Behavior on width  {
+        Behavior on width {
           NumberAnimation {
             duration: 320
             easing.type: Easing.OutCubic
@@ -483,7 +483,7 @@ Item {
     spacing: Style.space(8)
 
     Repeater {
-      model: timerService ? timerService.workSessionsBeforeLongBreak : 4
+      model: Math.max(1, Math.min(20, timerService ? timerService.workSessionsBeforeLongBreak : 4))
 
       Rectangle {
         required property int index
@@ -496,13 +496,13 @@ Item {
         radius: Style.space(4)
         color: isDone || (isCurrent && timerService && timerService.running) ? activeColor : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.25)
 
-        Behavior on width  {
+        Behavior on width {
           NumberAnimation {
             duration: 150
             easing.type: Easing.OutCubic
           }
         }
-        Behavior on color  {
+        Behavior on color {
           ColorAnimation {
             duration: 150
           }
