@@ -18,8 +18,10 @@ lib_json="$lib_dir/library.json"
 
 [[ -f "$lib_json" ]] || exit 0
 
-jq -r 'sort_by(.updatedAt // 0) | reverse | .[] | [.title, (.author // ""), .hash] | @tsv' "$lib_json" 2>/dev/null | while IFS=$'\t' read -r title author hash; do
+jq -r 'sort_by(.updatedAt // 0) | reverse | .[:200][] | [.title, (.author // ""), .hash] | @tsv' "$lib_json" 2>/dev/null | while IFS=$'\t' read -r title author hash; do
   [[ -n "$title" && -n "$hash" ]] || continue
+  title="${title:0:256}"
+  author="${author:0:128}"
 
   book="$(fd -a -d1 -e epub -e pdf -e mobi -e azw3 . "$lib_dir/$hash" 2>/dev/null | head -n1)"
   [[ -n "$book" ]] || continue

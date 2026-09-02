@@ -53,8 +53,8 @@ Item {
     else
       root.filter();
     Qt.callLater(function () {
-        keyCatcher.forceActiveFocus();
-      });
+      keyCatcher.forceActiveFocus();
+    });
   }
 
   function detectReadestCmd() {
@@ -105,23 +105,25 @@ Item {
   function parseResults(raw) {
     var lines = String(raw || "").split("\n");
     var rows = [];
-    for (var i = 0; i < lines.length; i++) {
+    for (var i = 0; i < lines.length && rows.length < 200; i++) {
       var line = lines[i].trim();
       if (!line)
         continue;
       var parts = line.split("\t");
       if (parts.length < 3)
         continue;
+      var label = String(parts[0] || "").substring(0, 256);
+      var detail = String(parts[1] || "").substring(0, 128);
       var cover = parts.length > 3 ? parts[3] : "";
       rows.push({
-          "icon": "󰂚",
-          "label": parts[0],
-          "detail": parts[1],
-          "cover": cover,
-          "title": parts[0],
-          "domain": parts[1],
-          "link": parts[2]
-        });
+        "icon": "󰂚",
+        "label": label,
+        "detail": detail,
+        "cover": cover,
+        "title": label,
+        "domain": detail,
+        "link": parts[2]
+      });
     }
     return rows;
   }
@@ -143,9 +145,9 @@ Item {
     else if (selectedIndex < 0)
       selectedIndex = 0;
     Qt.callLater(function () {
-        if (displayModel.count > 0)
-          resultList.positionViewAtIndex(root.selectedIndex, ListView.Contain);
-      });
+      if (displayModel.count > 0)
+        resultList.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+    });
   }
 
   function select(delta) {
@@ -273,8 +275,7 @@ Item {
 
       MouseArea {
         anchors.fill: parent
-        onClicked: {
-        }
+        onClicked: {}
       }
 
       Item {
@@ -407,6 +408,7 @@ Item {
                   Text {
                     width: parent.width
                     text: row.label
+                    textFormat: Text.PlainText
                     color: row.hasCursor ? root.selectedText : root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.heading
@@ -416,6 +418,7 @@ Item {
                   Text {
                     width: parent.width
                     text: row.detail
+                    textFormat: Text.PlainText
                     visible: row.detail.length > 0
                     color: row.hasCursor ? root.selectedText : root.foreground
                     opacity: 0.5
