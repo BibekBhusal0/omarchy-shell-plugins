@@ -53,8 +53,8 @@ Item {
     else
       root.filter();
     Qt.callLater(function () {
-      keyCatcher.forceActiveFocus();
-    });
+        keyCatcher.forceActiveFocus();
+      });
   }
 
   function detectReadestCmd() {
@@ -116,14 +116,14 @@ Item {
       var detail = String(parts[1] || "").substring(0, 128);
       var cover = parts.length > 3 ? parts[3] : "";
       rows.push({
-        "icon": "󰂚",
-        "label": label,
-        "detail": detail,
-        "cover": cover,
-        "title": label,
-        "domain": detail,
-        "link": parts[2]
-      });
+          "icon": "󰂚",
+          "label": label,
+          "detail": detail,
+          "cover": cover,
+          "title": label,
+          "domain": detail,
+          "link": parts[2]
+        });
     }
     return rows;
   }
@@ -145,9 +145,9 @@ Item {
     else if (selectedIndex < 0)
       selectedIndex = 0;
     Qt.callLater(function () {
-      if (displayModel.count > 0)
-        resultList.positionViewAtIndex(root.selectedIndex, ListView.Contain);
-    });
+        if (displayModel.count > 0)
+          resultList.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+      });
   }
 
   function select(delta) {
@@ -275,7 +275,8 @@ Item {
 
       MouseArea {
         anchors.fill: parent
-        onClicked: {}
+        onClicked: {
+        }
       }
 
       Item {
