@@ -1,4 +1,4 @@
-# Omarchy Shell Plugin for yt-dlp
+# YouTube Video Downloader for Omarchy
 
 A YouTube video downloader for the Omarchy bar.
 

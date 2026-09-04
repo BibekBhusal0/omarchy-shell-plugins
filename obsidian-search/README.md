@@ -60,6 +60,6 @@ Here are my other Omarchy plugins:
 
 - [Focusd](https://github.com/BibekBhusal0/omarchy-focusd) - pomodoro timer with streak, history and daily goal
 - [Readest](https://github.com/BibekBhusal0/omarchy-readest) - fuzzy-search your Readest library
-- [yt-dlp](https://github.com/BibekBhusal0/omarchy-ytdl) - video downloads with progress and history
+- [Youtube Video Downloader](https://github.com/BibekBhusal0/omarchy-ytdl) - video downloads with progress and history
 
 Please give a star if you find them useful!
