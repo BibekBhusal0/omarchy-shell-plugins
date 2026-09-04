@@ -131,10 +131,25 @@
           align-items: center;
           justify-content: center;
         }
-        .shot {
-          max-width: 560px;
-          max-height: 620px;
-          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        .shot-frame {
+          padding: 3px;
+          border-radius: 14px;
+          background: linear-gradient(
+            135deg,
+            #54b375,
+            #296c49 50%,
+            #54b375
+          );
+          box-shadow:
+            0 30px 80px rgba(0, 0, 0, 0.6),
+            0 0 18px rgba(84, 179, 117, 0.3);
+
+          .shot {
+            display: block;
+            max-width: 554px;
+            max-height: 614px;
+            border-radius: 11px;
+          }
         }
         .footer {
           position: absolute;

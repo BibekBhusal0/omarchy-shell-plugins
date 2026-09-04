@@ -34,9 +34,11 @@ function addBanner(b) {
             </li>`).join("")}
         </ul>
       </div>
-      <div class="right">
-        <img class="shot" src="${b.shot}" alt="${b.name}">
-      </div>
+        <div class="right">
+          <div class="shot-frame">
+            <img class="shot" src="${b.shot}" alt="${b.name}">
+          </div>
+        </div>
     </div>
     <div class="footer">${b.id} &middot; v${b.version}</div>`;
   document.getElementById("banners").appendChild(section);
