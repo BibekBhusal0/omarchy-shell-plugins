@@ -75,7 +75,7 @@ To install a plugin from this repo into the live shell:
 - **qmlformat** (Qt 6) handles QML files. Config: `.qmlformat.ini` (2-space indent).
   - Use `/usr/lib/qt6/bin/qmlformat`, not the Qt 5 version at `/usr/bin/qmlformat`.
   - Command: `/usr/lib/qt6/bin/qmlformat -i $(find . -name '*.qml' ! -path './.git/*')`
-- CI auto-formats on push to `main` via `.github/workflows/format.yml`: runs prettier and qmlformat, then commits any changes back using `stefanzweifel/git-auto-commit-action`.
+- CI auto-formats on push to `main` via `.github/workflows/format.yml`: runs prettier and qmlformat, then commits any changes back using `stefanzweifel/git-auto-commit-action`. Never format manually; push and let CI handle it.
 
 ## Plugin conventions
 
