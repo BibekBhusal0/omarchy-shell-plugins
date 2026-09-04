@@ -15,6 +15,8 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 | `readest/`         | menu (overlay)       | Fuzzy search across Readest library                |
 | `ytdl/`            | bar-widget + service | YouTube video downloader with clipboard monitoring |
 
+`banners/` holds the preview-image studio (not a plugin; `publish.sh` skips it because there is no `manifest.json`). `bun screenshot.ts` inside it renders each plugin's `preview.png` (1600x800) from `banners.js` data.
+
 `scripts/publish.sh` + `.github/workflows/publish.yml` push each plugin folder to its standalone repo and cut a `v<version>` release.
 
 ## How the dev loop works (critical)
@@ -94,6 +96,15 @@ To install a plugin from this repo into the live shell:
 - All plugins require Omarchy quattro.
 - `fd` + `jq` are preinstalled on Omarchy; search plugins list them as preinstalled requirements, not as install steps.
 - focusd requires the `focusd` binary on `$PATH`.
+
+## Banners
+
+`banners/` renders each marketplace plugin's `preview.png` (1600x800). Run `bun screenshot.ts` from inside it.
+
+- `banners.js` holds `BANNERS` data plus a small `addBanner` renderer. Icons are plain paths; bullets render as `<img>`. Never put SVG markup in JS.
+- `screenshot.ts` reads output paths from `banners.js`, loads `index.html?banner=N` per banner, saves `../<plugin>/preview.png`.
+- `background.jpg` is the shared backdrop. `app/` has brand marks, `screenshot/` has raw plugin UI captures, `icons/` has bullet icons (white baked in; edit the SVG to recolor).
+- Quirks this backend forces: `?banner=N` full reloads (scrollTo/evaluate broken, same-document `#` jumps hang navigate), zero body padding in single mode, 887px viewport height to land exactly 800px (backend crops 87px).
 
 ## Publishing
 

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Plugin Banners 1600x800</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        scrollbar-width: none;
+      }
+      ::-webkit-scrollbar {
+        display: none;
+      }
+      body {
+        background: #06110d;
+        font-family: "JetBrainsMono Nerd Font", monospace;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+        padding: 32px;
+        align-items: center;
+      }
+      .banner {
+        width: 1600px;
+        height: 800px;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        background: url("background.jpg") center / cover no-repeat;
+
+        .overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            100deg,
+            rgba(5, 22, 17, 0.94) 0%,
+            rgba(5, 22, 17, 0.88) 45%,
+            rgba(5, 22, 17, 0.55) 75%,
+            rgba(5, 22, 17, 0.35) 100%
+          );
+        }
+        .content {
+          position: relative;
+          display: flex;
+          width: 100%;
+          height: 100%;
+          padding: 90px 100px;
+          gap: 60px;
+        }
+        .left {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 22px;
+          margin-bottom: 26px;
+          color: #fff;
+
+          img,
+          svg {
+            width: 76px;
+            height: 76px;
+          }
+          h1 {
+            color: #f2f7f4;
+            font-size: 64px;
+            font-weight: 800;
+            letter-spacing: -1px;
+          }
+          h1.small {
+            font-size: 46px;
+          }
+        }
+        .tagline {
+          color: #9fe8c1;
+          font-size: 30px;
+          font-weight: 600;
+          margin-bottom: 44px;
+        }
+        .bullets {
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+
+          li {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            color: #e6f2ec;
+            font-size: 23px;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+            background: rgba(159, 232, 193, 0.08);
+            border: 1px solid rgba(159, 232, 193, 0.25);
+            border-radius: 14px;
+            padding: 12px 20px 12px 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+          }
+        }
+        .chip {
+          width: 52px;
+          height: 52px;
+          flex-shrink: 0;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(159, 232, 193, 0.14);
+          color: #fff;
+
+          img {
+            width: 28px;
+            height: 28px;
+          }
+        }
+        .right {
+          width: 640px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .shot {
+          max-width: 640px;
+          max-height: 620px;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        }
+        .footer {
+          position: absolute;
+          bottom: 34px;
+          left: 100px;
+          right: 100px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: rgba(185, 212, 198, 0.75);
+          font-size: 19px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="banners"></main>
+
+    <script src="banners.js"></script>
+  </body>
+</html>
