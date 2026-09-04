@@ -25,13 +25,17 @@ function addBanner(b) {
         </div>
         <p class="tagline">${b.tagline}</p>
         <ul class="bullets">
-          ${b.bullets.map(([icon, text]) => `
+          ${b.bullets
+            .map(
+              ([icon, text]) => `
             <li>
               <span class="chip">
                 <img src="${icon}" alt="">
               </span>
               ${text}
-            </li>`).join("")}
+            </li>`,
+            )
+            .join("")}
         </ul>
       </div>
         <div class="right">
