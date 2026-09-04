@@ -120,7 +120,7 @@ Item {
           width: (parent.width - parent.spacing) / 2
           spacing: Style.spacing.labelGap
           InfoPair {
-            icon: ""
+            icon: ""
             label: "Streak"
             value: (root.timerService ? root.timerService.currentStreak : 0) + "d"
             foreground: root.foreground
@@ -139,7 +139,7 @@ Item {
           width: (parent.width - parent.spacing) / 2
           spacing: Style.spacing.labelGap
           InfoPair {
-            icon: ""
+            icon: ""
             label: "Sessions today"
             value: root.timerService ? String(root.timerService.sessionsToday) : "0"
             foreground: root.foreground
