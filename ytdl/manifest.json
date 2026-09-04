@@ -1,10 +1,20 @@
 {
   "schemaVersion": 1,
   "id": "bibek.ytdl",
-  "name": "Youtube video downloader",
+  "name": "Youtube Video Downloader",
   "version": "1.0.6",
   "author": "Bibek Bhusal",
   "description": "Download videos and playlists from YouTube and other sites via yt-dlp with up to three parallel downloads, a queue, and a persistent history.",
+  "preview": {
+    "tagline": "Copy a link, or don't. It sees what's playing",
+    "icon": "app/logos--youtube-icon.svg",
+    "bullets": [
+      ["icons/hugeicons--ai-sparkles.svg", "Auto-detects clipboard links and browser playback"],
+      ["icons/hugeicons--download-01.svg", "Three parallel downloads, the rest queue up"],
+      ["icons/hugeicons--history.svg", "History, playlists and transcripts"]
+    ],
+    "shot": "screenshot/ytdl.png"
+  },
   "homepage": "https://github.com/BibekBhusal0/omarchy-ytdl",
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
@@ -13,7 +23,7 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Youtube video downloader",
+    "displayName": "Youtube Video Downloader",
     "description": "Video and playlist downloader with parallel downloads, a queue, and a persistent history.",
     "category": "Media",
     "allowMultiple": false,

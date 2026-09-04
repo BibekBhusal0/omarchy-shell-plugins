@@ -5,6 +5,16 @@
   "version": "1.0.1",
   "author": "Bibek Bhusal",
   "description": "Search and open Obsidian notes from the Omarchy shell with fuzzy ranking, plus bases and canvas support and creating a new note when nothing matches.",
+  "preview": {
+    "tagline": "Find any note. Miss one, it's already created",
+    "icon": "app/thesvg-color--obsidian.svg",
+    "bullets": [
+      ["icons/hugeicons--search-01.svg", "Fuzzy search across the whole vault"],
+      ["icons/hugeicons--shapes-01.svg", "Bases and canvas files included"],
+      ["icons/hugeicons--pencil-edit-01.svg", "No match creates the note for you"]
+    ],
+    "shot": "screenshot/obsidian.png"
+  },
   "homepage": "https://github.com/BibekBhusal0/omarchy-obsidian-search",
   "kinds": ["overlay"],
   "entryPoints": {

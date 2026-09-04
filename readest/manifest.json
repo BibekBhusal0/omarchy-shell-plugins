@@ -5,6 +5,16 @@
   "version": "1.0.22",
   "author": "Bibek Bhusal",
   "description": "Search and open books from the Readest library with fuzzy ranking by title or author.",
+  "preview": {
+    "tagline": "Your whole library, one keystroke away",
+    "icon": "app/readest.png",
+    "bullets": [
+      ["icons/hugeicons--search-01.svg", "Fuzzy search by title or author"],
+      ["icons/hugeicons--book-open-01.svg", "Cover art in every result row"],
+      ["icons/hugeicons--history.svg", "Most recently opened books first"]
+    ],
+    "shot": "screenshot/readest.png"
+  },
   "homepage": "https://github.com/BibekBhusal0/omarchy-readest",
   "kinds": ["overlay"],
   "entryPoints": {

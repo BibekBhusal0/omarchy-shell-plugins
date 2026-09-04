@@ -5,6 +5,16 @@
   "version": "1.1.1",
   "author": "Bibek Bhusal",
   "description": "A pomodoro timer for the Omarchy bar with features like streak, daily goal, sessions, stats, history, and session progress visualization.",
+  "preview": {
+    "tagline": "A pomodoro timer that keeps score",
+    "icon": "app/icon-park-outline--tomato.svg",
+    "bullets": [
+      ["icons/hugeicons--flame.svg", "Streaks and daily goals keep you honest"],
+      ["icons/hugeicons--chart-03.svg", "Detailed statistics and history"],
+      ["icons/hugeicons--square-terminal.svg", "Bar widget and TUI always in sync"]
+    ],
+    "shot": "screenshot/focusd.png"
+  },
   "homepage": "https://github.com/BibekBhusal0/omarchy-focusd",
   "kinds": ["service", "bar-widget"],
   "entryPoints": {

@@ -98,6 +98,12 @@ publish_plugin() {
   (cd "$clone" && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +)
   cp -a "$dir/." "$clone/"
 
+  # Strip local-only preview metadata; it must not ship to standalone repos.
+  if [[ -f "$clone/manifest.json" ]]; then
+    jq 'del(.preview)' "$clone/manifest.json" > "$clone/manifest.json.tmp" &&
+      mv "$clone/manifest.json.tmp" "$clone/manifest.json"
+  fi
+
   # Give the standalone repo its own license, and make README license links
   # that pointed at the parent repo's ../LICENSE point at this local copy.
   if [[ -f "$ROOT/LICENSE" ]]; then

@@ -1,15 +1,30 @@
 import { WebView } from "bun";
 
-const source = await Bun.file(`${import.meta.dir}/banners.js`).text();
-const files = [...source.matchAll(/file:\s*"([^"]+)"/g)].map((m) => m[1]);
+const dir = import.meta.dir;
+const ROOT = `${dir}/..`;
 
+// Backend crops 87px off the captured height, so 887 lands exactly 800.
 const view = new WebView({ width: 1600, height: 887, backend: "chrome" });
 
-for (let i = 0; i < files.length; i++) {
-  await view.navigate(`file://${import.meta.dir}/index.html?banner=${i}`);
+for await (const path of new Bun.Glob("*/manifest.json").scan(ROOT)) {
+  const manifest = await Bun.file(`${ROOT}/${path}`).json();
+  if (!manifest.preview) continue;
+  const payload = encodeURIComponent(
+    JSON.stringify({
+      name: manifest.name,
+      icon: manifest.preview.icon,
+      tagline: manifest.preview.tagline,
+      bullets: manifest.preview.bullets,
+      shot: manifest.preview.shot,
+      id: manifest.id,
+      version: manifest.version,
+    }),
+  );
+  await view.navigate(`file://${dir}/index.html?banner=${payload}`);
   const blob = await view.screenshot({ format: "png" });
-  await Bun.write(`${import.meta.dir}/${files[i]}`, blob);
-  console.log("saved", files[i]);
+  const out = `${path.split("/")[0]}/preview.png`;
+  await Bun.write(`${ROOT}/${out}`, blob);
+  console.log("saved", out);
 }
 
 await view.close();
