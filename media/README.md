@@ -4,6 +4,8 @@ An MPRIS now-playing widget for the Omarchy bar, cloned from the built-in `omarc
 
 Shows the playing track with a play/pause glyph in the bar. Right-clicking opens a popup with album art, a seekable progress bar, transport controls, and a list of active media sources.
 
+![Media preview](preview.png)
+
 ## Features
 
 - Bar widget with play/pause state and "title · artist" (truncated with `…` when too long)

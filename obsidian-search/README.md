@@ -4,6 +4,8 @@ A beautiful [Obsidian](https://obsidian.md/) vault search menu. Type to filter n
 
 ![Obsidian search Demo](demo.gif)
 
+![Obsidian Search preview](preview.png)
+
 ## Features
 
 - Fuzzy search across your vault, ranked by relevance

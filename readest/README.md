@@ -2,6 +2,8 @@
 
 A beautiful [Readest](https://readest.com/) library search menu. Type to filter books by title or author with fuzzy ranking, and open one with Enter.
 
+![Readest preview](preview.png)
+
 ## Features
 
 - Fuzzy search across your library by title or author, ranked by relevance
