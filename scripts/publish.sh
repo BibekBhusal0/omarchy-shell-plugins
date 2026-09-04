@@ -124,6 +124,13 @@ publish_plugin() {
     (cd "$clone" && git push origin "$BRANCH")
   fi
 
+  local target_sha=""
+  target_sha="$(cd "$clone" && git rev-parse HEAD)"
+  log "To update at marketplace, open issue at: https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=verify-plugin.yml"
+  log "    Plugin ID: $id"
+  log "    Repository URL: https://github.com/$org/$repo"
+  log "    Target commit: $target_sha"
+
   # Release (idempotent: skip if the tag already exists).
   if ! gh api "repos/$org/$repo/releases/tags/v$version" >/dev/null 2>&1; then
     gh release create "v$version" --repo "$org/$repo" \
