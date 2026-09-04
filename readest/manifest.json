@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "bibek.readest",
   "name": "Readest",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "author": "Bibek Bhusal",
   "description": "Search and open books from the Readest library with fuzzy ranking by title or author.",
   "preview": {
