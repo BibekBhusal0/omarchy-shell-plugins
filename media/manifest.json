@@ -5,6 +5,16 @@
   "version": "1.1.0",
   "author": "Bibek Bhusal",
   "description": "MPRIS media control service with cliamp headless support",
+  "preview": {
+    "tagline": "Every player, one bar widget",
+    "icon": "app/media-note.svg",
+    "bullets": [
+      ["icons/hugeicons--play.svg", "Play, pause and seek from the bar"],
+      ["icons/hugeicons--image.svg", "Album art with progress popup"],
+      ["icons/hugeicons--list.svg", "Switch between all active sources"]
+    ],
+    "shot": "screenshot/media.png"
+  },
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
   "entryPoints": {

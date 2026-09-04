@@ -105,7 +105,7 @@ To install a plugin from this repo into the live shell:
 - `screenshot.ts` discovers every plugin folder with a `preview` key and passes each banner as JSON in `index.html?banner=...`, saving `../<plugin>/preview.png`.
 - `banners.js` holds one static `addBanner` renderer plus a single sample banner for style preview. Title shrinks automatically past 16 chars.
 - `publish.sh` strips `.preview` from manifests before pushing to standalone repos; marketplace and shell never see it.
-- `background.jpg` is the shared backdrop. `app/` has brand marks, `screenshot/` has raw plugin UI captures, `icons/` has bullet icons (white baked in; edit the SVG to recolor).
+- `background.jpg` is the shared backdrop. `app/` has brand marks, `screenshot/` has raw plugin UI captures, `icons/` has bullet icons (white baked in; edit the SVG to recolor). New HugeIcons come from the Iconify API (`curl "https://api.iconify.design/hugeicons:<name>.svg" -o banners/icons/hugeicons--<name>.svg`), then replace `currentColor` with `#fff` to match the set.
 - Quirks this backend forces: `?banner=` full reloads (scrollTo/evaluate broken, same-document `#` jumps hang navigate), zero body padding in single mode, 887px viewport height to land exactly 800px (backend crops 87px).
 
 ## Publishing
