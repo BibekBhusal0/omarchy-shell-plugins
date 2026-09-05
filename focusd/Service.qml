@@ -16,7 +16,7 @@ Item {
   property real progress: 0
   property string tooltipText: ""
 
-  property bool installed: true
+  property bool installed: false
 
   property int sessionsToday: 0
   property string focusedToday: "0s"
