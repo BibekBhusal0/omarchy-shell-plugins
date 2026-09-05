@@ -99,7 +99,7 @@ To install a plugin from this repo into the live shell:
 
 ## Banners
 
-`banners/` renders each marketplace plugin's `preview.png` (1600x800). Run `bun screenshot.ts` from inside it.
+`banners/` renders each marketplace plugin's `preview.png` (1600x800). Load the `banner` skill before touching it. Run `bun screenshot.ts` from inside it; CI also regenerates previews on every push, so bumping a version never ships a stale banner.
 
 - Banner copy lives in each plugin's `manifest.json` under `preview` (tagline, icon, bullets, shot). Name/id/version are reused for the heading and footer.
 - `screenshot.ts` discovers every plugin folder with a `preview` key and passes each banner as JSON in `index.html?banner=...`, saving `../<plugin>/preview.png`.

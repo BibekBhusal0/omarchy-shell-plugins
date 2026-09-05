@@ -27,6 +27,20 @@ jobs:
           sudo apt-get install -y --no-install-recommends qt6-declarative-dev-tools || \
           sudo apt-get install -y --no-install-recommends qml6format
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Render banners
+        env:
+          BUN_CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: |
+          sudo apt-get install -y fonts-jetbrains-mono
+          cd banners && bun screenshot.ts
+
       - name: Format
         run: |
           prettier --write "**/*.{js,json,md}"
