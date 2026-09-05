@@ -440,8 +440,7 @@ Panel {
         if (msg === "updated" && root.timerService) {
           root.timerService.versionChecked = false;
           root.timerService.checkVersion();
-        }
-        else if (msg.indexOf("needs_sudo") === 0) {
+        } else if (msg.indexOf("needs_sudo") === 0) {
           var tmpPath = msg.split(" ")[1];
           var sudoCmd = "INSTALLED_PATH=$(which focusd) && " + "sudo mv \"" + tmpPath + "\" \"$INSTALLED_PATH\" && sudo chmod +x \"$INSTALLED_PATH\" && " + "focusd --stop-daemon && focusd -d && echo 'Done! Press Enter to close.' && read";
           Quickshell.execDetached(["omarchy", "launch", "floating", "terminal", "with", "presentation", "sh", "-c", sudoCmd]);
