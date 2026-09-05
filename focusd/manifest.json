@@ -9,7 +9,7 @@
     "tagline": "A pomodoro timer that keeps score",
     "icon": "app/icon-park-outline--tomato.svg",
     "bullets": [
-      ["icons/hugeicons--flame.svg", "Streaks and daily goals keep you honest"],
+      ["icons/hugeicons--flame.svg", "Streaks and daily goals keep you going"],
       ["icons/hugeicons--chart-03.svg", "Detailed statistics and history"],
       ["icons/hugeicons--square-terminal.svg", "Bar widget and TUI always in sync"]
     ],
