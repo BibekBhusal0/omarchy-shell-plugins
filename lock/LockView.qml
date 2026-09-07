@@ -56,6 +56,7 @@ Item {
   }
   readonly property bool hasMedia: activeMprisPlayer !== null && (activeMprisPlayer.trackTitle || activeMprisPlayer.trackArtist)
   readonly property string mediaTitle: activeMprisPlayer ? (activeMprisPlayer.trackTitle || "") : ""
+  readonly property string mediaButtonTitle: mediaTitle.length > 40 ? mediaTitle.slice(0, 40) + "…" : mediaTitle
   readonly property string mediaArtist: activeMprisPlayer ? (activeMprisPlayer.trackArtist || "") : ""
   readonly property string mediaArtUrl: activeMprisPlayer ? (activeMprisPlayer.trackArtUrl || "") : ""
   readonly property bool isMediaPlaying: activeMprisPlayer ? activeMprisPlayer.isPlaying : false
@@ -320,7 +321,8 @@ Item {
     Button {
       id: mediaCornerBtn
       iconText: "󰝚"
-      text: root.mediaTitle
+      text: root.mediaButtonTitle
+      tooltipText: root.mediaTitle
       visible: root.hasMedia
       bordered: true
       background: Color.lock.background
