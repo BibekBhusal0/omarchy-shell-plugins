@@ -7,6 +7,8 @@ A beautiful [Obsidian](https://obsidian.md/) vault search menu. Type to filter n
 ## Features
 
 - Fuzzy search across your vault, ranked by relevance
+- Daily notes included, resolved from your daily-notes settings
+- Today's daily note pinned on top, opened or created with one Enter
 - Support for bases and canvas files as well
 - Create a missing note directly from the menu
 
@@ -34,16 +36,37 @@ Bind the menu to a key (`~/.config/hypr/bindings.lua`):
 o.bind("SUPER", "O", "exec, omarchy-shell shell summon bibek.obsidian-search")
 ```
 
-Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root.
+Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root. With an empty query the first row is always today's daily note, opened via Obsidian's `obsidian://daily` URI (it creates the note when missing). Typing `daily` or `today` keeps that row pinned on top.
+
 
 ## Configuration
 
-The vault is auto-detected from `~/.config/obsidian/obsidian.json` by default. Override it under the plugin entry in `~/.config/omarchy/shell.json`:
+The vault is auto-detected from `~/.config/obsidian/obsidian.json` by default. Daily notes are shown by default: the plugin reads the daily folder from `.obsidian/daily-notes.json` (or the periodic-notes plugin when it manages daily notes), and only hides that exact folder when you opt out. The today's-note pin needs the daily-notes (or periodic-notes daily) plugin enabled in the vault; it opens via `obsidian://daily`, so no filename or folder setup is needed for it.
+
+Override settings under the plugin entry in `~/.config/omarchy/shell.json`:
 
 ```json
 "plugins": [
-  { "id": "bibek.obsidian-search", "vaultPath": "/path/to/your/vault" }
+  {
+    "id": "bibek.obsidian-search",
+    "vaultPath": "/path/to/your/vault",
+    "showDailyNotes": true,
+    "showTemplates": false,
+  }
 ]
+```
+
+- `vaultPath`: vault directory. Defaults to the first vault in the Obsidian config.
+- `showDailyNotes`: show daily notes in results. Default `true`. Today's-note pin is always shown regardless.
+- `showTemplates`: also list files under the templates folder. Default `false`.
+- `opener`: how notes open with Enter. Default `"obsidian"`. Use `"omawrite"` to edit in omawrite, `"neovim"` (or `"nvim"`) to edit in Neovim inside a terminal, or any other command that takes a file path (for example `"code"` or `"xdg-open"`).
+
+```json
+{ "id": "bibek.obsidian-search", "opener": "omawrite" }
+```
+
+```json
+{ "id": "bibek.obsidian-search", "opener": "neovim" }
 ```
 
 ## Uninstall

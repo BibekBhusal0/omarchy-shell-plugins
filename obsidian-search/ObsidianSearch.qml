@@ -18,6 +18,7 @@ Item {
   property var items: []
   property var allItems: []
   property string vaultName: ""
+  property bool dailyEnabled: false
   property string searchScript: root.manifest && root.manifest.__sourceDir ? root.manifest.__sourceDir + "/search.sh" : ""
 
   // Shares the [menu] surface tokens so themes style it like the menu.
@@ -68,12 +69,27 @@ Item {
     root.searchSerial += 1;
     searchProc.serial = root.searchSerial;
     searchProc.collected = "";
+    root.dailyEnabled = false;
     var args = [root.searchScript];
     var vaultPath = root.pluginSetting("vaultPath");
     if (vaultPath)
       args.push(vaultPath);
+    args.push("--show-daily=" + (root.pluginSettingBool("showDailyNotes", true) ? "1" : "0"));
+    args.push("--show-templates=" + (root.pluginSettingBool("showTemplates", false) ? "1" : "0"));
     searchProc.command = args;
     searchProc.running = true;
+  }
+
+  function pluginSettingBool(name, fallback) {
+    var raw = root.pluginSetting(name);
+    if (raw === "")
+      return fallback;
+    var lowered = raw.toLowerCase();
+    if (lowered === "true" || lowered === "1" || lowered === "yes")
+      return true;
+    if (lowered === "false" || lowered === "0" || lowered === "no")
+      return false;
+    return fallback;
   }
 
   function pluginSetting(name) {
@@ -105,6 +121,12 @@ Item {
           root.vaultName = line.slice("#vault\t".length);
         continue;
       }
+        continue;
+      }
+      if (line === "#daily" || line.indexOf("#daily\t") === 0) {
+        root.dailyEnabled = true;
+        continue;
+      }
       var parts = line.split("\t");
       if (parts.length < 4)
         continue;
@@ -112,44 +134,80 @@ Item {
       if (uri.indexOf("obsidian://") !== 0)
         continue;
       var path = parts[2];
+      var kind = parts[1];
       var icon = "󰠮";
-      if (parts[1] === "Canvas")
+      if (kind === "Canvas")
         icon = "󰇞";
-      else if (parts[1] === "Base")
+      else if (kind === "Base")
         icon = "";
+      else if (kind === "Daily Note")
+        icon = "";
+      else if (kind === "Template")
+        icon = "󱘒";
       rows.push({
           "icon": icon,
           "label": parts[0],
-          "detail": parts[1],
+          "detail": kind,
           "action": uri,
           "title": parts[0],
           "domain": path,
-          "link": uri
+          "link": uri,
+          "kind": kind,
+          "rel": path
         });
     }
     return rows;
   }
 
   // Client-side fuzzy ranking on every keystroke; no per-key process spawn.
+  // With an empty query the first row pins today's daily note (open or
+  // create); any other query keeps the previous behavior plus a create row.
   function filter() {
     var query = root.filterText.trim();
     var shown = [];
     if (!query) {
       shown = root.allItems.slice();
+      if (root.dailyEnabled)
+        shown.unshift(root.dailyRow());
     } else {
       shown = FuzzySearch.search(root.filterText, root.allItems);
-      shown.unshift({
+      if (root.matchesDaily(query))
+        shown.unshift(root.dailyRow());
+      shown.push({
           "icon": "󱘒",
           "label": "Create new note - " + query,
           "detail": "Create '" + query + ".md' in " + root.vaultName,
           "action": "obsidian://new?vault=" + encodeURIComponent(root.vaultName) + "&name=" + encodeURIComponent(query),
           "title": query,
           "domain": root.vaultName,
-          "link": ""
+          "link": "",
+          "kind": "New Note",
+          "rel": query + ".md"
         });
     }
     root.items = shown;
     root.rebuildDisplay();
+  }
+
+  function matchesDaily(query) {
+    if (!root.dailyEnabled)
+      return false;
+    var q = query.trim().toLowerCase();
+    return q.indexOf("daily") !== -1 || q.indexOf("today") !== -1;
+  }
+
+  function dailyRow() {
+    return {
+      "icon": "",
+      "label": "Today's daily note",
+      "detail": "Open in " + root.vaultName,
+      "action": "obsidian://daily?vault=" + encodeURIComponent(root.vaultName),
+      "title": "Today's daily note",
+      "domain": root.vaultName,
+      "link": "",
+      "kind": "Daily Pin",
+      "rel": ""
+    };
   }
 
   function rebuildDisplay() {
