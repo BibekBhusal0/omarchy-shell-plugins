@@ -80,8 +80,11 @@ To install a plugin from this repo into the live shell:
 ## Plugin conventions
 
 - `manifest.json` is the schema source of truth: `kinds`, `entryPoints`, and `barWidget.schema`/`defaults` define what the shell reads. New configurable options must be added there.
-- Settings helpers are inherited from the shell's `Panel`/`BarWidget` base (see `/usr/share/omarchy/shell/Ui/Panel.qml:39`): `setting(name, fallback)` reads `settings[name]`. Dotted keys like `icons.work` work.
-- **Keyboard navigation required:** Interactive components (panels, lock screen overlays, controls) must support full keyboard navigation (Tab/Shift+Tab, Arrow keys, Enter/Space activation, Esc).
+- Settings helpers are inherited from the shell's `Panel`/`BarWidget` base (see `/usr/share/omarchy/shell/Ui/Panel.qml:39`): `setting(name, fallback)` reads `settings[name]`. Dotted keys like `icons.work` work. Menu overlays in this repo do not extend that base; they read the same inline `shell.json` entry by looping over `shellConfig.plugins` for their own id (see `pluginSetting` in `obsidian-search/ObsidianSearch.qml`). Values arrive as strings there, so booleans need an explicit `"true"/"false"` conversion (`pluginSettingBool`). There is no manifest schema section for overlays (only `barWidget.schema`/`defaults`), so overlay options live in code plus README, not in `manifest.json`.
+- **Keyboard navigation required:** every interactive component must be fully keyboard operable. Three patterns, one per surface type:
+  - Menu overlays (list pickers like `obsidian-search`, `readest`): Up/Down and Ctrl+K/Ctrl+J move one row, PageUp/PageDown jump 6, Enter (or Right) activates, Esc clears the filter first and closes on the second press. Text editing goes through `Util.editsFilter`/`Util.editedFilter` (Backspace, Ctrl+Backspace, Ctrl+U). Printable characters append to the filter only with NoModifier/ShiftModifier, and Alt+`<key>` combos are reserved for alternate actions, so they must be matched before the text branch.
+  - Bar panels (like `focusd`): route keys through the shell's `PanelKeyCatcher` and wire up its move/activate/close/tab signals. Note Tab switches between open panels instead of moving focus.
+  - Lock screen (`lock/LockView.qml`): roving `focusIndex` over controls, Tab/Down moves next, Shift+Tab/Up moves previous, Enter/Space activates. Esc never unlocks or closes: it dismisses the media popup, otherwise it resets focus to the password field (clearing it when typed in the field). Any printable key refocuses the password field first (password-first), and Ctrl+U clears it.
 
 ## Plugin specifics
 
