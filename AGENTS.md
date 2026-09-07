@@ -25,6 +25,7 @@ QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **
 
 - `scripts/watch-sync.sh` watches this repo with `inotifywait` and copies changed `.qml/.js/.json/.sh` files into `~/.config/omarchy/plugins/<id>/`. Run it as a systemd user unit: `systemd-run --user --unit=plugin-watch --collect --working-directory=<repo> <repo>/scripts/watch-sync.sh` (currently active). It's also launched from `.tmuxinator.yml`.
 - **Never symlink** `~/.config/omarchy/plugins/<id>` to this repo: inotify does not follow symlinks, so hot-reload silently breaks (verified empirically). Keep real dirs.
+- **"sync" means only this:** copy changed files to `~/.config/omarchy/plugins/<plugin-folder>/` and restart the shell (`omarchy restart shell`). Nothing else: no status checks, no IPC calls, no log inspection, no testing.
 
 ## Plugin install and test workflow
 
