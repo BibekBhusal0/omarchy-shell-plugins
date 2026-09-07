@@ -19,7 +19,10 @@ Item {
   property var items: []
   property var allItems: []
   property string vaultName: ""
+  property string vaultPathResolved: ""
   property bool dailyEnabled: false
+  property var pendingLaunch: []
+  property bool hasPendingLaunch: false
   property string searchScript: root.manifest && root.manifest.__sourceDir ? root.manifest.__sourceDir + "/search.sh" : ""
 
   // Shares the [menu] surface tokens so themes style it like the menu.
@@ -122,6 +125,8 @@ Item {
           root.vaultName = line.slice("#vault\t".length);
         continue;
       }
+      if (line.indexOf("#vaultpath\t") === 0) {
+        root.vaultPathResolved = line.slice("#vaultpath\t".length).trim();
         continue;
       }
       if (line === "#daily" || line.indexOf("#daily\t") === 0) {
@@ -259,13 +264,58 @@ Item {
     root.selectedIndex = index;
   }
 
-  function activateIndex(index) {
+  function absPathFor(rel) {
+    if (!rel)
+      return "";
+    if (rel.charAt(0) === "/")
+      return rel;
+    var base = root.vaultPathResolved;
+    if (!base) {
+      base = root.pluginSetting("vaultPath");
+      if (base.indexOf("~/") === 0)
+        base = Quickshell.env("HOME") + base.slice(1);
+    }
+    if (!base)
+      return "";
+    return base.replace(/\/$/, "") + "/" + rel;
+  }
+
+  function launchArgvFor(mode, row) {
+    var kind = row.kind || "Note";
+    var forcedObsidian = kind === "Canvas" || kind === "Base" || kind === "Daily Note" || kind === "Daily Pin" || kind === "Template";
+    var opener = mode === "omawrite" ? "omawrite" : mode === "neovim" ? "nvim" : root.pluginSetting("opener") || "obsidian";
+    var lowered = String(opener).toLowerCase();
+    if (!forcedObsidian) {
+      if (lowered === "omawrite")
+        return ["omawrite", root.absPathFor(row.rel)];
+      if (lowered === "neovim" || lowered === "nvim" || lowered === "vim")
+        return ["omarchy", "launch", "tui", "--app-id=nvim-obsidian", "nvim", root.absPathFor(row.rel)];
+      if (lowered !== "obsidian")
+        return [String(opener), root.absPathFor(row.rel)];
+    }
+    return ["obsidian", row.action];
+  }
+
+  function activateIndex(index, mode) {
     if (index < 0 || index >= displayModel.count)
       return;
     var row = displayModel.get(index);
-    var action = row.action;
+    var kind = row.kind || "Note";
+    var argv = root.launchArgvFor(mode || "", row);
+    var needsFile = kind === "New Note" && argv[0] !== "obsidian";
     root.opened = false;
-    Util.execArgv(["obsidian", action]);
+    if (needsFile) {
+      var abs = root.absPathFor(row.rel);
+      if (!abs)
+        return;
+      root.pendingLaunch = argv;
+      root.hasPendingLaunch = true;
+      var dir = abs.slice(0, abs.lastIndexOf("/"));
+      ensureProc.command = ["bash", "-lc", 'mkdir -p "$1" && [ -e "$2" ] || touch "$2"', "bash", dir, abs];
+      ensureProc.running = true;
+      return;
+    }
+    Util.execArgv(argv);
   }
 
   ListModel {
@@ -287,6 +337,23 @@ Item {
       root.allItems = root.parseResults(searchProc.collected);
       root.filter();
     }
+  }
+
+  // Creates the parent dir plus an empty file for daily pins and new notes
+  // opened in an external editor, then runs the pending launch.
+  Process {
+    id: ensureProc
+    onExited: {
+      if (!root.hasPendingLaunch)
+        return;
+      root.hasPendingLaunch = false;
+      launchProc.command = root.pendingLaunch;
+      launchProc.running = true;
+    }
+  }
+
+  Process {
+    id: launchProc
   }
 
   PointerMoveGate {
@@ -362,6 +429,18 @@ Item {
             event.accepted = true;
           } else if (event.key === Qt.Key_PageDown) {
             root.select(6);
+            event.accepted = true;
+          } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_O) {
+            if (root.cursorActive)
+              root.activateIndex(root.selectedIndex, "omawrite");
+            else if (displayModel.count > 0)
+              root.cursorActive = true;
+            event.accepted = true;
+          } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_N) {
+            if (root.cursorActive)
+              root.activateIndex(root.selectedIndex, "neovim");
+            else if (displayModel.count > 0)
+              root.cursorActive = true;
             event.accepted = true;
           } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Right) {
             if (root.cursorActive)

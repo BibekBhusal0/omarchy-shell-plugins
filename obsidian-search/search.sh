@@ -6,6 +6,7 @@
 #
 # Headers:
 #   #vault \t <vault name>
+#   #vaultpath \t <absolute vault path>
 #   #daily (no arguments; only emitted when the daily-notes or periodic-notes
 #     plugin manages daily notes — the client opens it via obsidian://daily)
 #
