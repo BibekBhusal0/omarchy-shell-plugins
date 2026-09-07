@@ -424,6 +424,12 @@ Item {
           } else if (event.key === Qt.Key_Down) {
             root.select(1);
             event.accepted = true;
+          } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_K) {
+            root.select(-1);
+            event.accepted = true;
+          } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_J) {
+            root.select(1);
+            event.accepted = true;
           } else if (event.key === Qt.Key_PageUp) {
             root.select(-6);
             event.accepted = true;
@@ -448,7 +454,7 @@ Item {
             else if (displayModel.count > 0)
               root.cursorActive = true;
             event.accepted = true;
-          } else if (event.text && event.text.length === 1 && event.text.charCodeAt(0) >= 32 && event.text.charCodeAt(0) !== 127) {
+          } else if (event.text && event.text.length === 1 && event.text.charCodeAt(0) >= 32 && event.text.charCodeAt(0) !== 127 && (event.modifiers === Qt.NoModifier || event.modifiers === Qt.ShiftModifier)) {
             root.setFilter(root.filterText + event.text);
             event.accepted = true;
           }

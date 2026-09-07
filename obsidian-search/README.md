@@ -39,6 +39,7 @@ o.bind("SUPER", "O", "exec, omarchy-shell shell summon bibek.obsidian-search")
 
 Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root. With an empty query the first row is always today's daily note, opened via Obsidian's `obsidian://daily` URI (it creates the note when missing). Typing `daily` or `today` keeps that row pinned on top.
 
+Shortcuts: Up/Down or Ctrl+K/Ctrl+J to move, PageUp/PageDown to jump, Enter to open with the configured opener, Alt+O to open the selected note in omawrite, Alt+N to open it in Neovim.
 
 ## Where notes open
 

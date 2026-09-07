@@ -29,7 +29,7 @@ Bind the menu to a key (`~/.config/hypr/bindings.lua`):
 o.bind("SUPER", "R", "exec, omarchy-shell shell summon bibek.readest")
 ```
 
-Type to filter, Enter opens the selected book in Readest, Escape closes.
+Type to filter, Enter opens the selected book in Readest, Escape closes. Move with Up/Down or Ctrl+K/Ctrl+J, jump with PageUp/PageDown.
 
 ## Configuration
 
