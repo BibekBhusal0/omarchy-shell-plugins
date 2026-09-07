@@ -10,6 +10,7 @@ Item {
   id: root
 
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
+  property var shell: null
   property var manifest: null
   property bool opened: false
   property string filterText: ""
