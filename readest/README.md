@@ -33,12 +33,10 @@ Type to filter, Enter opens the selected book in Readest, Escape closes. Move wi
 
 ## Configuration
 
-The library is read from `~/.local/share/com.bilingify.readest/Readest/Books` by default. Override it under the plugin entry in `~/.config/omarchy/shell.json`:
+The library is read from `~/.local/share/com.bilingify.readest/Readest/Books` by default. Override it in `~/.config/omarchy/readest.json` (watched live, so edits apply instantly):
 
 ```json
-"plugins": [
-  { "id": "bibek.readest", "libraryPath": "/path/to/your/books" }
-]
+{ "libraryPath": "/path/to/your/books" }
 ```
 
 ## Uninstall
