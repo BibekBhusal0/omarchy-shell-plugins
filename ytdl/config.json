@@ -1,11 +1,11 @@
 {
   "downloadLocation": "~/Downloads/youtube",
-  "defaultQuality": "720p",
-  "defaultDownloadType": "audio",
+  "defaultQuality": "1080p",
+  "defaultDownloadType": "video",
   "cookiesBrowser": "zen",
   "extraArgs": "",
   "enableHistory": true,
-  "downloadTranscripts": true,
+  "downloadTranscripts": false,
   "transcriptLanguages": "en",
   "playlistInSeparateFolder": true
 }
