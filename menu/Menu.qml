@@ -164,9 +164,10 @@ Item {
   FileView {
     id: fallbackHidesFile
     path: root.fallbackBase() + "/default/omarchy/launcher.hides"
+    watchChanges: true
     printErrors: false
     onLoaded: { root.fallbackConfiguredHides = text(); root.loadFallbackHides(text() + "\n" + fallbackHidesOutput.text) }
-    onFileChanged: { root.fallbackConfiguredHides = text(); root.loadFallbackHides(text() + "\n" + fallbackHidesOutput.text) }
+    onFileChanged: fallbackHidesFile.reload()
     onLoadFailed: { root.fallbackConfiguredHides = ""; root.loadFallbackHides(fallbackHidesOutput.text) }
   }
   QtObject { id: fallbackHidesOutput; property string text: "" }
@@ -182,9 +183,10 @@ Item {
   FileView {
     id: searchEngineFile
     path: Quickshell.env("HOME") + "/.config/omarchy/menu.json"
+    watchChanges: true
     printErrors: false
     onLoaded: root.loadEngineConfig(text())
-    onFileChanged: root.loadEngineConfig(text())
+    onFileChanged: searchEngineFile.reload()
     onLoadFailed: root.searchEngineRaw = ""
   }
   function loadEngineConfig(rawText) {
