@@ -17,7 +17,22 @@ Panel {
   readonly property color foreground: Color.popups.text
   readonly property color activeColor: Color.accent
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
-  readonly property string progressBarStyle: setting("progressBarStyle", "linear")
+  readonly property string progressBarStyle: root.fileConfig.progressBarStyle || "linear"
+  property var fileConfig: ({})
+  FileView {
+    id: configFile
+    path: Quickshell.env("HOME") + "/.config/omarchy/focusd.json"
+    printErrors: false
+    onLoaded: root.fileConfig = root.parseFileConfig(text())
+    onFileChanged: root.fileConfig = root.parseFileConfig(text())
+    onLoadFailed: root.fileConfig = ({})
+  }
+  function parseFileConfig(raw) {
+    try {
+      var parsed = JSON.parse(String(raw || ""));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : ({});
+    } catch (e) { return ({}); }
+  }
   property int selectedAction: 0
   property bool cursorActive: true
 

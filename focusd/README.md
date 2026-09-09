@@ -47,27 +47,20 @@ Start the timer with `focusd start`. Press Escape in the info page to return to 
 
 ## Configuration
 
-Durations and presets are set in Focusd itself (`focusd settings`). The plugin's options go under its entry in `~/.config/omarchy/shell.json`.
+Durations and presets are set in Focusd itself (`focusd settings`). The plugin's options live in `~/.config/omarchy/focusd.json` (watched live, so edits apply instantly).
 
 Default configuration:
 
 ```json
-"bar": {
-  "layout": {
-    "right": [
-      {
-        "id": "bibek.focusd",
-        "progressBarStyle": "linear",
-        "icons": {
-          "work": "",
-          "work-paused": "󰏤",
-          "short-break": "",
-          "short-break-paused": "󰏤",
-          "long-break": "󰒲",
-          "long-break-paused": "󰏤"
-        }
-      }
-    ]
+{
+  "progressBarStyle": "linear",
+  "icons": {
+    "work": "",
+    "work-paused": "󰏤",
+    "short-break": "",
+    "short-break-paused": "󰏤",
+    "long-break": "󰒲",
+    "long-break-paused": "󰏤"
   }
 }
 ```
@@ -75,13 +68,7 @@ Default configuration:
 `progressBarStyle` switches the popup between the `linear` and `circular`:
 
 ```json
-"bar": {
-  "layout": {
-    "right": [
-      { "id": "bibek.focusd", "progressBarStyle": "circular" }
-    ]
-  }
-}
+{ "progressBarStyle": "circular" }
 ```
 
 `icons` overrides the per-state bar icons. Any of the keys above can be replaced:

@@ -1,0 +1,11 @@
+{
+  "progressBarStyle": "linear",
+  "icons": {
+    "work": "",
+    "work-paused": "",
+    "short-break": " ",
+    "short-break-paused": " ",
+    "long-break": "󰒲",
+    "long-break-paused": "󰒲"
+  }
+}
