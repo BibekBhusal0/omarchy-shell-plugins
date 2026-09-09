@@ -40,6 +40,12 @@ To install a plugin from this repo into the live shell:
 
    **Important**: Use the folder name (e.g., `focusd`), not the plugin ID from manifest.json (e.g., `bibek.focusd`).
 
+2. **Link its config file** (plugins with user settings keep a `config.json` next to the code; personal values stay in this repo and ship nowhere):
+
+   ```bash
+   ln -sfn <repo>/<plugin-folder>/config.json ~/.config/omarchy/<plugin-folder-name>.json
+   ```
+
 2. **Register the plugin** in `~/.config/omarchy/shell.json`:
    - Add `{"id": "<plugin-id>"}` to the `plugins` array (for services/overlays).
    - For bar widgets, also add `{"id": "<plugin-id>"}` to `bar.layout.right` (or `left`/`center`).
@@ -81,7 +87,7 @@ To install a plugin from this repo into the live shell:
 ## Plugin conventions
 
 - `manifest.json` is the schema source of truth: `kinds`, `entryPoints`, and `barWidget.schema`/`defaults` define what the shell reads. New configurable options must be added there.
-- Settings helpers are inherited from the shell's `Panel`/`BarWidget` base (see `/usr/share/omarchy/shell/Ui/Panel.qml:39`): `setting(name, fallback)` reads `settings[name]`. Dotted keys like `icons.work` work. Menu overlays in this repo do not extend that base; they read the same inline `shell.json` entry by looping over `shellConfig.plugins` for their own id (see `pluginSetting` in `obsidian-search/ObsidianSearch.qml`). Values arrive as strings there, so booleans need an explicit `"true"/"false"` conversion (`pluginSettingBool`). There is no manifest schema section for overlays (only `barWidget.schema`/`defaults`), so overlay options live in code plus README, not in `manifest.json`.
+- Settings live in per-plugin JSON files, never in `shell.json`: each plugin keeps a `config.json` next to its code, symlinked to `~/.config/omarchy/<plugin-folder>.json` (installed via `omarchy-overrides/config/omarchy.sh`). The shell hides `shell.json` from third-party plugins and silently drops their writes, so `setting()`/`pluginSetting`/`mutateShellConfig` must not be used for settings. Read pattern is a `FileView` on the config path plus a `cfg(name, fallback)` lookup with JSON parsing guarded by try/catch (see `menu/Menu.qml`); booleans accept real JSON booleans plus `"true"/"false"/"1"/"0"` strings. Writes (only `ytdl` so far) go through a debounced whole-document flush to avoid concurrent-write races, executed via a `jq` helper script with an allowlisted key set (see `ytdl/scripts/save-setting`), never via shell string interpolation. `publish.sh` strips `config.json` before pushing to standalone repos, so personal values stay in this repo. READMEs document configuration with generic example values, never personal ones. Do not add `barWidget.schema`: the shell settings UI it renders would write to `shell.json`, which plugins ignore.
 - **Keyboard navigation required:** every interactive component must be fully keyboard operable. Three patterns, one per surface type:
   - Menu overlays (list pickers like `obsidian-search`, `readest`): Up/Down and Ctrl+K/Ctrl+J move one row, PageUp/PageDown jump 6, Enter (or Right) activates, Esc clears the filter first and closes on the second press. Text editing goes through `Util.editsFilter`/`Util.editedFilter` (Backspace, Ctrl+Backspace, Ctrl+U). Printable characters append to the filter only with NoModifier/ShiftModifier, and Alt+`<key>` combos are reserved for alternate actions, so they must be matched before the text branch.
   - Bar panels (like `focusd`): route keys through the shell's `PanelKeyCatcher` and wire up its move/activate/close/tab signals. Note Tab switches between open panels instead of moving focus.
