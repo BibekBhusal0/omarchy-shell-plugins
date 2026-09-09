@@ -9,4 +9,6 @@ json="${2:?json document required}"
 
 tmp="$(mktemp)" || exit 1
 jq -n --argjson doc "$json" '$doc | {downloadLocation, defaultQuality, defaultDownloadType, cookiesBrowser, extraArgs, enableHistory, downloadTranscripts, transcriptLanguages, playlistInSeparateFolder} | with_entries(select(.value != null))' >"$tmp"
-mv "$tmp" "$file"
+# Redirect, never move: mv would replace a symlinked config with a real file.
+cat "$tmp" >"$file"
+rm -f "$tmp"

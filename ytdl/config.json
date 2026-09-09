@@ -7,5 +7,5 @@
   "enableHistory": true,
   "downloadTranscripts": true,
   "transcriptLanguages": "en",
-  "playlistInSeparateFolder": false
+  "playlistInSeparateFolder": true
 }

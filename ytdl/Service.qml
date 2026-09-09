@@ -145,9 +145,10 @@ Item {
   FileView {
     id: configFile
     path: root.configPath
+    watchChanges: true
     printErrors: false
     onLoaded: { root.fileConfig = root.parseFileConfig(text()); root.applyFileConfig(); }
-    onFileChanged: { root.fileConfig = root.parseFileConfig(text()); root.applyFileConfig(); }
+    onFileChanged: configFile.reload()
     onLoadFailed: root.fileConfig = ({})
   }
   readonly property string detectScriptPath: Qt.resolvedUrl("scripts/detect-url-mpri").toString().replace(/^file:\/\//, "")
