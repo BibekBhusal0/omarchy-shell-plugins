@@ -8,15 +8,21 @@ Shows the playing track with a play/pause glyph in the bar. Right-clicking opens
 
 ## Features
 
-- Bar widget with play/pause state and "title · artist" (truncated with `…` when too long)
-- Popup with album art, seekable progress bar with elapsed/total time, transport controls, and source switching
-- Clickable/slidable progress bar for seeking within a track (falls back to border when position is unavailable)
+From the built-in `omarchy.media`:
+
+- Bar widget with play/pause state and "title · artist" display
+- Popup card with album art, title, artist, album and transport controls
+- Multi-source list with switching
+- MPRIS tracking across players
+- IPC `media` target for scripts and hotkeys
+
+New in this clone:
+
+- Seekable progress bar with elapsed/total time, clickable for seeking within a track
 - Shuffle and repeat toggles in the popup
-- Switching sources pauses the current track and plays the selected one
-- Full MPRIS support for any player (Spotify, browsers, etc.)
+- Switching sources pauses the previous track and plays the selected one
 - [cliamp](https://github.com/bjarneo/cliamp) headless daemon support (`cliamp --daemon`, no MPRIS bridge needed)
-- Keyboard navigation in the popup (arrow keys to move, enter to activate, q to close)
-- IPC target `media` for scripts and hotkeys
+- Full keyboard navigation in the popup (arrow keys to move, enter to activate, q to close)
 
 ## Requirements
 
