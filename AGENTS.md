@@ -46,17 +46,17 @@ To install a plugin from this repo into the live shell:
    ln -sfn <repo>/<plugin-folder>/config.json ~/.config/omarchy/<plugin-folder-name>.json
    ```
 
-2. **Register the plugin** in `~/.config/omarchy/shell.json`:
+3. **Register the plugin** in `~/.config/omarchy/shell.json`:
    - Add `{"id": "<plugin-id>"}` to the `plugins` array (for services/overlays).
    - For bar widgets, also add `{"id": "<plugin-id>"}` to `bar.layout.right` (or `left`/`center`).
 
-3. **Restart the shell** to load changes:
+4. **Restart the shell** to load changes:
 
    ```bash
    omarchy-restart-shell
    ```
 
-4. **Test the plugin** by summoning it:
+5. **Test the plugin** by summoning it:
 
    ```bash
    omarchy-shell shell summon <plugin-id>
@@ -64,7 +64,7 @@ To install a plugin from this repo into the live shell:
 
    Check for errors in the output. If there are QML errors, they will show in the shell output.
 
-5. **Iterate**: Edit files in the repo, restart shell, test again. Symlinked dirs may not hot-reload, so restart the shell when a change does not apply.
+6. **Iterate**: Edit files in the repo, restart shell, test again. Symlinked dirs may not hot-reload, so restart the shell when a change does not apply.
 
 **Tip**: Use `omarchy-shell shell call <plugin-id> state` to inspect live plugin state for debugging.
 

@@ -32,7 +32,9 @@ Panel {
     try {
       var parsed = JSON.parse(String(raw || ""));
       return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : ({});
-    } catch (e) { return ({}); }
+    } catch (e) {
+      return ({});
+    }
   }
   property int selectedAction: 0
   property bool cursorActive: true

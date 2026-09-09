@@ -67,16 +67,24 @@ Item {
     try {
       var parsed = JSON.parse(String(raw || ""));
       return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : ({});
-    } catch (e) { return ({}); }
+    } catch (e) {
+      return ({});
+    }
   }
   FileView {
     id: configFile
     path: Quickshell.env("HOME") + "/.config/omarchy/focusd.json"
     watchChanges: true
     printErrors: false
-    onLoaded: { root.fileConfig = root.parseFileConfig(text()); root.configure(); }
+    onLoaded: {
+      root.fileConfig = root.parseFileConfig(text());
+      root.configure();
+    }
     onFileChanged: configFile.reload()
-    onLoadFailed: { root.fileConfig = ({}); root.configure(); }
+    onLoadFailed: {
+      root.fileConfig = ({});
+      root.configure();
+    }
   }
 
   function iconFor(key) {

@@ -90,7 +90,9 @@ Item {
     try {
       var parsed = JSON.parse(String(raw || ""));
       return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : ({});
-    } catch (e) { return ({}); }
+    } catch (e) {
+      return ({});
+    }
   }
   function cfg(name, fallback) {
     var value = root.fileConfig ? root.fileConfig[name] : undefined;

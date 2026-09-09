@@ -89,7 +89,9 @@ Item {
     try {
       var parsed = JSON.parse(String(raw || ""));
       return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : ({});
-    } catch (e) { return ({}); }
+    } catch (e) {
+      return ({});
+    }
   }
   function cfg(name, fallback) {
     var value = root.fileConfig ? root.fileConfig[name] : undefined;
@@ -97,12 +99,17 @@ Item {
   }
   function cfgBool(name, fallback) {
     var raw = root.cfg(name, "");
-    if (raw === "") return fallback;
-    if (raw === true) return true;
-    if (raw === false) return false;
+    if (raw === "")
+      return fallback;
+    if (raw === true)
+      return true;
+    if (raw === false)
+      return false;
     var lowered = String(raw).toLowerCase();
-    if (lowered === "true" || lowered === "1" || lowered === "yes") return true;
-    if (lowered === "false" || lowered === "0" || lowered === "no") return false;
+    if (lowered === "true" || lowered === "1" || lowered === "yes")
+      return true;
+    if (lowered === "false" || lowered === "0" || lowered === "no")
+      return false;
     return fallback;
   }
   FileView {
