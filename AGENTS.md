@@ -21,21 +21,20 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 
 ## How the dev loop works (critical)
 
-QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **no build step** for the plugin code itself. The shell only hot-reloads files under `~/.config/omarchy/plugins/<id>/` — **not** files in this repo.
+QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **no build step** for the plugin code itself.
 
-- `scripts/watch-sync.sh` watches this repo with `inotifywait` and copies changed `.qml/.js/.json/.sh` files into `~/.config/omarchy/plugins/<id>/`. Run it as a systemd user unit: `systemd-run --user --unit=plugin-watch --collect --working-directory=<repo> <repo>/scripts/watch-sync.sh` (currently active). It's also launched from `.tmuxinator.yml`.
-- **Never symlink** `~/.config/omarchy/plugins/<id>` to this repo: inotify does not follow symlinks, so hot-reload silently breaks (verified empirically). Keep real dirs.
-- **"sync" means only this:** copy changed files to `~/.config/omarchy/plugins/<plugin-folder>/` and restart the shell (`omarchy restart shell`). Nothing else: no status checks, no IPC calls, no log inspection, no testing.
+- `~/.config/omarchy/plugins/<id>/` are symlinks into this repo (installed via `omarchy-overrides/config/omarchy.sh` `install_my_plugin`). Edits here are live, no copy step.
+- Symlinked dirs may not hot-reload on save, so restart the shell (`omarchy restart shell`).
+- **"sync" means only this:** restart the shell (`omarchy restart shell`). Nothing else: no status checks, no IPC calls, no log inspection, no testing.
 
 ## Plugin install and test workflow
 
 To install a plugin from this repo into the live shell:
 
-1. **Copy plugin files** to the user plugins directory:
+1. **Link plugin files** to the user plugins directory:
 
    ```bash
-   mkdir -p ~/.config/omarchy/plugins/<plugin-folder-name>
-   cp -a <repo>/<plugin-folder>/. ~/.config/omarchy/plugins/<plugin-folder-name>/
+   ln -sfn <repo>/<plugin-folder> ~/.config/omarchy/plugins/<plugin-folder-name>/
    ```
 
    **Important**: Use the folder name (e.g., `focusd`), not the plugin ID from manifest.json (e.g., `bibek.focusd`).
@@ -58,7 +57,7 @@ To install a plugin from this repo into the live shell:
 
    Check for errors in the output. If there are QML errors, they will show in the shell output.
 
-5. **Iterate**: Edit files in the repo, re-copy to `~/.config/omarchy/plugins/<plugin-folder-name>/`, restart shell, test again. The shell hot-reloads on file save when the plugin dir is a real directory (not a symlink).
+5. **Iterate**: Edit files in the repo, restart shell, test again. Symlinked dirs may not hot-reload, so restart the shell when a change does not apply.
 
 **Tip**: Use `omarchy-shell shell call <plugin-id> state` to inspect live plugin state for debugging.
 

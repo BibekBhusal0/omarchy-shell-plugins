@@ -7,9 +7,3 @@ workspaces:
       - label: AI
         panes:
           - command: opencode --yolo
-      - label: sync
-        panes:
-          - {}
-          - split: right
-            ratio: 0.7
-            command: ./scripts/watch-sync.sh
