@@ -18,7 +18,7 @@ Item {
   property bool cursorActive: false
   property var items: []
   property var allItems: []
-  property string searchScript: root.manifest && root.manifest.__sourceDir ? root.manifest.__sourceDir + "/search.sh" : ""
+  readonly property string searchScript: Qt.resolvedUrl("search.sh").toString().replace(/^file:\/\//, "")
   property string readestCmd: "readest"
 
   Component.onCompleted: {

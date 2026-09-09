@@ -23,7 +23,7 @@ Item {
   property bool dailyEnabled: false
   property var pendingLaunch: []
   property bool hasPendingLaunch: false
-  property string searchScript: root.manifest && root.manifest.__sourceDir ? root.manifest.__sourceDir + "/search.sh" : ""
+  readonly property string searchScript: Qt.resolvedUrl("search.sh").toString().replace(/^file:\/\//, "")
 
   // Shares the [menu] surface tokens so themes style it like the menu.
   property color background: Color.menu.background
