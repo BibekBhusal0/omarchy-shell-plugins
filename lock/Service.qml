@@ -41,10 +41,24 @@ Item {
   readonly property bool locked: lockRequested || sessionLock.locked || sessionLock.secure
   readonly property bool authenticating: authenticatingPassword || fingerprintAuthenticating
 
+  property var fileConfig: ({})
+  function parseFileConfig(raw) {
+    try {
+      var parsed = JSON.parse(String(raw || ""));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : ({});
+    } catch (e) { return ({}); }
+  }
   function setting(key, fallback) {
-    if (root.settings && root.settings[key] !== undefined)
-      return root.settings[key];
-    return fallback;
+    var value = root.fileConfig ? root.fileConfig[key] : undefined;
+    return value === undefined || value === null ? fallback : value;
+  }
+  FileView {
+    id: configFile
+    path: Quickshell.env("HOME") + "/.config/omarchy/lock.json"
+    printErrors: false
+    onLoaded: root.fileConfig = root.parseFileConfig(text())
+    onFileChanged: root.fileConfig = root.parseFileConfig(text())
+    onLoadFailed: root.fileConfig = ({})
   }
 
   function realScreenCount() {

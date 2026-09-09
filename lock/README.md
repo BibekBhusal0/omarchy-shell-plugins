@@ -4,11 +4,18 @@ A custom lock screen service for Omarchy, cloned from the built-in `omarchy.lock
 
 ## Features
 
+From the built-in `omarchy.lock`:
+
+- Password and fingerprint PAM authentication with session lock handling
+
+New in this clone:
+
 - Big customizable date and time display above the password input field
 - Power action controls at the bottom for Shutdown, Restart, and Sleep
 - Integrated MPRIS media widget showing currently playing track title, artist, and playback controls (previous, play/pause, next)
 - Security prompt for "Forgot password" that alerts and blanks the screen
 - Separate password and fingerprint PAM authentication flows
+- Full keyboard navigation across every control
 
 ## Requirements
 
@@ -24,17 +31,12 @@ omarchy plugin add https://github.com/BibekBhusal0/omarchy-lock.git --enable
 
 ## Configuration
 
-Options can be customized under its entry in `~/.config/omarchy/shell.json`:
+Options live in `~/.config/omarchy/lock.json` (watched live, so edits apply instantly):
 
 ```json
 {
-  "plugins": [
-    {
-      "id": "bibek.lock",
-      "timeFormat": "hh:mm AP",
-      "dateFormat": "dddd, MMMM d"
-    }
-  ]
+  "timeFormat": "hh:mm AP",
+  "dateFormat": "dddd, MMMM d"
 }
 ```
 
