@@ -106,6 +106,9 @@ publish_plugin() {
       mv "$clone/manifest.json.tmp" "$clone/manifest.json"
   fi
 
+  # Drop the personal config file; standalone installs start from code defaults.
+  rm -f "$clone/config.json"
+
   # Give the standalone repo its own license, and make README license links
   # that pointed at the parent repo's ../LICENSE point at this local copy.
   if [[ -f "$ROOT/LICENSE" ]]; then
