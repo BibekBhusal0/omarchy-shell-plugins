@@ -72,9 +72,10 @@ Item {
   FileView {
     id: configFile
     path: Quickshell.env("HOME") + "/.config/omarchy/focusd.json"
+    watchChanges: true
     printErrors: false
     onLoaded: { root.fileConfig = root.parseFileConfig(text()); root.configure(); }
-    onFileChanged: { root.fileConfig = root.parseFileConfig(text()); root.configure(); }
+    onFileChanged: configFile.reload()
     onLoadFailed: { root.fileConfig = ({}); root.configure(); }
   }
 
