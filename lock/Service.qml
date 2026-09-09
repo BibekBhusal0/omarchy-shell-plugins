@@ -55,9 +55,10 @@ Item {
   FileView {
     id: configFile
     path: Quickshell.env("HOME") + "/.config/omarchy/lock.json"
+    watchChanges: true
     printErrors: false
     onLoaded: root.fileConfig = root.parseFileConfig(text())
-    onFileChanged: root.fileConfig = root.parseFileConfig(text())
+    onFileChanged: configFile.reload()
     onLoadFailed: root.fileConfig = ({})
   }
 
