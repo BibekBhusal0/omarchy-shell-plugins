@@ -1,10 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "bibek.lock",
-  "name": "Lock Screen",
+  "name": "Better Lock",
   "version": "1.0.0",
   "author": "Bibek Bhusal",
   "description": "Quickshell session lock clone with date/time, power controls, and forgot password prompt.",
+  "homepage": "https://github.com/BibekBhusal0/omarchy-better-lock",
   "kinds": ["service"],
   "keepLoaded": true,
   "entryPoints": {
