@@ -11,6 +11,7 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 | `focusd/`          | bar-widget + service | Focus timer with progress bar and panel            |
 | `lock/`            | service              | Lock screen with date/time, media, power controls  |
 | `media/`           | bar-widget + service | Media player controls and now-playing info         |
+| `menu/`            | menu (overlay)       | Omarchy menu clone with fuzzy ranking and app grid |
 | `obsidian-search/` | menu (overlay)       | Fuzzy search across Obsidian vaults                |
 | `readest/`         | menu (overlay)       | Fuzzy search across Readest library                |
 | `ytdl/`            | bar-widget + service | YouTube video downloader with clipboard monitoring |

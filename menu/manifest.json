@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "bibek.menu",
+  "name": "Menu",
+  "version": "1.0.0",
+  "author": "Bibek Bhusal",
+  "description": "Omarchy menu with subsequence fuzzy ranking, app grid, calculator and customizable web search.",
+  "preview": {
+    "tagline": "Launch anything in a few keystrokes",
+    "icon": "app/hugeicons--menu-01.svg",
+    "bullets": [
+      ["icons/hugeicons--search-01.svg", "Subsequence fuzzy ranking that forgives typos"],
+      ["icons/hugeicons--grid-view.svg", "Apps open in a Super Apps style grid"],
+      ["icons/hugeicons--calculator-01.svg", "Calculator and web search built into results"]
+    ],
+    "shot": "screenshot/menu.png"
+  },
+  "kinds": ["menu", "bar-widget"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "menu": "Menu.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Menu",
+    "description": "Launches the menu",
+    "category": "Compositor",
+    "allowMultiple": false
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.menu"
+  }
+}
