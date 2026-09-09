@@ -66,11 +66,10 @@ o.bind("SUPER SHIFT", "Y", "exec, omarchy shell ytdl autoDownload")
 
 ## Configuration
 
-Options can be customized via the interactive settings panel (click the button displaying the current quality/type summary in the downloader panel) or directly in `~/.config/omarchy/shell.json`:
+Options can be customized via the interactive settings panel (click the button displaying the current quality/type summary in the downloader panel) or directly in `~/.config/omarchy/ytdl.json` (watched live, so edits apply instantly; the panel writes back to the same file):
 
 ```json
 {
-  "id": "bibek.ytdl",
   "downloadLocation": "~/Downloads/yt-dlp",
   "defaultQuality": "1080p",
   "defaultDownloadType": "video",
