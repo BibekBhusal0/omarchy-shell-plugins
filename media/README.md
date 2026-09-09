@@ -1,10 +1,10 @@
-# Omarchy Shell Plugin for Media
+# Better Media
 
 An MPRIS now-playing widget for the Omarchy bar, cloned from the built-in `omarchy.media`, plus support for the [cliamp](https://github.com/bjarneo/cliamp) headless daemon.
 
 Shows the playing track with a play/pause glyph in the bar. Right-clicking opens a popup with album art, a seekable progress bar, transport controls, and a list of active media sources.
 
-![Media preview](preview.png)
+![Better Media preview](preview.png)
 
 ## Features
 
@@ -36,7 +36,7 @@ New in this clone:
 This is a personal clone of the built-in `omarchy.media`; on this machine it lives in the shell plugin monorepo and is installed under the id `bibek.media`. To install from the standalone repo on a fresh system:
 
 ```bash
-omarchy plugin add https://github.com/BibekBhusal0/omarchy-media.git --enable
+omarchy plugin add https://github.com/BibekBhusal0/omarchy-better-media.git --enable
 ```
 
 ## Usage
@@ -99,6 +99,8 @@ This plugin is licensed under the [MIT License](../LICENSE).
 Here are my other Omarchy plugins:
 
 - [Focusd](https://github.com/BibekBhusal0/omarchy-focusd) - pomodoro timer with streak, history and daily goal
+- [Better Lock](https://github.com/BibekBhusal0/omarchy-better-lock) - lock screen with date/time, media and power controls
+- [Better Menu](https://github.com/BibekBhusal0/omarchy-better-menu) - fuzzy menu with app grid, calculator and web search
 - [Obsidian Search](https://github.com/BibekBhusal0/omarchy-obsidian-search) - fuzzy-search your Obsidian vault
 - [Readest](https://github.com/BibekBhusal0/omarchy-readest) - fuzzy-search your Readest library
 - [yt-dlp](https://github.com/BibekBhusal0/omarchy-ytdl) - video downloads with progress and history

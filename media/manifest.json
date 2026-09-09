@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "bibek.media",
-  "name": "Media",
+  "name": "Better Media",
   "version": "1.1.1",
   "author": "Bibek Bhusal",
   "description": "MPRIS media control service with cliamp headless support",
@@ -15,6 +15,7 @@
     ],
     "shot": "screenshot/media.png"
   },
+  "homepage": "https://github.com/BibekBhusal0/omarchy-better-media",
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
   "entryPoints": {
@@ -25,7 +26,7 @@
     "clonedFrom": "omarchy.media"
   },
   "barWidget": {
-    "displayName": "Media",
+    "displayName": "Better Media",
     "description": "MPRIS now-playing with playback controls, plus cliamp headless",
     "category": "Media",
     "allowMultiple": false
