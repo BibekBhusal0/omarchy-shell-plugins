@@ -129,7 +129,7 @@ publish_plugin() {
     (cd "$clone" && git push origin "$BRANCH")
   fi
 
-  SUMMARY_UPDATED+=("$id|https://github.com/$org/$repo|$(cd "$clone" && git rev-parse HEAD)")
+  SUMMARY_UPDATED+=("$id|$version|https://github.com/$org/$repo|$(cd "$clone" && git rev-parse HEAD)")
 
   # Release (idempotent: skip if the tag already exists).
   if ! gh api "repos/$org/$repo/releases/tags/v$version" >/dev/null 2>&1; then
@@ -152,14 +152,17 @@ log "Done."
 
 {
   if ((${#SUMMARY_UPDATED[@]})); then
-    echo "To update at marketplace, open issue at: https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=verify-plugin.yml"
+    echo "## Published plugins"
     echo ""
+    echo "To list or update at the marketplace, open a verification issue for each repo:"
+    echo ""
+    echo "[Verify plugin](https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=verify-plugin.yml)"
+    echo ""
+    echo "| Plugin ID | Version | Repository | Target commit |"
+    echo "| --- | --- | --- | --- |"
     for entry in "${SUMMARY_UPDATED[@]}"; do
-      IFS='|' read -r vid vurl vsha <<< "$entry"
-      echo "- Plugin ID: $vid"
-      echo "- Repository URL: $vurl"
-      echo "- Target commit: $vsha"
-      echo ""
+      IFS='|' read -r vid vver vurl vsha <<< "$entry"
+      echo "| \`$vid\` | \`v$vver\` | [${vurl#https://github.com/}]($vurl) | [\`${vsha:0:7}\`]($vurl/commit/$vsha) |"
     done
   else
     echo "All plugins up to date."
