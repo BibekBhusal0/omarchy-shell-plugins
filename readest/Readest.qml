@@ -319,10 +319,10 @@ Item {
           } else if (event.key === Qt.Key_Down) {
             root.select(1);
             event.accepted = true;
-          } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_K) {
+          } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_K || event.key === Qt.Key_P)) {
             root.select(-1);
             event.accepted = true;
-          } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_J) {
+          } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_J || event.key === Qt.Key_N)) {
             root.select(1);
             event.accepted = true;
           } else if (event.key === Qt.Key_PageUp) {
