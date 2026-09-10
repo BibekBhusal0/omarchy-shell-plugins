@@ -21,6 +21,7 @@ Item {
   property string vaultName: ""
   property string vaultPathResolved: ""
   property bool dailyEnabled: false
+  property bool configReady: false
   property var pendingLaunch: []
   property bool hasPendingLaunch: false
   readonly property string searchScript: Qt.resolvedUrl("search.sh").toString().replace(/^file:\/\//, "")
@@ -74,6 +75,8 @@ Item {
     searchProc.serial = root.searchSerial;
     searchProc.collected = "";
     root.dailyEnabled = false;
+    root.vaultName = "";
+    root.vaultPathResolved = "";
     var args = [root.searchScript];
     var vaultPath = root.cfg("vaultPath", "");
     if (vaultPath)
@@ -117,9 +120,27 @@ Item {
     path: Quickshell.env("HOME") + "/.config/omarchy/obsidian-search.json"
     watchChanges: true
     printErrors: false
-    onLoaded: root.fileConfig = root.parseFileConfig(text())
+    onLoaded: {
+      root.fileConfig = root.parseFileConfig(text());
+      root.configReady = true;
+      root.onConfigChanged();
+    }
     onFileChanged: configFile.reload()
-    onLoadFailed: root.fileConfig = ({})
+    onLoadFailed: {
+      root.fileConfig = ({});
+      root.configReady = true;
+      root.onConfigChanged();
+    }
+  }
+
+  // Re-lists with the new showDailyNotes/showTemplates flags once the config
+  // arrives or changes; without this the first run uses fallback defaults and
+  // later edits never apply because results are cached.
+  function onConfigChanged() {
+    if (root.opened || root.allItems.length)
+      root.runSearch();
+    else
+      root.filter();
   }
 
   function parseResults(raw) {
@@ -130,8 +151,7 @@ Item {
       if (!line)
         continue;
       if (line.indexOf("#vault\t") === 0) {
-        if (!root.vaultName)
-          root.vaultName = line.slice("#vault\t".length);
+        root.vaultName = line.slice("#vault\t".length);
         continue;
       }
       if (line.indexOf("#vaultpath\t") === 0) {
@@ -179,14 +199,16 @@ Item {
   // create); any other query keeps the previous behavior plus a create row.
   function filter() {
     var query = root.filterText.trim();
+    var wantDaily = root.cfgBool("showDailyNotes", true);
+    var wantTemplates = root.cfgBool("showTemplates", false);
     var shown = [];
     if (!query) {
       shown = root.allItems.slice();
-      if (root.dailyEnabled)
+      if (wantDaily && root.dailyEnabled)
         shown.unshift(root.dailyRow());
     } else {
       shown = FuzzySearch.search(root.filterText, root.allItems);
-      if (root.matchesDaily(query))
+      if (wantDaily && root.matchesDaily(query))
         shown.unshift(root.dailyRow());
       shown.push({
           "icon": "󱘒",
@@ -200,6 +222,13 @@ Item {
           "rel": query + ".md"
         });
     }
+    shown = shown.filter(function (row) {
+        if (row.kind === "Daily Note" || row.kind === "Daily Pin")
+          return wantDaily;
+        if (row.kind === "Template")
+          return wantTemplates;
+        return true;
+      });
     root.items = shown;
     root.rebuildDisplay();
   }
