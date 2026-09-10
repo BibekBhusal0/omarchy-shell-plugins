@@ -48,10 +48,8 @@ Item {
     root.selectedIndex = 0;
     root.cursorActive = true;
     root.disarmPointer();
-    if (!root.allItems.length)
-      root.runSearch();
-    else
-      root.filter();
+    root.filter();
+    root.runSearch();
     Qt.callLater(function () {
         keyCatcher.forceActiveFocus();
       });
@@ -103,9 +101,23 @@ Item {
     path: Quickshell.env("HOME") + "/.config/omarchy/readest.json"
     watchChanges: true
     printErrors: false
-    onLoaded: root.fileConfig = root.parseFileConfig(text())
+    onLoaded: {
+      root.fileConfig = root.parseFileConfig(text());
+      root.onConfigChanged();
+    }
     onFileChanged: configFile.reload()
-    onLoadFailed: root.fileConfig = ({})
+    onLoadFailed: {
+      root.fileConfig = ({});
+      root.onConfigChanged();
+    }
+  }
+
+  // Re-lists with the new libraryPath once the config arrives or changes,
+  // and prewarms the cache at shell startup so the first open is instant.
+  // Cached rows stay visible until the fresh list lands.
+  function onConfigChanged() {
+    root.filter();
+    root.runSearch();
   }
 
   function parseResults(raw) {
