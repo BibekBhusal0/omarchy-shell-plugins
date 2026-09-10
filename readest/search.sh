@@ -18,12 +18,16 @@ lib_json="$lib_dir/library.json"
 
 [[ -f "$lib_json" ]] || exit 0
 
+# Book files resolve to $lib_dir/<hash>/ with a glob instead of one fd per
+# book, so listing stays flat no matter how large the library grows.
+shopt -s nullglob
 jq -r 'sort_by(.updatedAt // 0) | reverse | .[:200][] | [.title, (.author // ""), .hash] | @tsv' "$lib_json" 2>/dev/null | while IFS=$'\t' read -r title author hash; do
   [[ -n "$title" && -n "$hash" ]] || continue
   title="${title:0:256}"
   author="${author:0:128}"
 
-  book="$(fd -a -d1 -e epub -e pdf -e mobi -e azw3 . "$lib_dir/$hash" 2>/dev/null | head -n1)"
+  candidates=("$lib_dir/$hash/"*.epub "$lib_dir/$hash/"*.pdf "$lib_dir/$hash/"*.mobi "$lib_dir/$hash/"*.azw3)
+  book="${candidates[0]:-}"
   [[ -n "$book" ]] || continue
 
   cover="$lib_dir/$hash/cover.png"

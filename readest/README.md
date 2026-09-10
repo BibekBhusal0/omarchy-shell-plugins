@@ -13,7 +13,7 @@ A beautiful [Readest](https://readest.com/) library search menu. Type to filter 
 
 - Omarchy quattro
 - Readest
-- `fd` and `jq` (preinstalled on Omarchy)
+- `jq` (preinstalled on Omarchy)
 
 ## Install
 
