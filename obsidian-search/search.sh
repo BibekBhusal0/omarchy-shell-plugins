@@ -141,7 +141,7 @@ fi
 daily_template="${daily_template#/}"
 daily_template="${daily_template%/}"
 
-if [[ "$daily_enabled" -eq 1 && "$show_daily" -eq 1 ]]; then
+if [[ "$daily_enabled" -eq 1 ]]; then
   printf '#daily\n'
 fi
 

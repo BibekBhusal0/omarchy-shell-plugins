@@ -17,7 +17,7 @@ A beautiful [Obsidian](https://obsidian.md/) vault search menu. Type to filter n
 
 - Omarchy quattro
 - Obsidian
-- `fd` and `jq` (preinstalled on Omarchy)
+- `fd`, `jq`, and `python3` (preinstalled on Omarchy)
 
 ## Install
 
@@ -37,7 +37,7 @@ Bind the menu to a key (`~/.config/hypr/bindings.lua`):
 o.bind("SUPER", "O", "exec, omarchy-shell shell summon bibek.obsidian-search")
 ```
 
-Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root. With an empty query the first row is today's daily note when daily notes are enabled, opened via Obsidian's `obsidian://daily` URI (it creates the note when missing). Typing `daily` or `today` keeps that row pinned on top.
+Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root. With an empty query the first row is always today's daily note, opened via Obsidian's `obsidian://daily` URI (it creates the note when missing). Typing `daily` or `today` keeps that row pinned on top.
 
 Shortcuts: Up/Down, Ctrl+K/Ctrl+J, or Ctrl+P/Ctrl+N to move, PageUp/PageDown to jump, Enter to open with the configured opener, Alt+O to force-open the selected note in Obsidian, Alt+W to open it in omawrite, Alt+N to open it in Neovim.
 
@@ -68,7 +68,7 @@ Override settings in `~/.config/omarchy/obsidian-search.json` (watched live, so 
 ```
 
 - `vaultPath`: vault directory. Defaults to the first vault in the Obsidian config.
-- `showDailyNotes`: show daily notes in results. Default `true`. When `false`, daily-note files and the today's-note pin are both hidden.
+- `showDailyNotes`: show daily notes in results. Default `true`. Today's-note pin is always shown regardless.
 - `showTemplates`: also list files under the templates folder. Default `false`.
 - `opener`: how notes open with Enter. Default `"obsidian"`. Use `"omawrite"` to edit in omawrite, `"neovim"` (or `"nvim"`) to edit in Neovim inside a terminal, or any other command that takes a file path (for example `"code"` or `"xdg-open"`).
 

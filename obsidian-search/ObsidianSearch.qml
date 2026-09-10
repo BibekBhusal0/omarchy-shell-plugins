@@ -200,11 +200,11 @@ Item {
     var shown = [];
     if (!query) {
       shown = root.allItems.slice();
-      if (wantDaily && root.dailyEnabled)
+      if (root.dailyEnabled)
         shown.unshift(root.dailyRow());
     } else {
       shown = FuzzySearch.search(root.filterText, root.allItems);
-      if (wantDaily && root.matchesDaily(query))
+      if (root.matchesDaily(query))
         shown.unshift(root.dailyRow());
       shown.push({
           "icon": "󱘒",
@@ -219,7 +219,7 @@ Item {
         });
     }
     shown = shown.filter(function (row) {
-        if (row.kind === "Daily Note" || row.kind === "Daily Pin")
+        if (row.kind === "Daily Note")
           return wantDaily;
         if (row.kind === "Template")
           return wantTemplates;
