@@ -39,7 +39,7 @@ o.bind("SUPER", "O", "exec, omarchy-shell shell summon bibek.obsidian-search")
 
 Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root. With an empty query the first row is always today's daily note, opened via Obsidian's `obsidian://daily` URI (it creates the note when missing). Typing `daily` or `today` keeps that row pinned on top.
 
-Shortcuts: Up/Down, Ctrl+K/Ctrl+J, or Ctrl+P/Ctrl+N to move, PageUp/PageDown to jump, Enter to open with the configured opener, Alt+O to force-open the selected note in Obsidian, Alt+W to open it in omawrite, Alt+N to open it in Neovim.
+Shortcuts: Up/Down, Ctrl+K/Ctrl+J, or Ctrl+P/Ctrl+N to move, PageUp/PageDown to jump, Enter to open with the configured opener. Alt+O to force-open the selected note in Obsidian, Alt+W to open it in omawrite, Alt+N to open it in Neovim.
 
 ## Where notes open
 
@@ -71,14 +71,6 @@ Override settings in `~/.config/omarchy/obsidian-search.json` (watched live, so 
 - `showDailyNotes`: show daily notes in results. Default `true`. Today's-note pin is always shown regardless.
 - `showTemplates`: also list files under the templates folder. Default `false`.
 - `opener`: how notes open with Enter. Default `"obsidian"`. Use `"omawrite"` to edit in omawrite, `"neovim"` (or `"nvim"`) to edit in Neovim inside a terminal, or any other command that takes a file path (for example `"code"` or `"xdg-open"`).
-
-```json
-{ "vaultPath": "/path/to/your/vault", "opener": "omawrite" }
-```
-
-```json
-{ "id": "bibek.obsidian-search", "opener": "neovim" }
-```
 
 ## Uninstall
 
