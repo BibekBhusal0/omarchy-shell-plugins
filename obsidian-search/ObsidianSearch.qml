@@ -50,10 +50,8 @@ Item {
     root.selectedIndex = 0;
     root.cursorActive = true;
     root.disarmPointer();
-    if (!root.allItems.length)
-      root.runSearch();
-    else
-      root.filter();
+    root.filter();
+    root.runSearch();
     Qt.callLater(function () {
         keyCatcher.forceActiveFocus();
       });
@@ -134,13 +132,11 @@ Item {
   }
 
   // Re-lists with the new showDailyNotes/showTemplates flags once the config
-  // arrives or changes; without this the first run uses fallback defaults and
-  // later edits never apply because results are cached.
+  // arrives or changes, and prewarms the cache at shell startup so the first
+  // open is instant. Cached rows stay visible until the fresh list lands.
   function onConfigChanged() {
-    if (root.opened || root.allItems.length)
-      root.runSearch();
-    else
-      root.filter();
+    root.filter();
+    root.runSearch();
   }
 
   function parseResults(raw) {
