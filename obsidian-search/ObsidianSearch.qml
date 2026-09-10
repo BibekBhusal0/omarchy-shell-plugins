@@ -315,6 +315,8 @@ Item {
   }
 
   function launchArgvFor(mode, row) {
+    if (mode === "obsidian")
+      return ["obsidian", row.action];
     var kind = row.kind || "Note";
     var forcedObsidian = kind === "Canvas" || kind === "Base" || kind === "Daily Note" || kind === "Daily Pin" || kind === "Template";
     var opener = mode === "omawrite" ? "omawrite" : mode === "neovim" ? "nvim" : root.cfg("opener", "") || "obsidian";
@@ -458,10 +460,10 @@ Item {
           } else if (event.key === Qt.Key_Down) {
             root.select(1);
             event.accepted = true;
-          } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_K) {
+          } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_K || event.key === Qt.Key_P)) {
             root.select(-1);
             event.accepted = true;
-          } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_J) {
+          } else if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_J || event.key === Qt.Key_N)) {
             root.select(1);
             event.accepted = true;
           } else if (event.key === Qt.Key_PageUp) {
@@ -471,6 +473,12 @@ Item {
             root.select(6);
             event.accepted = true;
           } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_O) {
+            if (root.cursorActive)
+              root.activateIndex(root.selectedIndex, "obsidian");
+            else if (displayModel.count > 0)
+              root.cursorActive = true;
+            event.accepted = true;
+          } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_W) {
             if (root.cursorActive)
               root.activateIndex(root.selectedIndex, "omawrite");
             else if (displayModel.count > 0)
