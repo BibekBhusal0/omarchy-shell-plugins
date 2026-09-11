@@ -152,6 +152,10 @@ Item {
       id = id.slice(0, -8);
     Quickshell.execDetached([root.fallbackBase() + "/bin/omarchy-remove-launcher-entry", id, String(label || id)]);
   }
+  function refreshAppsIfLoaded() {
+    if (root.providersLoaded["apps"])
+      root.mergeAppRows();
+  }
   function loadFallbackHides(rawText) {
     var next = ({});
     var lines = String(rawText || "").split("\n");
@@ -163,7 +167,7 @@ Item {
         next[id] = true;
     }
     root.fallbackHiddenIds = next;
-    if (root.opened && root.providersLoaded["apps"])
+    if (root.providersLoaded["apps"])
       root.mergeAppRows();
   }
   function refreshFallbackHides() {
@@ -980,6 +984,8 @@ Item {
       root.disarmPointer();
     root.rebuildDisplay();
     root.invalidateVolatileProvider(id);
+    if (id === "apps")
+      root.refreshAppsIfLoaded();
     root.loadProviderForMenu(id);
   }
 
@@ -1115,6 +1121,7 @@ Item {
     root.evaluateGuards();
     opened = true;
     rebuildDisplay();
+    refreshAppsIfLoaded();
     invalidateVolatileProvider(activeMenu);
     loadProviderForMenu(activeMenu);
     // The shell may start before first-install packages have finished placing
@@ -1237,10 +1244,9 @@ Item {
   Connections {
     target: DesktopEntries.applications
     function onValuesChanged() {
-      if (root.opened && !root.appLibrary) {
+      if (!root.appLibrary) {
         root.refreshFallbackHides();
-        if (root.providersLoaded["apps"])
-          root.mergeAppRows();
+        root.refreshAppsIfLoaded();
       }
     }
   }
