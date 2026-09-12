@@ -27,6 +27,7 @@ Item {
   readonly property string brightDisplayBin: "/usr/share/omarchy/bin/omarchy-brightness-display"
   readonly property string fprintdListBin: "/usr/bin/fprintd-list"
   readonly property string fingerprintPamPath: "/etc/pam.d/omarchy-lock-fingerprint"
+  readonly property string fixedPath: "/usr/local/sbin:/usr/local/bin:/usr/bin"
   property bool fingerprintPamFile: false
   property int maxHelperBytes: 4096
   property int helperTimeoutMs: 3000
@@ -269,15 +270,23 @@ Item {
   }
 
   function requestShutdown() {
-    Quickshell.execDetached([root.omarchyBin, "system", "shutdown"]);
+    root.runPower([root.omarchyBin, "system", "shutdown"]);
   }
 
   function requestReboot() {
-    Quickshell.execDetached([root.omarchyBin, "system", "reboot"]);
+    root.runPower([root.omarchyBin, "system", "reboot"]);
   }
 
   function requestSuspend() {
-    Quickshell.execDetached([root.systemctlBin, "suspend"]);
+    root.runPower([root.systemctlBin, "suspend"]);
+  }
+
+  function runPower(args) {
+    if (powerProc.running)
+      return;
+    powerProc.command = args;
+    powerProc.running = true;
+    powerWatchdog.restart();
   }
 
   function submitPassword(value) {
@@ -576,6 +585,10 @@ Item {
 
   Process {
     id: fingerprintListProc
+    clearEnvironment: true
+    environment: ({
+        "PATH": root.fixedPath
+      })
     property string collected: ""
     property int collectedBytes: 0
     property bool overflowed: false
@@ -637,6 +650,12 @@ Item {
   Process {
     id: strandedLockCheckProc
     command: [root.sessionLockedBin]
+    clearEnvironment: true
+    environment: ({
+        "PATH": root.fixedPath,
+        "HYPRLAND_INSTANCE_SIGNATURE": null,
+        "XDG_RUNTIME_DIR": null
+      })
     stderr: SplitParser {
       onRead: function (data) {
         strandedLockCheckProc.collectedBytes += String(data + "\n").length;
@@ -669,6 +688,12 @@ Item {
   Process {
     id: wakeProcess
     command: [root.wakeBin]
+    clearEnvironment: true
+    environment: ({
+        "PATH": root.fixedPath,
+        "HYPRLAND_INSTANCE_SIGNATURE": null,
+        "XDG_RUNTIME_DIR": null
+      })
     stderr: SplitParser {
       onRead: function (data) {
         wakeProcess.collectedBytes += String(data + "\n").length;
@@ -698,6 +723,12 @@ Item {
   Process {
     id: blankKeyboardProc
     command: [root.brightKeyboardBin, "off"]
+    clearEnvironment: true
+    environment: ({
+        "PATH": root.fixedPath,
+        "HYPRLAND_INSTANCE_SIGNATURE": null,
+        "XDG_RUNTIME_DIR": null
+      })
     stderr: SplitParser {
       onRead: function (data) {
         blankKeyboardProc.collectedBytes += String(data + "\n").length;
@@ -716,6 +747,12 @@ Item {
   Process {
     id: blankDisplayProc
     command: [root.brightDisplayBin, "off"]
+    clearEnvironment: true
+    environment: ({
+        "PATH": root.fixedPath,
+        "HYPRLAND_INSTANCE_SIGNATURE": null,
+        "XDG_RUNTIME_DIR": null
+      })
     stderr: SplitParser {
       onRead: function (data) {
         blankDisplayProc.collectedBytes += String(data + "\n").length;
@@ -728,6 +765,36 @@ Item {
       blankDisplayProc.collectedBytes = 0;
       if (!blankKeyboardProc.running && !blankDisplayProc.running)
         blankWatchdog.stop();
+    }
+  }
+
+  Timer {
+    id: powerWatchdog
+    interval: 30000
+    repeat: false
+    onTriggered: {
+      if (powerProc.running)
+        root.killProc(powerProc);
+    }
+  }
+
+  Process {
+    id: powerProc
+    clearEnvironment: true
+    environment: ({
+        "PATH": root.fixedPath
+      })
+    stderr: SplitParser {
+      onRead: function (data) {
+        powerProc.collectedBytes += String(data + "\n").length;
+        if (powerProc.collectedBytes > root.maxHelperBytes)
+          root.killProc(powerProc);
+      }
+    }
+    property int collectedBytes: 0
+    onExited: {
+      powerWatchdog.stop();
+      powerProc.collectedBytes = 0;
     }
   }
 
