@@ -15,7 +15,22 @@ Item {
   readonly property string home: Quickshell.env("HOME")
   readonly property string stateHome: home + "/.local/state"
   readonly property string userName: Quickshell.env("USER") || Quickshell.env("LOGNAME") || "User"
+  readonly property string loginName: Quickshell.env("USER") || Quickshell.env("LOGNAME") || ""
   readonly property string currentBackgroundLink: stateHome + "/omarchy/current/background"
+  readonly property string stateRoot: stateHome + "/omarchy"
+  readonly property string shareRoot: "/usr/share/omarchy"
+  readonly property string omarchyBin: "/usr/share/omarchy/bin/omarchy"
+  readonly property string systemctlBin: "/usr/bin/systemctl"
+  readonly property string sessionLockedBin: "/usr/share/omarchy/bin/omarchy-hyprland-session-locked"
+  readonly property string wakeBin: "/usr/share/omarchy/bin/omarchy-system-wake"
+  readonly property string brightKeyboardBin: "/usr/share/omarchy/bin/omarchy-brightness-keyboard"
+  readonly property string brightDisplayBin: "/usr/share/omarchy/bin/omarchy-brightness-display"
+  readonly property string fprintdListBin: "/usr/bin/fprintd-list"
+  readonly property string fingerprintPamPath: "/etc/pam.d/omarchy-lock-fingerprint"
+  property bool fingerprintPamFile: false
+  property int maxHelperBytes: 4096
+  property int helperTimeoutMs: 3000
+  property int wakeTimeoutMs: 5000
 
   property string timeFormat: setting("timeFormat", "hh:mm AP")
   property string dateFormat: setting("dateFormat", "dddd, MMMM d")
@@ -114,6 +129,24 @@ Item {
       return;
     }
     strandedLockCheckProc.running = true;
+    strandedWatchdog.restart();
+  }
+
+  function killProc(proc) {
+    try {
+      proc.signal(9);
+    } catch (e) {
+    }
+    proc.running = false;
+  }
+
+  function acceptBackground(raw) {
+    var line = String(raw || "").split("\n")[0].trim();
+    if (line === "" || line.charAt(0) !== "/" || line.length > 4096)
+      return "";
+    if (line.indexOf(root.stateRoot + "/") !== 0 && line.indexOf(root.shareRoot + "/") !== 0)
+      return "";
+    return line;
   }
 
   function recoverStrandedLock() {
@@ -125,13 +158,38 @@ Item {
   }
 
   function refreshBackground() {
-    if (!readlinkProc.running)
-      readlinkProc.running = true;
+    if (backgroundProc.running)
+      return;
+    backgroundProc.collected = "";
+    backgroundProc.collectedBytes = 0;
+    backgroundProc.overflowed = false;
+    backgroundProc.timedOut = false;
+    backgroundProc.command = ["/usr/bin/env", "-i", "/usr/bin/sh", "-c", "p=$(/usr/bin/readlink -f \"$0\" 2>/dev/null); [ -n \"$p\" ] || exit 0; case \"$p\" in \"$1\"/*|\"$2\"/*) ;; *) exit 0;; esac; [ -f \"$p\" ] && [ ! -L \"$p\" ] || exit 0; [ \"$(/usr/bin/stat -c %s \"$p\")\" -le 67108864 ] || exit 0; printf '%s' \"$p\"", root.currentBackgroundLink, root.stateRoot, root.shareRoot];
+    backgroundProc.running = true;
+    backgroundWatchdog.restart();
   }
 
   function refreshFingerprintStatus() {
-    if (!fingerprintCheckProc.running)
-      fingerprintCheckProc.running = true;
+    if (!root.fingerprintPamFile || root.loginName === "" || fingerprintListProc.running) {
+      if (!root.fingerprintPamFile || root.loginName === "")
+        setFingerprintConfigured(false);
+      return;
+    }
+    fingerprintListProc.collected = "";
+    fingerprintListProc.collectedBytes = 0;
+    fingerprintListProc.overflowed = false;
+    fingerprintListProc.timedOut = false;
+    fingerprintListProc.command = [root.fprintdListBin, root.loginName];
+    fingerprintListProc.running = true;
+    fingerprintWatchdog.restart();
+  }
+
+  function setFingerprintConfigured(on) {
+    root.fingerprintConfigured = on === true;
+    if (root.lockRequested && root.fingerprintConfigured)
+      root.startFingerprint();
+    else if (!root.fingerprintConfigured && fingerprintPam.active)
+      fingerprintPam.abort();
   }
 
   function logEvent(event) {
@@ -191,15 +249,35 @@ Item {
   }
 
   function runWake() {
-    if (!wakeProcess.running)
+    if (!wakeProcess.running) {
       wakeProcess.running = true;
+      wakeWatchdog.restart();
+    }
     if (lockRequested)
       armBlankTimer();
   }
 
   function runBlank() {
-    if (!blankProcess.running)
-      blankProcess.running = true;
+    if (!blankKeyboardProc.running) {
+      blankKeyboardProc.running = true;
+      blankWatchdog.restart();
+    }
+    if (!blankDisplayProc.running) {
+      blankDisplayProc.running = true;
+      blankWatchdog.restart();
+    }
+  }
+
+  function requestShutdown() {
+    Quickshell.execDetached([root.omarchyBin, "system", "shutdown"]);
+  }
+
+  function requestReboot() {
+    Quickshell.execDetached([root.omarchyBin, "system", "reboot"]);
+  }
+
+  function requestSuspend() {
+    Quickshell.execDetached([root.systemctlBin, "suspend"]);
   }
 
   function submitPassword(value) {
@@ -316,9 +394,9 @@ Item {
         onClearFailureRequested: root.failureMessage = ""
         onWakeRequested: root.runWake()
         onSleepRequested: root.runBlank()
-        onShutdownRequested: Quickshell.execDetached(["omarchy", "system", "shutdown"])
-        onRebootRequested: Quickshell.execDetached(["omarchy", "system", "reboot"])
-        onSuspendRequested: Quickshell.execDetached(["systemctl", "suspend"])
+        onShutdownRequested: root.requestShutdown()
+        onRebootRequested: root.requestReboot()
+        onSuspendRequested: root.requestSuspend()
       }
     }
   }
@@ -354,9 +432,9 @@ Item {
       dateFormat: root.dateFormat
       onWakeRequested: root.runWake()
       onSleepRequested: root.runBlank()
-      onShutdownRequested: Quickshell.execDetached(["omarchy", "system", "shutdown"])
-      onRebootRequested: Quickshell.execDetached(["omarchy", "system", "reboot"])
-      onSuspendRequested: Quickshell.execDetached(["systemctl", "suspend"])
+      onShutdownRequested: root.requestShutdown()
+      onRebootRequested: root.requestReboot()
+      onSuspendRequested: root.requestSuspend()
     }
 
     MouseArea {
@@ -413,41 +491,163 @@ Item {
     onTriggered: root.startFingerprint()
   }
 
-  Process {
-    id: readlinkProc
-    command: ["readlink", "-f", root.currentBackgroundLink]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: {
-        var next = String(text || "").trim();
-        if (next !== root.backgroundPath) {
-          root.backgroundPath = next;
-          root.backgroundVersion += 1;
-        }
+  Timer {
+    id: backgroundWatchdog
+    interval: root.helperTimeoutMs
+    repeat: false
+    onTriggered: {
+      if (backgroundProc.running) {
+        backgroundProc.timedOut = true;
+        backgroundProc.collected = "";
+        backgroundProc.collectedBytes = 0;
+        root.killProc(backgroundProc);
       }
     }
   }
 
   Process {
-    id: fingerprintCheckProc
-    command: ["bash", "-c", "if [[ -f /etc/pam.d/omarchy-lock-fingerprint ]] && command -v fprintd-list >/dev/null 2>&1 && fprintd-list \"$USER\" 2>/dev/null | grep -qi finger; then echo yes; else echo no; fi"]
-    stdout: StdioCollector {
-      id: fingerprintCheckStdout
-      waitForEnd: true
+    id: backgroundProc
+    property string collected: ""
+    property int collectedBytes: 0
+    property bool overflowed: false
+    property bool timedOut: false
+    stdout: SplitParser {
+      onRead: function (data) {
+        if (backgroundProc.overflowed || backgroundProc.timedOut)
+          return;
+        var chunk = String(data + "\n");
+        if (backgroundProc.collectedBytes + chunk.length > root.maxHelperBytes) {
+          backgroundProc.overflowed = true;
+          backgroundProc.collected = "";
+          backgroundProc.collectedBytes = 0;
+          root.killProc(backgroundProc);
+          return;
+        }
+        backgroundProc.collected += chunk;
+        backgroundProc.collectedBytes += chunk.length;
+      }
     }
-    onExited: {
-      root.fingerprintConfigured = String(fingerprintCheckStdout.text || "").trim() === "yes";
-      if (root.lockRequested && root.fingerprintConfigured)
-        root.startFingerprint();
-      else if (!root.fingerprintConfigured && fingerprintPam.active)
-        fingerprintPam.abort();
+    stderr: SplitParser {
+      onRead: function (data) {
+        if (backgroundProc.overflowed || backgroundProc.timedOut)
+          return;
+        backgroundProc.collectedBytes += String(data + "\n").length;
+        if (backgroundProc.collectedBytes > root.maxHelperBytes) {
+          backgroundProc.overflowed = true;
+          backgroundProc.collected = "";
+          backgroundProc.collectedBytes = 0;
+          root.killProc(backgroundProc);
+        }
+      }
+    }
+    onExited: function (exitCode) {
+      backgroundWatchdog.stop();
+      var failed = backgroundProc.overflowed || backgroundProc.timedOut;
+      var output = String(backgroundProc.collected);
+      backgroundProc.collected = "";
+      backgroundProc.collectedBytes = 0;
+      backgroundProc.overflowed = false;
+      backgroundProc.timedOut = false;
+      var next = (!failed && exitCode === 0) ? root.acceptBackground(output) : "";
+      if (next !== "" && next !== root.backgroundPath) {
+        root.backgroundPath = next;
+        root.backgroundVersion += 1;
+      } else if (next === "" && root.backgroundPath !== "") {
+        root.backgroundPath = "";
+        root.backgroundVersion += 1;
+      }
+    }
+  }
+
+  Timer {
+    id: fingerprintWatchdog
+    interval: root.helperTimeoutMs
+    repeat: false
+    onTriggered: {
+      if (fingerprintListProc.running) {
+        fingerprintListProc.timedOut = true;
+        fingerprintListProc.collected = "";
+        fingerprintListProc.collectedBytes = 0;
+        root.killProc(fingerprintListProc);
+        root.setFingerprintConfigured(false);
+      }
+    }
+  }
+
+  Process {
+    id: fingerprintListProc
+    property string collected: ""
+    property int collectedBytes: 0
+    property bool overflowed: false
+    property bool timedOut: false
+    stdout: SplitParser {
+      onRead: function (data) {
+        if (fingerprintListProc.overflowed || fingerprintListProc.timedOut)
+          return;
+        var chunk = String(data + "\n");
+        if (fingerprintListProc.collectedBytes + chunk.length > root.maxHelperBytes) {
+          fingerprintListProc.overflowed = true;
+          fingerprintListProc.collected = "";
+          fingerprintListProc.collectedBytes = 0;
+          root.killProc(fingerprintListProc);
+          return;
+        }
+        fingerprintListProc.collected += chunk;
+        fingerprintListProc.collectedBytes += chunk.length;
+      }
+    }
+    stderr: SplitParser {
+      onRead: function (data) {
+        if (fingerprintListProc.overflowed || fingerprintListProc.timedOut)
+          return;
+        fingerprintListProc.collectedBytes += String(data + "\n").length;
+        if (fingerprintListProc.collectedBytes > root.maxHelperBytes) {
+          fingerprintListProc.overflowed = true;
+          fingerprintListProc.collected = "";
+          fingerprintListProc.collectedBytes = 0;
+          root.killProc(fingerprintListProc);
+        }
+      }
+    }
+    onExited: function (exitCode) {
+      fingerprintWatchdog.stop();
+      var failed = fingerprintListProc.overflowed || fingerprintListProc.timedOut;
+      var output = String(fingerprintListProc.collected);
+      fingerprintListProc.collected = "";
+      fingerprintListProc.collectedBytes = 0;
+      fingerprintListProc.overflowed = false;
+      fingerprintListProc.timedOut = false;
+      var enrolled = !failed && exitCode === 0 && output.toLowerCase().indexOf("finger") !== -1;
+      root.setFingerprintConfigured(root.fingerprintPamFile && enrolled);
+    }
+  }
+
+  Timer {
+    id: strandedWatchdog
+    interval: root.helperTimeoutMs
+    repeat: false
+    onTriggered: {
+      if (strandedLockCheckProc.running) {
+        root.killProc(strandedLockCheckProc);
+        root.strandedLockResolved = true;
+      }
     }
   }
 
   Process {
     id: strandedLockCheckProc
-    command: ["bash", "-c", "omarchy-hyprland-session-locked"]
+    command: [root.sessionLockedBin]
+    stderr: SplitParser {
+      onRead: function (data) {
+        strandedLockCheckProc.collectedBytes += String(data + "\n").length;
+        if (strandedLockCheckProc.collectedBytes > root.maxHelperBytes)
+          root.killProc(strandedLockCheckProc);
+      }
+    }
+    property int collectedBytes: 0
     onExited: function (exitCode) {
+      strandedWatchdog.stop();
+      strandedLockCheckProc.collectedBytes = 0;
       if (exitCode === 2)
         return;
       root.strandedLockResolved = true;
@@ -456,14 +656,79 @@ Item {
     }
   }
 
-  Process {
-    id: wakeProcess
-    command: ["bash", "-c", "omarchy-system-wake"]
+  Timer {
+    id: wakeWatchdog
+    interval: root.wakeTimeoutMs
+    repeat: false
+    onTriggered: {
+      if (wakeProcess.running)
+        root.killProc(wakeProcess);
+    }
   }
 
   Process {
-    id: blankProcess
-    command: ["bash", "-c", "omarchy-brightness-keyboard off; omarchy-brightness-display off"]
+    id: wakeProcess
+    command: [root.wakeBin]
+    stderr: SplitParser {
+      onRead: function (data) {
+        wakeProcess.collectedBytes += String(data + "\n").length;
+        if (wakeProcess.collectedBytes > root.maxHelperBytes)
+          root.killProc(wakeProcess);
+      }
+    }
+    property int collectedBytes: 0
+    onExited: {
+      wakeWatchdog.stop();
+      wakeProcess.collectedBytes = 0;
+    }
+  }
+
+  Timer {
+    id: blankWatchdog
+    interval: root.wakeTimeoutMs
+    repeat: false
+    onTriggered: {
+      if (blankKeyboardProc.running)
+        root.killProc(blankKeyboardProc);
+      if (blankDisplayProc.running)
+        root.killProc(blankDisplayProc);
+    }
+  }
+
+  Process {
+    id: blankKeyboardProc
+    command: [root.brightKeyboardBin, "off"]
+    stderr: SplitParser {
+      onRead: function (data) {
+        blankKeyboardProc.collectedBytes += String(data + "\n").length;
+        if (blankKeyboardProc.collectedBytes > root.maxHelperBytes)
+          root.killProc(blankKeyboardProc);
+      }
+    }
+    property int collectedBytes: 0
+    onExited: {
+      blankKeyboardProc.collectedBytes = 0;
+      if (!blankKeyboardProc.running && !blankDisplayProc.running)
+        blankWatchdog.stop();
+    }
+  }
+
+  Process {
+    id: blankDisplayProc
+    command: [root.brightDisplayBin, "off"]
+    stderr: SplitParser {
+      onRead: function (data) {
+        blankDisplayProc.collectedBytes += String(data + "\n").length;
+        if (blankDisplayProc.collectedBytes > root.maxHelperBytes)
+          root.killProc(blankDisplayProc);
+      }
+    }
+    property int collectedBytes: 0
+    onExited: {
+      blankDisplayProc.collectedBytes = 0;
+      if (!blankKeyboardProc.running && !blankDisplayProc.running)
+        blankWatchdog.stop();
+    }
   }
 
   Timer {
@@ -538,6 +803,21 @@ Item {
     printErrors: false
     onLoaded: root.passwordPamConfigured = true
     onLoadFailed: root.passwordPamConfigured = false
+    onFileChanged: reload()
+  }
+
+  FileView {
+    path: root.fingerprintPamPath
+    watchChanges: true
+    printErrors: false
+    onLoaded: {
+      root.fingerprintPamFile = true;
+      root.refreshFingerprintStatus();
+    }
+    onLoadFailed: {
+      root.fingerprintPamFile = false;
+      root.setFingerprintConfigured(false);
+    }
     onFileChanged: reload()
   }
 
