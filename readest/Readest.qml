@@ -41,6 +41,7 @@ Item {
   property int rowHeight: Math.max(Style.space(44), Style.font.body + Style.spacing.rowPaddingX * 2)
   property int cardHeight: Math.min(contentMargin * 2 + headerHeight + contentSpacing + rowHeight * Math.min(root.items.length, 9) + Style.space(8), panel.height - Style.gapsOut * 2)
   property int searchSerial: 0
+  property bool searchPending: false
 
   function open(payloadJson) {
     root.opened = true;
@@ -49,7 +50,8 @@ Item {
     root.cursorActive = true;
     root.disarmPointer();
     root.filter();
-    root.runSearch();
+    if (!searchProc.running)
+      root.runSearch();
     Qt.callLater(function () {
         keyCatcher.forceActiveFocus();
       });
@@ -72,6 +74,10 @@ Item {
   }
 
   function runSearch() {
+    if (searchProc.running) {
+      root.searchPending = true;
+      return;
+    }
     root.searchSerial += 1;
     searchProc.serial = root.searchSerial;
     searchProc.collected = "";
@@ -233,6 +239,10 @@ Item {
         return;
       root.allItems = root.parseResults(searchProc.collected);
       root.filter();
+      if (root.searchPending) {
+        root.searchPending = false;
+        root.runSearch();
+      }
     }
   }
 
