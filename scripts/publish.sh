@@ -162,7 +162,7 @@ log "Done."
     echo "| --- | --- | --- | --- |"
     for entry in "${SUMMARY_UPDATED[@]}"; do
       IFS='|' read -r vid vver vurl vsha <<< "$entry"
-      echo "| \`$vid\` | \`v$vver\` | \`${vurl#https://github.com/}\` | \`$vsha\` |"
+      echo "| \`$vid\` | \`v$vver\` | \`$vurl\` | \`$vsha\` |"
     done
   else
     echo "All plugins up to date."
