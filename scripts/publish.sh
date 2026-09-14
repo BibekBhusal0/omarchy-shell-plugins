@@ -116,6 +116,9 @@ publish_plugin() {
   # must not ship to standalone repos.
   rm -f "$clone/$NOTES_FILE"
 
+  # Drop editor and formatter backup files.
+  find "$clone" -name '*~' -delete
+
   # Give the standalone repo its own license, and make README license links
   # that pointed at the parent repo's ../LICENSE point at this local copy.
   if [[ -f "$ROOT/LICENSE" ]]; then
