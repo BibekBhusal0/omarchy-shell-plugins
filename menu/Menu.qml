@@ -8,6 +8,13 @@ import "MenuModel.js" as MenuModel
 import "FuzzySearch.js" as FuzzySearch
 import "/usr/share/omarchy/shell/services/AppSearch.js" as AppSearch
 
+
+
+
+
+
+
+
 Item {
   id: root
 
