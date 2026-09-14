@@ -5,7 +5,7 @@ BarWidget {
   id: root
   moduleName: "bibek.menu"
 
-  implicitWidth: button.implicitWidth   
+  implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
   WidgetButton {
