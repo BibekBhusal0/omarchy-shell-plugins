@@ -2,8 +2,8 @@ import QtQuick
 import qs.Ui
 
 BarWidget {
-  id: root
-  moduleName: "bibek.menu"
+  id: root   
+  moduleName: "bibek.menu"   
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
