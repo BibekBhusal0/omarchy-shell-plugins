@@ -17,6 +17,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 GITHUB_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
 GITHUB_ACTOR="${GITHUB_ACTOR:-github-actions[bot]}"
 BRANCH="${BRANCH:-main}"
+NOTES_FILE="release notes.md"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -109,6 +110,10 @@ publish_plugin() {
   # Drop the personal config file; standalone installs start from code defaults.
   rm -f "$clone/config.json"
 
+  # Drop the pending release notes; they become the GitHub release body and
+  # must not ship to standalone repos.
+  rm -f "$clone/$NOTES_FILE"
+
   # Give the standalone repo its own license, and make README license links
   # that pointed at the parent repo's ../LICENSE point at this local copy.
   if [[ -f "$ROOT/LICENSE" ]]; then
@@ -132,10 +137,26 @@ publish_plugin() {
   SUMMARY_UPDATED+=("$id|$version|https://github.com/$org/$repo|$(cd "$clone" && git rev-parse HEAD)")
 
   # Release (idempotent: skip if the tag already exists).
+  # Release notes come from "<plugin>/release notes.md" when it has content;
+  # otherwise fall back to generated notes. A used notes file is cleared so
+  # the next version starts fresh; the publish workflow commits the clearing.
+  local notes_source="$dir/$NOTES_FILE"
+  local use_notes=0
+  if [[ -f "$notes_source" ]] && grep -q '[^[:space:]]' "$notes_source" 2>/dev/null; then
+    use_notes=1
+  fi
+
   if ! gh api "repos/$org/$repo/releases/tags/v$version" >/dev/null 2>&1; then
-    gh release create "v$version" --repo "$org/$repo" \
-      --title "$name v$version" --generate-notes
-    log "Created release v$version"
+    if [[ "$use_notes" == "1" ]]; then
+      gh release create "v$version" --repo "$org/$repo" \
+        --title "$name v$version" --notes-file "$notes_source"
+      log "Created release v$version from $NOTES_FILE"
+      : > "$notes_source"
+    else
+      gh release create "v$version" --repo "$org/$repo" \
+        --title "$name v$version" --generate-notes
+      log "Created release v$version"
+    fi
   else
     log "Release v$version already exists; skipping"
   fi

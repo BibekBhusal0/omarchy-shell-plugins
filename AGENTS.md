@@ -127,8 +127,16 @@ To install a plugin from this repo into the live shell:
 
 ## Publishing
 
-- Bump `version` in a plugin's `manifest.json`, `publish.sh` skips a plugin if the remote manifest already matches the local version. Do not bump version unless user ask to.
+- Bump `version` in a plugin's `manifest.json`, `publish.sh` skips a plugin if the remote manifest already matches the local version. Do not bump version unless user ask to. The skip is version-based, so any plugin-folder change after the commit that set the current version never ships until the version is bumped: always compare the plugin folder against that commit, not just the version number.
 - Publish flow runs on push to `main` or `workflow_dispatch`; needs `PAT_TOKEN` (repo scope) set on the repo. Dry-run locally: `GITHUB_TOKEN=... bash scripts/publish.sh`.
+
+## Release notes
+
+- Each plugin may keep a `release notes.md` next to its code. When `publish.sh` cuts a `v<version>` release it uses that file as the release body; when the file is missing or blank it falls back to generated notes.
+- `release notes.md` never ships to standalone repos (`publish.sh` deletes it from the child clone, like `config.json`) and is cleared in this repo after the release is created, so the next version starts fresh. The publish workflow commits the clearing back to `main`.
+- Write notes for users, not developers: describe user-visible behavior, no internals.
+- Use only these headings, and only the ones that apply: `New features`, `Fixes`, `Breaking Changes`, `Contributors`, `Preview`.
+- `Contributors` credits outside contributors only, never the repo owner or agents.
 
 ## Environment notes
 
