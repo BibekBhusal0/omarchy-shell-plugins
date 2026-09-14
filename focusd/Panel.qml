@@ -4,19 +4,6 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 Panel {
   id: root
   moduleName: "focusd"
