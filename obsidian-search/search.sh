@@ -8,7 +8,7 @@
 #   #vault \t <vault name>
 #   #vaultpath \t <absolute vault path>
 #   #daily (no arguments; only emitted when the daily-notes or periodic-notes
-#     plugin manages daily notes — the client opens it via obsidian://daily)
+#     plugin manages daily notes (the client opens it via obsidian://daily)
 #
 # The URI is the only script-generated field. It is URL-encoded, so it never
 # contains literal tabs or newlines, and the client launches it with
