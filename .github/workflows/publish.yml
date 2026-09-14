@@ -25,11 +25,33 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Check for QML changes
+        id: qml
+        run: |
+          base="${{ github.event.before }}"
+          if [[ -z "$base" || "$base" == 0000000000000000000000000000000000000000* ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$base" "${{ github.sha }}" -- '*.qml' | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache Qt packages
+        if: steps.qml.outputs.changed == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/apt-archives
+          key: apt-qt6-${{ runner.os }}-${{ runner.arch }}-v1
+
       - name: Install tools
         run: |
           bun add --global prettier
-          sudo apt-get install -y --no-install-recommends qt6-declarative-dev-tools || \
-          sudo apt-get install -y --no-install-recommends qml6format
+          if [[ "${{ steps.qml.outputs.changed }}" == "true" ]]; then
+            mkdir -p ~/apt-archives
+            sudo apt-get install -y --no-install-recommends -o Dir::Cache::archives="$HOME/apt-archives" qt6-declarative-dev-tools || \
+            sudo apt-get install -y --no-install-recommends -o Dir::Cache::archives="$HOME/apt-archives" qml6format
+          fi
 
       - name: Setup Chrome
         id: setup-chrome
@@ -45,8 +67,12 @@ jobs:
       - name: Format
         run: |
           prettier --write "**/*.{js,json,md}"
-          find . -name "*.qml" ! -path './.git/*' -exec /usr/lib/qt6/bin/qmlformat -i {} +
           find . -name "*~" -delete
+
+      - name: Format QML
+        if: steps.qml.outputs.changed == 'true'
+        run: |
+          find . -name "*.qml" ! -path './.git/*' -exec /usr/lib/qt6/bin/qmlformat -i {} +
 
       - name: Commit and push
         run: |
