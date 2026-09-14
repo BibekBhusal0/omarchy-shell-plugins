@@ -10,7 +10,7 @@
 #      creates a GitHub release tagged v<version>.
 #
 # Usage: GITHUB_TOKEN=... bash scripts/publish.sh
-# Requires: git, jq, curl, gh
+# Requires: git, jq, gh
 set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -73,10 +73,12 @@ publish_plugin() {
     }
   fi
 
-  # Compare with the remote version on the same branch.
+  # Compare with the remote version on the same branch. Read it via the API:
+  # raw.githubusercontent.com can serve a stale cached manifest right after a
+  # push, which causes a redundant republish of the same version.
   local remote_version=""
-  remote_version="$(curl -fsSL "https://raw.githubusercontent.com/$org/$repo/$BRANCH/manifest.json" \
-    2>/dev/null | jq -r '.version // empty' 2>/dev/null || true)"
+  remote_version="$(gh api "repos/$org/$repo/contents/manifest.json?ref=$BRANCH" \
+    2>/dev/null | jq -r '.content // empty' | base64 -d 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true)"
   if [[ -n "$remote_version" && "$remote_version" == "$version" ]]; then
     log "Up to date (remote v$remote_version); skipping"
     return 0

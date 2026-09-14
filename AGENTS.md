@@ -133,7 +133,7 @@ To install a plugin from this repo into the live shell:
 ## Release notes
 
 - Each plugin may keep a `release notes.md` next to its code. When `publish.sh` cuts a `v<version>` release it uses that file as the release body; when the file is missing or blank it falls back to generated notes.
-- `release notes.md` never ships to standalone repos (`publish.sh` deletes it from the child clone, like `config.json`) and is cleared in this repo after the release is created, so the next version starts fresh. The publish workflow commits the clearing back to `main`.
+- `release notes.md` never ships to standalone repos (`publish.sh` deletes it from the child clone, like `config.json`) and is cleared in this repo after the release is created, so the next version starts fresh. The publish workflow commits the clearing back to `main` with `[skip ci]` so it doesn't trigger another publish run.
 - Write notes for users, not developers: describe user-visible behavior, no internals.
 - Use only these headings, and only the ones that apply: `New features`, `Fixes`, `Breaking Changes`, `Contributors`, `Preview`.
 - `Contributors` credits outside contributors only, never the repo owner or agents.
