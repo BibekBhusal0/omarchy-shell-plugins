@@ -20,13 +20,13 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 
 `scripts/publish.sh` + `.github/workflows/publish.yml` push each plugin folder to its standalone repo and cut a `v<version>` release.
 
-## How the dev loop works (critical)
+## Plugin editing workflow
 
-QML runs inside the long-lived `omarchy-shell` (Quickshell) process; there is **no build step** for the plugin code itself.
-
-- `~/.config/omarchy/plugins/<id>/` are symlinks into this repo (installed via `omarchy-overrides/config/omarchy.sh` `install_my_plugin`). Edits here are live, no copy step.
-- Symlinked dirs may not hot-reload on save, so restart the shell (`omarchy restart shell`).
-- **"sync" means only this:** restart the shell (`omarchy restart shell`). Nothing else: no status checks, no IPC calls, no log inspection, no testing.
+- Update plugin code.
+- Restart the slell
+```bash
+omarchy-restart-shell
+```
 
 ## Plugin install and test workflow
 
@@ -70,10 +70,6 @@ To install a plugin from this repo into the live shell:
 
 ## Comment conventions
 
-- **No slop comments.** Never add decorative section dividers (`# ------`), "talking to the reader" comments, or obvious comments that restate the code.
-- **High-value comments only.** Use comments to break down complex logic: non-obvious constants (like AT-SPI role codes), protocol message formats, timing-sensitive code, or workarounds.
-- **No mdashes in README files.**.
-- **No comments in Code** unless explaining a non-obvious behavior or workaround.
 - **Icon comments required for new/modified components only.** When adding a new QML component or modifying an existing one that uses Nerd Font icon glyphs, add `// FIX: icon below` on the line above the `iconText` property. Do not add this comment to existing, unmodified components that already have icons.
 
 ## Formatting
