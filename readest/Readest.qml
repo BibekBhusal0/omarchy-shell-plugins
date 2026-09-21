@@ -140,7 +140,7 @@ Item {
       var detail = String(parts[1] || "").substring(0, 128);
       var cover = parts.length > 3 ? parts[3] : "";
       rows.push({
-          "icon": "󰂚",
+          "icon": "󱓷",
           "label": label,
           "detail": detail,
           "cover": cover,
