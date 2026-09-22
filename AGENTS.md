@@ -24,9 +24,11 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 
 - Update plugin code.
 - Restart the shell
+
 ```bash
 omarchy-restart-shell
 ```
+
 - Update the release note (if significant changes)
 
 ## Plugin install and test workflow
