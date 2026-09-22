@@ -92,7 +92,6 @@ jobs:
 
   publish:
     needs: format
-    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
