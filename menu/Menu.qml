@@ -140,16 +140,13 @@ Item {
     var id = String(appId || "");
     if (!id)
       return;
-    if (id.slice(-8) === ".desktop")
-      id = id.slice(0, -8);
+    // Keep the .desktop suffix or ids like org.telegram.desktop won't resolve.
     Quickshell.execDetached(["uwsm-app", "--", "gtk-launch", id + ".desktop"]);
   }
   function fallbackRemove(appId, label) {
     var id = String(appId || "");
     if (!id)
       return;
-    if (id.slice(-8) === ".desktop")
-      id = id.slice(0, -8);
     Quickshell.execDetached([root.fallbackBase() + "/bin/omarchy-remove-launcher-entry", id, String(label || id)]);
   }
   function refreshAppsIfLoaded() {
