@@ -204,10 +204,15 @@ Item {
       Qt.callLater(forcePasswordFocus);
   }
 
+  Component.onDestruction: {
+    dateTimeTimer.stop();
+    forgotPasswordSleepTimer.stop();
+  }
+
   Timer {
     id: dateTimeTimer
     interval: 1000
-    running: true
+    running: root.visible
     repeat: true
     triggeredOnStart: true
     onTriggered: {
