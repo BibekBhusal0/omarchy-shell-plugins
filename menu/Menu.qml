@@ -1269,20 +1269,16 @@ Item {
   function loadConfigs() {
     if (configProc.running)
       return;
-    root.configQueue = [
-      {
+    root.configQueue = [{
         "kind": "engine",
         "path": Quickshell.env("HOME") + "/.config/omarchy/menu.json"
-      },
-      {
+      }, {
         "kind": "default",
         "path": root.defaultMenuPath
-      },
-      {
+      }, {
         "kind": "user",
         "path": root.userMenuPath
-      }
-    ];
+      }];
     root.nextConfig();
   }
 

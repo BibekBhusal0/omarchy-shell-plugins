@@ -106,18 +106,15 @@ Item {
   function loadPersistedState() {
     if (readProc.running)
       return;
-    root.readQueue = [
-      {
+    root.readQueue = [{
         "kind": "config",
         "path": root.configPath,
         "max": root.maxConfigBytes
-      },
-      {
+      }, {
         "kind": "history",
         "path": root.historyPath,
         "max": root.maxHistoryBytes
-      }
-    ];
+      }];
     root.nextRead();
   }
 
