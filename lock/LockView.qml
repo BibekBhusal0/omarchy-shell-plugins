@@ -403,6 +403,7 @@ Item {
           Text {
             width: parent.width
             text: root.mediaTitle
+            textFormat: Text.PlainText
             color: Color.popups.text
             font.family: Style.font.family
             font.pixelSize: Style.font.body
@@ -413,6 +414,7 @@ Item {
           Text {
             width: parent.width
             text: root.mediaArtist
+            textFormat: Text.PlainText
             visible: root.mediaArtist.length > 0
             color: Color.popups.text
             font.family: Style.font.family
