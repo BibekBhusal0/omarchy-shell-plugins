@@ -303,4 +303,42 @@ test("emptyMessage", () => {
   );
 });
 
+test("parseLine carries marker, defaulting from checked", () => {
+  const snap = Model.parseLine(
+    JSON.stringify({
+      state: "ok",
+      todos: [
+        { line: 1, checked: false, marker: "/", text: "half", depth: 0 },
+        { line: 2, checked: true, marker: ">", text: "fwd", depth: 0 },
+        { line: 3, checked: false, text: "legacy", depth: 0 },
+        { line: 4, checked: true, text: "legacy-done", depth: 0 },
+      ],
+    }),
+  );
+  assert.equal(snap.todos[0].marker, "/");
+  assert.equal(snap.todos[1].marker, ">");
+  assert.equal(snap.todos[2].marker, " ");
+  assert.equal(snap.todos[3].marker, "x");
+});
+
+test("isDoneMarker matches the backend", () => {
+  assert.equal(Model.isDoneMarker(" "), false);
+  assert.equal(Model.isDoneMarker("-"), false);
+  assert.equal(Model.isDoneMarker("/"), false);
+  assert.equal(Model.isDoneMarker("x"), true);
+  assert.equal(Model.isDoneMarker("X"), true);
+  assert.equal(Model.isDoneMarker(">"), true);
+  assert.equal(Model.isDoneMarker("?"), true);
+});
+
+test("markerGlyph renders states without special fonts", () => {
+  assert.equal(Model.markerGlyph(" "), "");
+  assert.equal(Model.markerGlyph("x"), "✓");
+  assert.equal(Model.markerGlyph("X"), "✓");
+  assert.equal(Model.markerGlyph("/"), "◐");
+  assert.equal(Model.markerGlyph("-"), "–");
+  assert.equal(Model.markerGlyph(">"), ">");
+  assert.equal(Model.markerGlyph("?"), "?");
+});
+
 console.log("All Model.js tests passed.");

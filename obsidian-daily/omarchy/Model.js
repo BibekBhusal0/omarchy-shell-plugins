@@ -50,9 +50,13 @@ function parseLine(line) {
       var parentLine = null;
       if (typeof item.parentLine === "number" && isFinite(item.parentLine) && item.parentLine >= 1)
         parentLine = Math.floor(item.parentLine);
+      var marker = typeof item.marker === "string" && item.marker.length > 0
+        ? item.marker.charAt(0)
+        : (item.checked === true ? "x" : " ");
       todos.push({
         line: Math.floor(lineNo),
         checked: item.checked === true,
+        marker: marker,
         text: safeTodoText(item.text),
         depth: Math.min(32, Math.floor(depth)),
         parentLine: parentLine
@@ -137,6 +141,22 @@ function safeUri(value) {
   if (value.indexOf("<") !== -1 || value.indexOf(">") !== -1 || value.indexOf('"') !== -1)
     return "";
   return value;
+}
+
+// Only open, canceled and half-done count as not done; every other marker
+// counts as done. Mirrors is_done_marker in src/todos.rs.
+function isDoneMarker(marker) {
+  return marker !== " " && marker !== "-" && marker !== "/";
+}
+
+// Glyph drawn inside a todo checkbox for its marker. Falls back to the raw
+// marker so extended states stay recognizable without special fonts.
+function markerGlyph(marker) {
+  if (marker === "x" || marker === "X") return "✓";
+  if (marker === "/") return "◐";
+  if (marker === "-") return "–";
+  if (marker === " ") return "";
+  return String(marker);
 }
 
 function expandPath(path, home) {

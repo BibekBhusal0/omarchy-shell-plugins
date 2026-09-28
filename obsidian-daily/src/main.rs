@@ -10,7 +10,7 @@ use obsidian_daily_qs::config::Vault;
 use obsidian_daily_qs::status::{Snapshot, WeekSummary};
 use obsidian_daily_qs::watch;
 use obsidian_daily_qs::{
-    add_todo_under, carry_over, defer_todo, delete_todo, edit_todo, open_in_obsidian,
+    add_todo_under, carry_over, cycle_todo, defer_todo, delete_todo, edit_todo, open_in_obsidian,
     read_snapshot_filtered, set_indent, toggle_todo, undo_last, week_summary,
 };
 
@@ -68,6 +68,15 @@ enum Command {
     },
     /// Toggle a checkbox on the given 1-based source line
     Toggle {
+        #[arg(long)]
+        line: usize,
+        #[arg(long)]
+        expect_text: Option<String>,
+        #[arg(long)]
+        date: Option<String>,
+    },
+    /// Advance a checkbox to the next state (` ` → `/` → `x` → `-` → …)
+    Cycle {
         #[arg(long)]
         line: usize,
         #[arg(long)]
@@ -184,6 +193,16 @@ fn main() {
             vault_arg,
             archive_arg,
             |vault, d| toggle_todo(vault, d, line, expect_text.as_deref()),
+            date,
+        )),
+        Command::Cycle {
+            line,
+            expect_text,
+            date,
+        } => emit(run(
+            vault_arg,
+            archive_arg,
+            |vault, d| cycle_todo(vault, d, line, expect_text.as_deref()),
             date,
         )),
         Command::Edit {

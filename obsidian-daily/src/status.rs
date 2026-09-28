@@ -14,6 +14,10 @@ pub struct TodoItem {
     /// 1-based source line number in the daily note.
     pub line: usize,
     pub checked: bool,
+    /// Single-character checkbox state (` ` open, `x` done, `/` half-done,
+    /// `-` canceled, plus extended markers like `>`, `?`, `!`). Only ` `,
+    /// `-` and `/` count as not done; everything else counts as done.
+    pub marker: char,
     pub text: String,
     /// Nesting level under its parent todo: 0 = top-level, 1 = first level
     /// of indentation, … Raw indentation is normalized so a todo never nests
@@ -158,6 +162,7 @@ mod tests {
             vec![TodoItem {
                 line: 3,
                 checked: false,
+                marker: ' ',
                 text: "Ship".into(),
                 depth: 0,
                 parent_line: None,
@@ -180,6 +185,7 @@ mod tests {
                 TodoItem {
                     line: 3,
                     checked: false,
+                    marker: ' ',
                     text: "Parent".into(),
                     depth: 0,
                     parent_line: None,
@@ -187,6 +193,7 @@ mod tests {
                 TodoItem {
                     line: 4,
                     checked: false,
+                    marker: ' ',
                     text: "Child".into(),
                     depth: 1,
                     parent_line: Some(3),

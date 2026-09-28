@@ -12,7 +12,10 @@ use crate::open;
 use crate::status::{Snapshot, TodoItem};
 
 fn checkbox_re() -> Regex {
-    Regex::new(r"^(\s*)([-*+])\s+\[([ xX])\](\s+)(.*)$").expect("checkbox regex")
+    // Any single marker character counts (` ` open, `x` done, `/` half-done,
+    // `-` canceled, plus extended states like `>`, `?`, `!`). Only ` `, `-`
+    // and `/` count as not done; everything else counts as done.
+    Regex::new(r"^(\s*)([-*+])\s+\[([^\]])\](\s+)(.*)$").expect("checkbox regex")
 }
 
 fn tasks_heading_re() -> Regex {
@@ -71,6 +74,39 @@ fn indent_level(indent: &str) -> usize {
     tabs + spaces / 2
 }
 
+/// Cycle order for the `t` key / `cycle` command: open, half-done, done,
+/// canceled, then the extended single-character states.
+pub const STATE_ORDER: &[char] = &[
+    ' ', '/', 'x', '-', '>', '<', '?', '!', '*', '"', 'l', 'b', 'i', 'I', 'p', 'c', 'f',
+    'k', 'u', 'd',
+];
+
+/// Only ` ` (open), `-` (canceled) and `/` (half-done) count as not done;
+/// every other marker counts as done.
+pub fn is_done_marker(marker: char) -> bool {
+    !matches!(marker, ' ' | '-' | '/')
+}
+
+fn normalize_marker(raw: &str) -> char {
+    raw.chars().next().unwrap_or(' ')
+}
+
+/// Advance to the next marker in [`STATE_ORDER`], matching case-insensitively
+/// so `X` continues from `x`. Unknown markers restart the walk at done.
+pub fn next_marker(current: char) -> char {
+    let at = STATE_ORDER
+        .iter()
+        .position(|&c| c == current)
+        .or_else(|| {
+            current
+                .to_lowercase()
+                .next()
+                .and_then(|l| STATE_ORDER.iter().position(|&c| c == l))
+        })
+        .unwrap_or(2);
+    STATE_ORDER[(at + 1) % STATE_ORDER.len()]
+}
+
 /// Parse all checkbox todos from note body. Line numbers are 1-based.
 ///
 /// Nested list items are normalized: each todo's `depth` is at most one level
@@ -88,7 +124,8 @@ pub fn parse_todos(content: &str) -> Vec<TodoItem> {
             continue;
         };
         let line_no = idx + 1;
-        let checked = !caps[3].eq(" ");
+        let marker = normalize_marker(&caps[3]);
+        let checked = is_done_marker(marker);
         let text = caps[5].to_string();
         let raw = indent_level(&caps[1]);
         let depth = if stack.is_empty() {
@@ -105,6 +142,7 @@ pub fn parse_todos(content: &str) -> Vec<TodoItem> {
         todos.push(TodoItem {
             line: line_no,
             checked,
+            marker,
             text,
             depth,
             parent_line,
@@ -560,25 +598,24 @@ fn add_todo_lines(
     items: &[(usize, String)],
     heading: Option<&str>,
 ) -> Result<(), VaultError> {
-    let formatted: Vec<(usize, bool, String)> = items
+    let formatted: Vec<(usize, char, String)> = items
         .iter()
-        .map(|(depth, text)| (*depth, false, text.clone()))
+        .map(|(depth, text)| (*depth, ' ', text.clone()))
         .collect();
     add_checkbox_lines(vault, date, &formatted, true, heading)
 }
 
-fn format_checkbox_lines(items: &[(usize, bool, String)]) -> Vec<String> {
+fn format_checkbox_lines(items: &[(usize, char, String)]) -> Vec<String> {
     let mut prev_depth: Option<usize> = None;
     items
         .iter()
-        .map(|(depth, checked, text)| {
+        .map(|(depth, marker, text)| {
             let d = match prev_depth {
                 None => 0,
                 Some(p) => (*depth).min(p + 1),
             };
             prev_depth = Some(d);
-            let mark = if *checked { "x" } else { " " };
-            format!("{}- [{mark}] {text}", "  ".repeat(d))
+            format!("{}- [{marker}] {text}", "  ".repeat(d))
         })
         .collect()
 }
@@ -586,7 +623,7 @@ fn format_checkbox_lines(items: &[(usize, bool, String)]) -> Vec<String> {
 fn add_checkbox_lines(
     vault: &Vault,
     date: NaiveDate,
-    items: &[(usize, bool, String)],
+    items: &[(usize, char, String)],
     rollover: bool,
     heading: Option<&str>,
 ) -> Result<(), VaultError> {
@@ -636,7 +673,8 @@ fn expect_line_text(
     }
 }
 
-/// Toggle the checkbox on the given 1-based line.
+/// Toggle the checkbox on the given 1-based line: done states become open,
+/// everything else becomes done.
 pub fn toggle_todo(
     vault: &Vault,
     date: NaiveDate,
@@ -657,8 +695,41 @@ pub fn toggle_todo(
     let content = fs::read_to_string(&path)
         .map_err(|e| VaultError::Io(format!("failed to read {}: {e}", path.display())))?;
     expect_line_text(&content, line, expect_text)?;
-    let next = toggle_line(&content, line)?;
-    write_atomic_with_undo(vault, date, &path, &content, &next)?;
+    let next = if is_done_marker(marker_of(&content, line)?) {
+        ' '
+    } else {
+        'x'
+    };
+    let next_body = set_marker_line(&content, line, next)?;
+    write_atomic_with_undo(vault, date, &path, &content, &next_body)?;
+    read_snapshot(vault, date)
+}
+
+/// Advance the checkbox on the given 1-based line to the next state in
+/// [`STATE_ORDER`] (` ` → `/` → `x` → `-` → extended states → ` `).
+pub fn cycle_todo(
+    vault: &Vault,
+    date: NaiveDate,
+    line: usize,
+    expect_text: Option<&str>,
+) -> Result<Snapshot, VaultError> {
+    if line == 0 {
+        return Err(VaultError::Io("line must be >= 1".into()));
+    }
+    let config = vault.daily_notes_config()?;
+    let path = resolved_note_path(vault, &config, date)?;
+    if !path.exists() {
+        return Err(VaultError::Io(format!(
+            "daily note does not exist: {}",
+            path.display()
+        )));
+    }
+    let content = fs::read_to_string(&path)
+        .map_err(|e| VaultError::Io(format!("failed to read {}: {e}", path.display())))?;
+    expect_line_text(&content, line, expect_text)?;
+    let next = next_marker(marker_of(&content, line)?);
+    let next_body = set_marker_line(&content, line, next)?;
+    write_atomic_with_undo(vault, date, &path, &content, &next_body)?;
     read_snapshot(vault, date)
 }
 
@@ -828,10 +899,10 @@ pub fn defer_todo_to(
             drop.insert(t.line);
         }
     }
-    let mut moving: Vec<(usize, bool, String)> = todos
+    let mut moving: Vec<(usize, char, String)> = todos
         .into_iter()
         .filter(|t| drop.contains(&t.line))
-        .map(|t| (t.depth, t.checked, t.text))
+        .map(|t| (t.depth, t.marker, t.text))
         .collect();
     if moving.is_empty() {
         return Err(VaultError::Io(format!("line {line} is not a todo")));
@@ -1348,7 +1419,28 @@ fn finish_body(out: Vec<String>) -> String {
     body
 }
 
-fn toggle_line(content: &str, line: usize) -> Result<String, VaultError> {
+/// Read the checkbox marker on the given 1-based line.
+fn marker_of(content: &str, line: usize) -> Result<char, VaultError> {
+    let re = checkbox_re();
+    let idx = line - 1;
+    let target = content.lines().nth(idx).ok_or_else(|| {
+        VaultError::Io(format!(
+            "line {line} is past end of file ({} lines)",
+            content.lines().count()
+        ))
+    })?;
+    let caps = re
+        .captures(target)
+        .ok_or_else(|| VaultError::Io(format!("line {line} is not a checkbox todo")))?;
+    Ok(normalize_marker(&caps[3]))
+}
+
+fn set_marker_line(content: &str, line: usize, marker: char) -> Result<String, VaultError> {
+    if marker == ']' || marker.is_control() {
+        return Err(VaultError::Io(format!(
+            "refusing to write marker {marker:?} on line {line}"
+        )));
+    }
     let re = checkbox_re();
     let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
     let idx = line - 1;
@@ -1362,11 +1454,9 @@ fn toggle_line(content: &str, line: usize) -> Result<String, VaultError> {
     let caps = re
         .captures(&current)
         .ok_or_else(|| VaultError::Io(format!("line {line} is not a checkbox todo")))?;
-    let checked = !caps[3].eq(" ");
-    let mark = if checked { " " } else { "x" };
     lines[idx] = format!(
         "{}{} [{}]{}{}",
-        &caps[1], &caps[2], mark, &caps[4], &caps[5]
+        &caps[1], &caps[2], marker, &caps[4], &caps[5]
     );
     let mut body = lines.join("\n");
     if content.ends_with('\n') && !body.ends_with('\n') {
@@ -2664,6 +2754,90 @@ mod tests {
         assert_eq!(snap.carry_over_count, Some(0));
         let snap = carry_over(&vault, today, None).unwrap();
         assert_eq!(snap.carry_over_count, Some(0));
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn parses_extended_markers() {
+        let todos = parse_todos(
+            "- [ ] open\n- [/] half\n- [-] canceled\n- [x] done\n- [X] upper\n- [>] fwd\n- [<] sched\n- [?] q\n- [!] bang\n- [*] star\n- [\"] quote\n- [l] loc\n- [b] mark\n- [i] info\n- [I] idea\n- [p] pro\n- [c] con\n- [f] fire\n- [k] key\n- [u] up\n- [d] down\n",
+        );
+        assert_eq!(todos.len(), 21);
+        let markers: Vec<char> = todos.iter().map(|t| t.marker).collect();
+        assert_eq!(
+            markers,
+            vec![
+                ' ', '/', '-', 'x', 'X', '>', '<', '?', '!', '*', '"', 'l', 'b', 'i',
+                'I', 'p', 'c', 'f', 'k', 'u', 'd'
+            ]
+        );
+        // Only open, half-done and canceled count as not done.
+        let open: Vec<char> = todos
+            .iter()
+            .filter(|t| !t.checked)
+            .map(|t| t.marker)
+            .collect();
+        assert_eq!(open, vec![' ', '/', '-']);
+    }
+
+    #[test]
+    fn next_marker_walks_state_order() {
+        assert_eq!(next_marker(' '), '/');
+        assert_eq!(next_marker('/'), 'x');
+        assert_eq!(next_marker('x'), '-');
+        assert_eq!(next_marker('-'), '>');
+        assert_eq!(next_marker('d'), ' ');
+        assert_eq!(next_marker('X'), '-');
+        assert_eq!(next_marker('~'), '-');
+    }
+
+    #[test]
+    fn toggle_maps_half_and_canceled_to_done() {
+        let (vault, date, note) = vault_with("- [/] half\n- [-] gone\n- [>] fwd\n");
+        toggle_todo(&vault, date, 1, None).unwrap();
+        toggle_todo(&vault, date, 2, None).unwrap();
+        toggle_todo(&vault, date, 3, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [x] half\n- [x] gone\n- [ ] fwd\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn cycle_advances_and_wraps() {
+        let (vault, date, note) = vault_with("- [ ] a\n- [d] b\n- [X] c\n");
+        cycle_todo(&vault, date, 1, None).unwrap();
+        cycle_todo(&vault, date, 2, None).unwrap();
+        cycle_todo(&vault, date, 3, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [/] a\n- [ ] b\n- [-] c\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn carry_over_treats_half_as_open_and_forwarded_as_done() {
+        let (vault, today, _) = vault_with("- [ ] today-only\n");
+        let ynote = vault.root().join("Daily").join("2026-08-19.md");
+        fs::write(&ynote, "- [/] half\n- [>] fwd\n- [-] gone\n").unwrap();
+        let snap = carry_over(&vault, today, None).unwrap();
+        let texts: Vec<_> = snap.todos.unwrap().into_iter().map(|t| t.text).collect();
+        assert!(texts.contains(&"half".to_string()));
+        assert!(texts.contains(&"gone".to_string()));
+        assert!(!texts.contains(&"fwd".to_string()));
+        assert_eq!(fs::read_to_string(&ynote).unwrap(), "- [>] fwd\n");
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn defer_preserves_custom_marker() {
+        let (vault, date, note) = vault_with("- [ ] keep\n- [/] later\n");
+        defer_todo(&vault, date, 2, Some("later"), false, None).unwrap();
+        assert_eq!(fs::read_to_string(&note).unwrap(), "- [ ] keep\n");
+        let next = fs::read_to_string(vault.root().join("Daily/2026-08-21.md")).unwrap();
+        assert!(next.contains("- [/] later"), "next: {next}");
         let _ = fs::remove_dir_all(vault.root());
     }
 }

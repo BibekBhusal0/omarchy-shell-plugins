@@ -110,6 +110,17 @@ Panel {
     watcher.toggleTodo(line, text)
   }
 
+  function cycleSelected() {
+    if (!root.selectedTodo) return
+    root.cycleTodo(root.selectedTodo)
+  }
+
+  function cycleTodo(todo) {
+    if (!todo) return
+    if (!hasWatcher || typeof watcher.cycleTodo !== "function") return
+    watcher.cycleTodo(todo.line, todo.text)
+  }
+
   function editTodo(line, expectText, newText) {
     if (!hasWatcher || typeof watcher.editTodo !== "function") return
     watcher.editTodo(line, expectText, newText)
@@ -369,6 +380,8 @@ Panel {
           root.indentSelected(1)
         } else if (t === "u" || t === "U") {
           root.undoLast()
+        } else if (t === "t" || t === "T") {
+          root.cycleSelected()
         } else if (t === "e" || t === "E") {
           root.startEdit(root.selectedTodo)
         }
@@ -840,8 +853,8 @@ Panel {
 
                           Text {
                             anchors.centerIn: parent
-                            visible: modelData.checked === true
-                            text: "\u2713"
+                            visible: Model.markerGlyph(modelData.marker) !== ""
+                            text: Model.markerGlyph(modelData.marker)
                             textFormat: Text.PlainText
                             color: root.foreground
                             font.family: root.fontFamily
@@ -894,10 +907,10 @@ Panel {
                         visible: root.editingLine !== modelData.line
                         text: modelData.text
                         textFormat: Text.PlainText
-                        color: modelData.checked ? root.dim : root.foreground
+                        color: (modelData.checked || modelData.marker === "-") ? root.dim : root.foreground
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.body
-                        font.strikeout: modelData.checked === true
+                        font.strikeout: modelData.checked === true || modelData.marker === "-"
                         elide: Text.ElideRight
                         wrapMode: Text.NoWrap
                       }
