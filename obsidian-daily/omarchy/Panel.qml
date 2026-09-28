@@ -34,6 +34,13 @@ Panel {
   }
   property string searchText: ""
   property int selectedIndex: -1
+  // Keyboard cursor: zone + item replaces focus traversal. Zones in visual
+  // order are nav (day buttons), week, tools, todos, foot (add button).
+  // Inside a todo row Left/Right flips todoSub between the checkbox (toggle)
+  // and the delete button instead of leaving the row.
+  property string cursorZone: "todos"
+  property int cursorItem: 0
+  property string todoSub: "box"
   property int editingLine: -1
   property string editingOriginal: ""
   property int pendingAppendCount: 0
@@ -85,6 +92,9 @@ Panel {
   }
 
   function focusCapture() {
+    root.cursorZone = "foot"
+    root.cursorItem = 0
+    root.todoSub = "box"
     if (root.vaultSetupError)
       vaultPathField.forceActiveFocus()
     else
@@ -236,20 +246,128 @@ Panel {
   }
 
   function moveSelection(dy) {
-    if (root.shownTodos.length === 0) {
-      root.selectedIndex = -1
+    root.navMove(0, dy)
+  }
+
+  function navItems() {
+    var items = ["prev"]
+    if (!root.isToday) items.push("today")
+    items.push("next", "open")
+    return items
+  }
+
+  function toolItems() {
+    var items = []
+    if (root.isToday && root.carryOverCount > 0) items.push("carry")
+    items.push("hide", "sort")
+    return items
+  }
+
+  function zoneItems(zone) {
+    if (zone === "nav") return root.navItems()
+    if (zone === "week") return root.weekDays
+    if (zone === "tools") return root.toolItems()
+    if (zone === "todos") return root.shownTodos
+    return ["add"]
+  }
+
+  function zoneList() {
+    var zones = ["nav"]
+    if (root.weekDays.length > 0) zones.push("week")
+    zones.push("tools")
+    if (root.shownTodos.length > 0) zones.push("todos")
+    zones.push("foot")
+    return zones
+  }
+
+  function setCursor(zone, item) {
+    var zones = root.zoneList()
+    if (zones.indexOf(zone) === -1)
+      zone = zones.indexOf("tools") !== -1 ? "tools" : zones[0]
+    var count = root.zoneItems(zone).length
+    if (count === 0) return
+    root.cursorZone = zone
+    root.cursorItem = Math.max(0, Math.min(count - 1, item))
+    if (zone === "todos") {
+      root.selectedIndex = root.cursorItem
+      root.todoSub = "box"
+      root.scrollSelectedIntoView()
+    }
+  }
+
+  // Arrows and vim keys walk every control: Left/Right (h/l) inside a row,
+  // Up/Down (j/k) across rows. Returns nothing; clamps at panel edges.
+  function navMove(dx, dy) {
+    if (dy !== 0) {
+      var zones = root.zoneList()
+      var at = zones.indexOf(root.cursorZone)
+      if (at === -1) {
+        root.setCursor(dy > 0 ? zones[0] : zones[zones.length - 1], dy > 0 ? 0 : 999999)
+        return
+      }
+      var next = at + (dy > 0 ? 1 : -1)
+      if (next < 0 || next >= zones.length) return
+      var zone = zones[next]
+      var item = root.cursorItem
+      if (zone === "todos") {
+        if (root.selectedIndex >= 0 && root.selectedIndex < root.shownTodos.length)
+          item = root.selectedIndex
+        else
+          item = dy > 0 ? 0 : root.shownTodos.length - 1
+      } else if (root.cursorZone === "todos") {
+        item = dy > 0 ? 0 : 999999
+      }
+      root.setCursor(zone, item)
       return
     }
-    if (root.selectedIndex < 0)
-      root.selectedIndex = dy > 0 ? 0 : root.shownTodos.length - 1
-    else
-      root.selectedIndex = Math.max(0, Math.min(root.shownTodos.length - 1, root.selectedIndex + dy))
-    root.scrollSelectedIntoView()
+    if (dx === 0) return
+    if (root.cursorZone === "todos") {
+      root.todoSub = dx > 0 ? "del" : "box"
+      return
+    }
+    if (root.zoneItems(root.cursorZone).length === 0) return
+    root.setCursor(root.cursorZone, root.cursorItem + dx)
+  }
+
+  function cycleSort() {
+    if (root.sortOrder === "newest") root.sortOrder = "openFirst"
+    else if (root.sortOrder === "openFirst") root.sortOrder = "alphabetical"
+    else if (root.sortOrder === "alphabetical") root.sortOrder = "default"
+    else root.sortOrder = "newest"
   }
 
   function activateSelected() {
-    if (!root.selectedTodo) return
-    root.toggleTodo(root.selectedTodo.line, root.selectedTodo.text)
+    var zone = root.cursorZone
+    if (zone === "todos") {
+      if (!root.selectedTodo) return
+      if (root.todoSub === "del") root.deleteTodo(root.selectedTodo)
+      else root.toggleTodo(root.selectedTodo.line, root.selectedTodo.text)
+      return
+    }
+    if (zone === "nav") {
+      var id = root.navItems()[root.cursorItem]
+      if (id === "prev") root.shiftDay(-1)
+      else if (id === "next") root.shiftDay(1)
+      else if (id === "today") root.goToday()
+      else if (id === "open") root.openInObsidian()
+      return
+    }
+    if (zone === "week") {
+      var day = root.weekDays[root.cursorItem]
+      if (day && day.date) root.goToDate(day.date)
+      return
+    }
+    if (zone === "tools") {
+      var tool = root.toolItems()[root.cursorItem]
+      if (tool === "carry") root.carryOver()
+      else if (tool === "hide") root.openOnly = !root.openOnly
+      else if (tool === "sort") root.cycleSort()
+      return
+    }
+    if (zone === "foot") {
+      root.addTodo(false)
+      return
+    }
   }
 
   function scrollItemIntoView(item) {
@@ -292,6 +410,7 @@ Panel {
 
   onShownTodosChanged: {
     root.clampSelection()
+    if (root.cursorZone === "todos") root.setCursor("todos", root.cursorItem)
     if (root.editingLine >= 0) {
       var stillThere = false
       for (var i = 0; i < root.shownTodos.length; i++) {
@@ -321,6 +440,7 @@ Panel {
 
   onDateChanged: {
     root.selectedIndex = -1
+    root.todoSub = "box"
     root.cancelEdit()
     root.closeTodoMenu()
     if (panelFlick) panelFlick.contentY = 0
@@ -330,6 +450,9 @@ Panel {
     if (root.opened) {
       root.searchText = ""
       root.selectedIndex = -1
+      root.cursorZone = "foot"
+      root.cursorItem = 0
+      root.todoSub = "box"
       root.cancelEdit()
       root.closeTodoMenu()
       if (panelFlick) panelFlick.contentY = 0
@@ -375,8 +498,12 @@ Panel {
         if (t === "/" && root.searchAvailable) {
           searchField.forceActiveFocus()
         } else if (t === "[") {
-          root.indentSelected(-1)
+          root.shiftDay(-1)
         } else if (t === "]") {
+          root.shiftDay(1)
+        } else if (t === "{") {
+          root.indentSelected(-1)
+        } else if (t === "}") {
           root.indentSelected(1)
         } else if (t === "u" || t === "U") {
           root.undoLast()
@@ -387,8 +514,7 @@ Panel {
         }
       }
       onMoveRequested: function(dx, dy) {
-        if (dy === 0) return
-        root.moveSelection(dy)
+        root.navMove(dx, dy)
       }
 
       Column {
@@ -421,7 +547,12 @@ Panel {
                   tooltipText: "Previous day"
                   foreground: root.foreground
                   fontFamily: root.fontFamily
-                  onClicked: root.shiftDay(-1)
+                  hasCursor: root.cursorZone === "nav" && root.navItems()[root.cursorItem] === "prev"
+                  onHovered: function(h) { if (h) root.setCursor("nav", root.navItems().indexOf("prev")) }
+                  onClicked: {
+                    root.setCursor("nav", root.navItems().indexOf("prev"))
+                    root.shiftDay(-1)
+                  }
                 }
 
                 PanelActionButton {
@@ -430,7 +561,12 @@ Panel {
                   visible: !root.isToday
                   foreground: root.foreground
                   fontFamily: root.fontFamily
-                  onClicked: root.goToday()
+                  hasCursor: root.cursorZone === "nav" && root.navItems()[root.cursorItem] === "today"
+                  onHovered: function(h) { if (h) root.setCursor("nav", root.navItems().indexOf("today")) }
+                  onClicked: {
+                    root.setCursor("nav", root.navItems().indexOf("today"))
+                    root.goToday()
+                  }
                 }
 
                 PanelActionButton {
@@ -438,7 +574,12 @@ Panel {
                   tooltipText: "Next day"
                   foreground: root.foreground
                   fontFamily: root.fontFamily
-                  onClicked: root.shiftDay(1)
+                  hasCursor: root.cursorZone === "nav" && root.navItems()[root.cursorItem] === "next"
+                  onHovered: function(h) { if (h) root.setCursor("nav", root.navItems().indexOf("next")) }
+                  onClicked: {
+                    root.setCursor("nav", root.navItems().indexOf("next"))
+                    root.shiftDay(1)
+                  }
                 }
 
                 PanelActionButton {
@@ -447,7 +588,12 @@ Panel {
                   y: 2
                   foreground: root.foreground
                   fontFamily: root.fontFamily
-                  onClicked: root.openInObsidian()
+                  hasCursor: root.cursorZone === "nav" && root.navItems()[root.cursorItem] === "open"
+                  onHovered: function(h) { if (h) root.setCursor("nav", root.navItems().indexOf("open")) }
+                  onClicked: {
+                    root.setCursor("nav", root.navItems().indexOf("open"))
+                    root.openInObsidian()
+                  }
                 }
               }
             }
@@ -483,7 +629,13 @@ Panel {
               foreground: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.body
-              Keys.onEscapePressed: root.close()
+              Keys.onEscapePressed: keyCatcher.forceActiveFocus()
+              Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                  root.switchPanel(event.key === Qt.Key_Backtab ? -1 : 1)
+                  event.accepted = true
+                }
+              }
               onAccepted: root.saveVaultPath(vaultPathField.text)
             }
 
@@ -514,18 +666,22 @@ Panel {
                 delegate: CursorSurface {
                   id: dayCell
                   required property var modelData
+                  required property int index
                   Layout.fillWidth: true
                   Layout.preferredHeight: Style.space(48)
                   foreground: root.foreground
                   accent: root.accent
-                  hasCursor: false
+                  hasCursor: root.cursorZone === "week" && root.cursorItem === index
                   current: modelData.date === root.date
                   bordered: true
 
                   MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.goToDate(modelData.date)
+                    onClicked: {
+                      root.setCursor("week", index)
+                      root.goToDate(modelData.date)
+                    }
                   }
 
                   Column {
@@ -605,7 +761,18 @@ Panel {
                       root.searchText = ""
                       inputField.forceActiveFocus()
                     } else {
-                      root.close()
+                      keyCatcher.forceActiveFocus()
+                    }
+                  }
+                  Keys.onPressed: function(event) {
+                    if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                      root.switchPanel(event.key === Qt.Key_Backtab ? -1 : 1)
+                      event.accepted = true
+                      return
+                    }
+                    if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+                      keyCatcher.forceActiveFocus()
+                      event.accepted = true
                     }
                   }
                 }
@@ -637,7 +804,12 @@ Panel {
                   fontSize: Style.font.caption
                   horizontalPadding: Style.space(10)
                   verticalPadding: Style.space(4)
-                  onClicked: root.carryOver()
+                  hasCursor: root.cursorZone === "tools" && root.toolItems()[root.cursorItem] === "carry"
+                  onHovered: function(h) { if (h) root.setCursor("tools", root.toolItems().indexOf("carry")) }
+                  onClicked: {
+                    root.setCursor("tools", root.toolItems().indexOf("carry"))
+                    root.carryOver()
+                  }
                 }
               }
             }
@@ -680,7 +852,7 @@ Panel {
                     ? Style.selectedFillFor(root.foreground, root.accent)
                     : "transparent"
                   borderSpec: Border.controlSpec(
-                    hideDoneCheck.checked ? "selected" : "normal",
+                    hideDoneCheck.checked ? "selected" : ((root.cursorZone === "tools" && root.toolItems()[root.cursorItem] === "hide") ? "hover" : "normal"),
                     root.foreground,
                     root.accent)
 
@@ -720,11 +892,11 @@ Panel {
                 }
                 foreground: root.foreground
                 fontFamily: root.fontFamily
+                hasCursor: root.cursorZone === "tools" && root.toolItems()[root.cursorItem] === "sort"
+                onHovered: function(h) { if (h) root.setCursor("tools", root.toolItems().indexOf("sort")) }
                 onClicked: {
-                  if (root.sortOrder === "newest") root.sortOrder = "openFirst"
-                  else if (root.sortOrder === "openFirst") root.sortOrder = "alphabetical"
-                  else if (root.sortOrder === "alphabetical") root.sortOrder = "default"
-                  else root.sortOrder = "newest"
+                  root.setCursor("tools", root.toolItems().indexOf("sort"))
+                  root.cycleSort()
                 }
               }
             }
@@ -801,7 +973,7 @@ Panel {
                       cursorShape: Qt.PointingHandCursor
                       acceptedButtons: Qt.LeftButton | Qt.RightButton
                       onClicked: function(mouse) {
-                        root.selectedIndex = index
+                        root.setCursor("todos", index)
                         if (mouse.button === Qt.RightButton) {
                           root.openTodoMenu(todoRow, modelData)
                           return
@@ -847,7 +1019,7 @@ Panel {
                             ? Style.selectedFillFor(root.foreground, root.accent)
                             : "transparent"
                           borderSpec: Border.controlSpec(
-                            modelData.checked ? "selected" : (checkboxMouse.containsMouse ? "hover" : "normal"),
+                            modelData.checked ? "selected" : ((checkboxMouse.containsMouse || (root.cursorZone === "todos" && root.selectedIndex === index && root.todoSub === "box")) ? "hover" : "normal"),
                             root.foreground,
                             root.accent)
 
@@ -870,7 +1042,7 @@ Panel {
                           hoverEnabled: true
                           cursorShape: Qt.PointingHandCursor
                           onClicked: function(mouse) {
-                            root.selectedIndex = index
+                            root.setCursor("todos", index)
                             if (root.todoMenuOpen) {
                               root.closeTodoMenu()
                             }
@@ -897,7 +1069,17 @@ Panel {
                           }
                         }
                         onAccepted: root.commitEdit(modelData.line, editField.text)
-                        Keys.onEscapePressed: root.cancelEdit()
+                        Keys.onEscapePressed: {
+                          root.cancelEdit()
+                          keyCatcher.forceActiveFocus()
+                        }
+                        Keys.onPressed: function(event) {
+                          if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                            root.commitEdit(modelData.line, editField.text)
+                            root.switchPanel(event.key === Qt.Key_Backtab ? -1 : 1)
+                            event.accepted = true
+                          }
+                        }
                       }
 
                       Text {
@@ -927,9 +1109,11 @@ Panel {
                         fontFamily: root.fontFamily
                         fontSize: Style.font.caption
                         size: Style.space(20)
+                        hasCursor: root.cursorZone === "todos" && root.selectedIndex === index && root.todoSub === "del"
                         onHovered: function(h) { isHovered = h }
                         onClicked: {
-                          root.selectedIndex = index
+                          root.setCursor("todos", index)
+                          root.todoSub = "del"
                           if (root.todoMenuOpen) root.closeTodoMenu()
                           root.deleteTodo(modelData)
                         }
@@ -962,11 +1146,29 @@ Panel {
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
             onAccepted: root.addTodo(false)
-            Keys.onEscapePressed: root.close()
+            Keys.onEscapePressed: keyCatcher.forceActiveFocus()
             Keys.onPressed: function(event) {
               if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                   && (event.modifiers & Qt.ShiftModifier)) {
                 root.addTodo(true)
+                event.accepted = true
+                return
+              }
+              if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                root.switchPanel(event.key === Qt.Key_Backtab ? -1 : 1)
+                event.accepted = true
+                return
+              }
+              if (event.key === Qt.Key_Up) {
+                keyCatcher.forceActiveFocus()
+                root.cursorZone = "foot"
+                root.cursorItem = 0
+                root.navMove(0, -1)
+                event.accepted = true
+                return
+              }
+              if (event.key === Qt.Key_Down) {
+                keyCatcher.forceActiveFocus()
                 event.accepted = true
                 return
               }
@@ -983,7 +1185,12 @@ Panel {
             bordered: true
             foreground: root.foreground
             fontFamily: root.fontFamily
-            onClicked: root.addTodo(false)
+            hasCursor: root.cursorZone === "foot"
+            onHovered: function(h) { if (h) root.setCursor("foot", 0) }
+            onClicked: {
+              root.setCursor("foot", 0)
+              root.addTodo(false)
+            }
           }
         }
       }
