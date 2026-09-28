@@ -149,14 +149,31 @@ function isDoneMarker(marker) {
   return marker !== " " && marker !== "-" && marker !== "/";
 }
 
-// Glyph drawn inside a todo checkbox for its marker. Falls back to the raw
-// marker so extended states stay recognizable without special fonts.
 function markerGlyph(marker) {
-  if (marker === "x" || marker === "X") return "✓";
-  if (marker === "/") return "◐";
-  if (marker === "-") return "–";
-  if (marker === " ") return "";
-  return String(marker);
+  switch (marker) {
+    case " ": return "";
+    case "x":
+    case "X": return "✓";
+    case "-": return "";
+    case "/": return "󱎖";
+    case ">": return "";
+    case "<": return "";
+    case "?": return "";
+    case "!": return "";
+    case "*": return "";
+    case '"': return "";
+    case "l": return "";
+    case "b": return "";
+    case "i": return "󰋼";
+    case "I": return "";
+    case "p": return "";
+    case "c": return "";
+    case "f": return "";
+    case "k": return "";
+    case "u": return "󰔵";
+    case "d": return "󰔳";
+    default: return String(marker);
+  }
 }
 
 function expandPath(path, home) {

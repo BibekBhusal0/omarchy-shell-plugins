@@ -126,6 +126,30 @@ Panel {
     watcher.cycleTodo(todo.line, todo.text)
   }
 
+  function stateColor(marker) {
+    switch (marker) {
+      case "-":
+      case '"': return "#9AA080"
+      case "/":
+      case "?":
+      case "*":
+      case "I":
+      case "k": return "#E0AC00"
+      case ">":
+      case "i": return "#027AFF"
+      case "<": return "#53DFDD"
+      case "!":
+      case "c":
+      case "d": return "#FB464C"
+      case "l":
+      case "p":
+      case "u": return "#44CF6E"
+      case "b": return "#F92672"
+      case "f": return "#E9973F"
+      default: return root.foreground
+    }
+  }
+
   function editTodo(line, expectText, newText) {
     if (!hasWatcher || typeof watcher.editTodo !== "function") return
     watcher.editTodo(line, expectText, newText)
@@ -1018,10 +1042,11 @@ Panel {
                         BorderSurface {
                           anchors.fill: parent
                           radius: Math.max(2, Style.cornerRadius * 0.45)
-                          color: modelData.checked
+                          readonly property bool boxed: modelData.marker === " " || modelData.marker === "x" || modelData.marker === "X"
+                          color: !boxed ? "transparent" : (modelData.checked
                             ? Style.selectedFillFor(root.foreground, root.accent)
-                            : "transparent"
-                          borderSpec: Border.controlSpec(
+                            : "transparent")
+                          borderSpec: !boxed ? Border.none() : Border.controlSpec(
                             modelData.checked ? "selected" : (checkboxMouse.containsMouse ? "hover" : "normal"),
                             root.foreground,
                             root.accent)
@@ -1031,10 +1056,9 @@ Panel {
                             visible: Model.markerGlyph(modelData.marker) !== ""
                             text: Model.markerGlyph(modelData.marker)
                             textFormat: Text.PlainText
-                            color: root.foreground
+                            color: root.stateColor(modelData.marker)
                             font.family: root.fontFamily
-                            font.pixelSize: Style.font.caption
-                            font.bold: true
+                            font.pixelSize: Style.space(14)
                           }
                         }
 
@@ -1095,7 +1119,7 @@ Panel {
                         color: (modelData.checked || modelData.marker === "-") ? root.dim : root.foreground
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.body
-                        font.strikeout: modelData.checked === true || modelData.marker === "-"
+                        font.strikeout: modelData.marker === "x" || modelData.marker === "X"
                         elide: Text.ElideRight
                         wrapMode: Text.NoWrap
                       }

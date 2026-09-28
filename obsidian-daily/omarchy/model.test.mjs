@@ -331,14 +331,29 @@ test("isDoneMarker matches the backend", () => {
   assert.equal(Model.isDoneMarker("?"), true);
 });
 
-test("markerGlyph renders states without special fonts", () => {
+test("markerGlyph uses the render-markdown icons", () => {
   assert.equal(Model.markerGlyph(" "), "");
   assert.equal(Model.markerGlyph("x"), "✓");
   assert.equal(Model.markerGlyph("X"), "✓");
-  assert.equal(Model.markerGlyph("/"), "◐");
-  assert.equal(Model.markerGlyph("-"), "–");
-  assert.equal(Model.markerGlyph(">"), ">");
-  assert.equal(Model.markerGlyph("?"), "?");
+  assert.equal(Model.markerGlyph("-"), "");
+  assert.equal(Model.markerGlyph("/"), "󱎖");
+  assert.equal(Model.markerGlyph(">"), "");
+  assert.equal(Model.markerGlyph("<"), "");
+  assert.equal(Model.markerGlyph("?"), "");
+  assert.equal(Model.markerGlyph("!"), "");
+  assert.equal(Model.markerGlyph("*"), "");
+  assert.equal(Model.markerGlyph('"'), "");
+  assert.equal(Model.markerGlyph("l"), "");
+  assert.equal(Model.markerGlyph("b"), "");
+  assert.equal(Model.markerGlyph("i"), "󰋼");
+  assert.equal(Model.markerGlyph("I"), "");
+  assert.equal(Model.markerGlyph("p"), "");
+  assert.equal(Model.markerGlyph("c"), "");
+  assert.equal(Model.markerGlyph("f"), "");
+  assert.equal(Model.markerGlyph("k"), "");
+  assert.equal(Model.markerGlyph("u"), "󰔵");
+  assert.equal(Model.markerGlyph("d"), "󰔳");
+  assert.equal(Model.markerGlyph("~"), "~");
 });
 
 console.log("All Model.js tests passed.");
