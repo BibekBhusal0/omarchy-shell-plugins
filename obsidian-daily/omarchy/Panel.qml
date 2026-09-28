@@ -34,13 +34,9 @@ Panel {
   }
   property string searchText: ""
   property int selectedIndex: -1
-  // Keyboard cursor: zone + item replaces focus traversal. Zones in visual
-  // order are nav (day buttons), week, tools, todos, foot (add button).
-  // Inside a todo row Left/Right flips todoSub between the checkbox (toggle)
-  // and the delete button instead of leaving the row.
+  // Keyboard cursor: each todo is its own group alongside nav/week/tools/foot.
   property string cursorZone: "todos"
   property int cursorItem: 0
-  property string todoSub: "box"
   property int editingLine: -1
   property string editingOriginal: ""
   property int pendingAppendCount: 0
@@ -94,7 +90,6 @@ Panel {
   function focusCapture() {
     root.cursorZone = "foot"
     root.cursorItem = 0
-    root.todoSub = "box"
     if (root.vaultSetupError)
       vaultPathField.forceActiveFocus()
     else
@@ -290,41 +285,52 @@ Panel {
     root.cursorItem = Math.max(0, Math.min(count - 1, item))
     if (zone === "todos") {
       root.selectedIndex = root.cursorItem
-      root.todoSub = "box"
       root.scrollSelectedIntoView()
     }
   }
 
-  // Arrows and vim keys walk every control: Left/Right (h/l) inside a row,
-  // Up/Down (j/k) across rows. Returns nothing; clamps at panel edges.
   function navMove(dx, dy) {
-    if (dy !== 0) {
-      var zones = root.zoneList()
-      var at = zones.indexOf(root.cursorZone)
-      if (at === -1) {
-        root.setCursor(dy > 0 ? zones[0] : zones[zones.length - 1], dy > 0 ? 0 : 999999)
+    if (root.cursorZone === "todos") {
+      if (dy !== 0) {
+        var cur = root.selectedIndex
+        if (cur < 0) cur = dy > 0 ? -1 : root.shownTodos.length
+        var row = cur + dy
+        if (row < 0 || row >= root.shownTodos.length) {
+          var zones = root.zoneList()
+          var at = zones.indexOf("todos")
+          if (at === -1) return
+          var edge = at + (dy > 0 ? 1 : -1)
+          if (edge < 0 || edge >= zones.length) return
+          root.setCursor(zones[edge], dy > 0 ? 0 : 999999)
+          return
+        }
+        root.setCursor("todos", row)
         return
       }
-      var next = at + (dy > 0 ? 1 : -1)
-      if (next < 0 || next >= zones.length) return
-      var zone = zones[next]
+      // Left/Right inside a todo does nothing: the whole row is the target.
+      return
+    }
+    if (dy !== 0) {
+      var allZones = root.zoneList()
+      var pos = allZones.indexOf(root.cursorZone)
+      if (pos === -1) {
+        root.setCursor(dy > 0 ? allZones[0] : allZones[allZones.length - 1], dy > 0 ? 0 : 999999)
+        return
+      }
+      var next = pos + (dy > 0 ? 1 : -1)
+      if (next < 0 || next >= allZones.length) return
+      var zone = allZones[next]
       var item = root.cursorItem
       if (zone === "todos") {
         if (root.selectedIndex >= 0 && root.selectedIndex < root.shownTodos.length)
           item = root.selectedIndex
         else
           item = dy > 0 ? 0 : root.shownTodos.length - 1
-      } else if (root.cursorZone === "todos") {
-        item = dy > 0 ? 0 : 999999
       }
       root.setCursor(zone, item)
       return
     }
     if (dx === 0) return
-    if (root.cursorZone === "todos") {
-      root.todoSub = dx > 0 ? "del" : "box"
-      return
-    }
     if (root.zoneItems(root.cursorZone).length === 0) return
     root.setCursor(root.cursorZone, root.cursorItem + dx)
   }
@@ -340,8 +346,7 @@ Panel {
     var zone = root.cursorZone
     if (zone === "todos") {
       if (!root.selectedTodo) return
-      if (root.todoSub === "del") root.deleteTodo(root.selectedTodo)
-      else root.toggleTodo(root.selectedTodo.line, root.selectedTodo.text)
+      root.toggleTodo(root.selectedTodo.line, root.selectedTodo.text)
       return
     }
     if (zone === "nav") {
@@ -440,7 +445,6 @@ Panel {
 
   onDateChanged: {
     root.selectedIndex = -1
-    root.todoSub = "box"
     root.cancelEdit()
     root.closeTodoMenu()
     if (panelFlick) panelFlick.contentY = 0
@@ -452,7 +456,6 @@ Panel {
       root.selectedIndex = -1
       root.cursorZone = "foot"
       root.cursorItem = 0
-      root.todoSub = "box"
       root.cancelEdit()
       root.closeTodoMenu()
       if (panelFlick) panelFlick.contentY = 0
@@ -1019,7 +1022,7 @@ Panel {
                             ? Style.selectedFillFor(root.foreground, root.accent)
                             : "transparent"
                           borderSpec: Border.controlSpec(
-                            modelData.checked ? "selected" : ((checkboxMouse.containsMouse || (root.cursorZone === "todos" && root.selectedIndex === index && root.todoSub === "box")) ? "hover" : "normal"),
+                            modelData.checked ? "selected" : (checkboxMouse.containsMouse ? "hover" : "normal"),
                             root.foreground,
                             root.accent)
 
@@ -1109,11 +1112,9 @@ Panel {
                         fontFamily: root.fontFamily
                         fontSize: Style.font.caption
                         size: Style.space(20)
-                        hasCursor: root.cursorZone === "todos" && root.selectedIndex === index && root.todoSub === "del"
                         onHovered: function(h) { isHovered = h }
                         onClicked: {
                           root.setCursor("todos", index)
-                          root.todoSub = "del"
                           if (root.todoMenuOpen) root.closeTodoMenu()
                           root.deleteTodo(modelData)
                         }
