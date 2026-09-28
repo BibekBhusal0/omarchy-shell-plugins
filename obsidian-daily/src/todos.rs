@@ -1441,28 +1441,109 @@ fn set_marker_line(content: &str, line: usize, marker: char) -> Result<String, V
             "refusing to write marker {marker:?} on line {line}"
         )));
     }
-    let re = checkbox_re();
-    let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
-    let idx = line - 1;
-    if idx >= lines.len() {
-        return Err(VaultError::Io(format!(
-            "line {line} is past end of file ({} lines)",
-            lines.len()
-        )));
+    apply_marker_with_propagation(content, line, marker)
+}
+
+/// Recompute a parent marker from its direct children: all done → done, all
+/// open/canceled → open, anything mixed (including half-done) → half-done.
+fn recompute_parent(kids: &[usize], markers: &std::collections::HashMap<usize, char>) -> char {
+    let mut any_done = false;
+    let mut any_open = false;
+    let mut any_half = false;
+    for kid in kids {
+        let m = markers.get(kid).copied().unwrap_or(' ');
+        if is_done_marker(m) {
+            any_done = true;
+        } else if m == '/' {
+            any_half = true;
+        } else {
+            any_open = true;
+        }
     }
-    let current = lines[idx].clone();
-    let caps = re
-        .captures(&current)
-        .ok_or_else(|| VaultError::Io(format!("line {line} is not a checkbox todo")))?;
-    lines[idx] = format!(
-        "{}{} [{}]{}{}",
-        &caps[1], &caps[2], marker, &caps[4], &caps[5]
-    );
+    if any_done && !any_open && !any_half {
+        'x'
+    } else if !any_done && any_open && !any_half {
+        ' '
+    } else {
+        '/'
+    }
+}
+
+/// Set `line` to `marker`, stamp the same marker onto every transitive
+/// subtask, then recompute each ancestor from its direct children up to the
+/// root. Only toggle/cycle mutate through here, so a single write (and a
+/// single undo record) covers the whole cascade.
+fn apply_marker_with_propagation(
+    content: &str,
+    line: usize,
+    marker: char,
+) -> Result<String, VaultError> {
+    let todos = parse_todos(content);
+    if !todos.iter().any(|t| t.line == line) {
+        return Err(VaultError::Io(format!("line {line} is not a checkbox todo")));
+    }
+    let mut kids: std::collections::HashMap<usize, Vec<usize>> =
+        std::collections::HashMap::new();
+    let mut parent: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
+    for t in &todos {
+        if let Some(p) = t.parent_line {
+            kids.entry(p).or_default().push(t.line);
+            parent.insert(t.line, p);
+        }
+    }
+    let mut markers: std::collections::HashMap<usize, char> =
+        todos.iter().map(|t| (t.line, t.marker)).collect();
+    let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+    let stamp = |lines: &mut Vec<String>,
+                     markers: &mut std::collections::HashMap<usize, char>,
+                     target: usize,
+                     next: char| {
+        if target == 0 || target > lines.len() {
+            return;
+        }
+        if let Some(text) = replace_marker(&lines[target - 1], next) {
+            lines[target - 1] = text;
+            markers.insert(target, next);
+        }
+    };
+    // Target first, then every transitive subtask gets the same marker.
+    let mut order = vec![line];
+    let mut i = 0;
+    while i < order.len() {
+        let current = order[i];
+        i += 1;
+        if let Some(direct) = kids.get(&current) {
+            for kid in direct {
+                order.push(*kid);
+            }
+        }
+    }
+    for target in order {
+        stamp(&mut lines, &mut markers, target, marker);
+    }
+    // Recompute ancestors bottom-up so deep nesting settles correctly.
+    let mut current = line;
+    while let Some(p) = parent.get(&current).copied() {
+        if let Some(direct) = kids.get(&p).cloned() {
+            let next = recompute_parent(&direct, &markers);
+            stamp(&mut lines, &mut markers, p, next);
+        }
+        current = p;
+    }
     let mut body = lines.join("\n");
     if content.ends_with('\n') && !body.ends_with('\n') {
         body.push('\n');
     }
     Ok(body)
+}
+
+fn replace_marker(line_text: &str, marker: char) -> Option<String> {
+    let re = checkbox_re();
+    let caps = re.captures(line_text)?;
+    Some(format!(
+        "{}{} [{}]{}{}",
+        &caps[1], &caps[2], marker, &caps[4], &caps[5]
+    ))
 }
 
 /// Create `dir` and any missing parents after verifying its existing
@@ -2838,6 +2919,100 @@ mod tests {
         assert_eq!(fs::read_to_string(&note).unwrap(), "- [ ] keep\n");
         let next = fs::read_to_string(vault.root().join("Daily/2026-08-21.md")).unwrap();
         assert!(next.contains("- [/] later"), "next: {next}");
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn toggling_parent_stamps_all_descendants() {
+        let (vault, date, note) =
+            vault_with("- [ ] parent\n  - [ ] child\n    - [x] grand\n  - [/] half\n");
+        toggle_todo(&vault, date, 1, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [x] parent\n  - [x] child\n    - [x] grand\n  - [x] half\n"
+        );
+        toggle_todo(&vault, date, 1, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [ ] parent\n  - [ ] child\n    - [ ] grand\n  - [ ] half\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn toggling_last_open_child_completes_parent() {
+        let (vault, date, note) = vault_with("- [/] parent\n  - [x] a\n  - [ ] b\n");
+        toggle_todo(&vault, date, 3, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [x] parent\n  - [x] a\n  - [x] b\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn toggling_done_child_makes_parent_half_done() {
+        let (vault, date, note) = vault_with("- [x] parent\n  - [x] a\n  - [x] b\n");
+        toggle_todo(&vault, date, 2, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [/] parent\n  - [ ] a\n  - [x] b\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn all_half_children_keep_parent_half_done() {
+        let (vault, date, note) = vault_with("- [x] parent\n  - [ ] a\n  - [/] b\n");
+        // Cycling the open child to half-done leaves all children half-done,
+        // so the parent settles on half-done as well.
+        cycle_todo(&vault, date, 2, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [/] parent\n  - [/] a\n  - [/] b\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn propagation_settles_deep_nesting() {
+        let (vault, date, note) =
+            vault_with("- [ ] top\n  - [ ] mid\n    - [ ] leaf\n    - [x] done-leaf\n");
+        // Completing the open leaf completes the middle and the top.
+        toggle_todo(&vault, date, 3, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [x] top\n  - [x] mid\n    - [x] leaf\n    - [x] done-leaf\n"
+        );
+        // Reopening the middle reopens the whole subtree and the top.
+        toggle_todo(&vault, date, 2, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [ ] top\n  - [ ] mid\n    - [ ] leaf\n    - [ ] done-leaf\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn cycling_parent_to_half_stamps_children_half() {
+        let (vault, date, note) = vault_with("- [ ] parent\n  - [ ] a\n  - [x] b\n");
+        cycle_todo(&vault, date, 1, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [/] parent\n  - [/] a\n  - [/] b\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
+    }
+
+    #[test]
+    fn cycling_child_recomputes_parent() {
+        let (vault, date, note) = vault_with("- [x] parent\n  - [x] a\n  - [x] b\n");
+        // x → - on the child: done plus canceled mixes to half-done parent.
+        cycle_todo(&vault, date, 2, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [/] parent\n  - [-] a\n  - [x] b\n"
+        );
         let _ = fs::remove_dir_all(vault.root());
     }
 }
