@@ -10,8 +10,8 @@ use obsidian_daily_qs::config::Vault;
 use obsidian_daily_qs::status::{Snapshot, WeekSummary};
 use obsidian_daily_qs::watch;
 use obsidian_daily_qs::{
-    add_todo_under, carry_over, cycle_todo, defer_todo, delete_todo, edit_todo, open_in_obsidian,
-    read_snapshot_filtered, set_indent, toggle_todo, undo_last, week_summary,
+    add_todo_under, carry_over, cycle_todo, cycle_todo_backward, defer_todo, delete_todo, edit_todo,
+    open_in_obsidian, read_snapshot_filtered, set_indent, toggle_todo, undo_last, week_summary,
 };
 
 #[derive(Parser)]
@@ -83,6 +83,9 @@ enum Command {
         expect_text: Option<String>,
         #[arg(long)]
         date: Option<String>,
+        /// Step back to the previous state instead
+        #[arg(long, default_value_t = false)]
+        backward: bool,
     },
     /// Rewrite the text of a todo on the given line
     Edit {
@@ -199,10 +202,17 @@ fn main() {
             line,
             expect_text,
             date,
+            backward,
         } => emit(run(
             vault_arg,
             archive_arg,
-            |vault, d| cycle_todo(vault, d, line, expect_text.as_deref()),
+            |vault, d| {
+                if backward {
+                    cycle_todo_backward(vault, d, line, expect_text.as_deref())
+                } else {
+                    cycle_todo(vault, d, line, expect_text.as_deref())
+                }
+            },
             date,
         )),
         Command::Edit {

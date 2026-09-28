@@ -307,13 +307,15 @@ BarWidget {
     root.runAction(args)
   }
 
-  function cycleTodo(line, text) {
+  function cycleTodo(line, text, backward) {
     var n = Number(line)
     if (!isFinite(n) || n < 1) return
     var d = root.viewDate || Model.todayIso()
     var args = ["cycle", "--date", d, "--line", String(Math.floor(n))]
     if (typeof text === "string" && text !== "")
       args.push("--expect-text", text)
+    if (backward === true)
+      args.push("--backward")
     root.runAction(args)
   }
 

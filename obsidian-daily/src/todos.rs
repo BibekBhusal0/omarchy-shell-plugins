@@ -94,6 +94,16 @@ fn normalize_marker(raw: &str) -> char {
 /// Advance to the next marker in [`STATE_ORDER`], matching case-insensitively
 /// so `X` continues from `x`. Unknown markers restart the walk at done.
 pub fn next_marker(current: char) -> char {
+    step_marker(current, 1)
+}
+
+/// Step back to the previous marker in [`STATE_ORDER`], with the same
+/// matching rules as [`next_marker`].
+pub fn prev_marker(current: char) -> char {
+    step_marker(current, STATE_ORDER.len() - 1)
+}
+
+fn step_marker(current: char, step: usize) -> char {
     let at = STATE_ORDER
         .iter()
         .position(|&c| c == current)
@@ -104,7 +114,7 @@ pub fn next_marker(current: char) -> char {
                 .and_then(|l| STATE_ORDER.iter().position(|&c| c == l))
         })
         .unwrap_or(2);
-    STATE_ORDER[(at + 1) % STATE_ORDER.len()]
+    STATE_ORDER[(at + step) % STATE_ORDER.len()]
 }
 
 /// Parse all checkbox todos from note body. Line numbers are 1-based.
@@ -713,6 +723,26 @@ pub fn cycle_todo(
     line: usize,
     expect_text: Option<&str>,
 ) -> Result<Snapshot, VaultError> {
+    cycle_todo_dir(vault, date, line, expect_text, false)
+}
+
+/// Step the checkbox back to the previous state in [`STATE_ORDER`].
+pub fn cycle_todo_backward(
+    vault: &Vault,
+    date: NaiveDate,
+    line: usize,
+    expect_text: Option<&str>,
+) -> Result<Snapshot, VaultError> {
+    cycle_todo_dir(vault, date, line, expect_text, true)
+}
+
+fn cycle_todo_dir(
+    vault: &Vault,
+    date: NaiveDate,
+    line: usize,
+    expect_text: Option<&str>,
+    backward: bool,
+) -> Result<Snapshot, VaultError> {
     if line == 0 {
         return Err(VaultError::Io("line must be >= 1".into()));
     }
@@ -727,7 +757,11 @@ pub fn cycle_todo(
     let content = fs::read_to_string(&path)
         .map_err(|e| VaultError::Io(format!("failed to read {}: {e}", path.display())))?;
     expect_line_text(&content, line, expect_text)?;
-    let next = next_marker(marker_of(&content, line)?);
+    let next = if backward {
+        prev_marker(marker_of(&content, line)?)
+    } else {
+        next_marker(marker_of(&content, line)?)
+    };
     let next_body = set_marker_line(&content, line, next)?;
     write_atomic_with_undo(vault, date, &path, &content, &next_body)?;
     read_snapshot(vault, date)
@@ -2870,6 +2904,28 @@ mod tests {
         assert_eq!(next_marker('d'), ' ');
         assert_eq!(next_marker('X'), '-');
         assert_eq!(next_marker('~'), '-');
+    }
+
+    #[test]
+    fn prev_marker_walks_state_order_backward() {
+        assert_eq!(prev_marker('/'), ' ');
+        assert_eq!(prev_marker(' '), 'd');
+        assert_eq!(prev_marker('-'), 'x');
+        assert_eq!(prev_marker('x'), '/');
+        assert_eq!(prev_marker('X'), '/');
+        assert_eq!(prev_marker('~'), '/');
+    }
+
+    #[test]
+    fn cycle_backward_steps_back() {
+        let (vault, date, note) = vault_with("- [/] a\n- [ ] b\n");
+        cycle_todo_backward(&vault, date, 1, None).unwrap();
+        cycle_todo_backward(&vault, date, 2, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(&note).unwrap(),
+            "- [ ] a\n- [d] b\n"
+        );
+        let _ = fs::remove_dir_all(vault.root());
     }
 
     #[test]

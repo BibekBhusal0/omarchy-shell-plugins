@@ -117,13 +117,18 @@ Panel {
 
   function cycleSelected() {
     if (!root.selectedTodo) return
-    root.cycleTodo(root.selectedTodo)
+    root.cycleTodo(root.selectedTodo, false)
   }
 
-  function cycleTodo(todo) {
+  function cycleSelectedBackward() {
+    if (!root.selectedTodo) return
+    root.cycleTodo(root.selectedTodo, true)
+  }
+
+  function cycleTodo(todo, backward) {
     if (!todo) return
     if (!hasWatcher || typeof watcher.cycleTodo !== "function") return
-    watcher.cycleTodo(todo.line, todo.text)
+    watcher.cycleTodo(todo.line, todo.text, backward)
   }
 
   function stateColor(marker) {
@@ -534,8 +539,10 @@ Panel {
           root.indentSelected(1)
         } else if (t === "u" || t === "U") {
           root.undoLast()
-        } else if (t === "t" || t === "T") {
+        } else if (t === "t") {
           root.cycleSelected()
+        } else if (t === "T") {
+          root.cycleSelectedBackward()
         } else if (t === "e" || t === "E") {
           root.startEdit(root.selectedTodo)
         }
