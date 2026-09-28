@@ -10,7 +10,7 @@ import "Model.js" as Model
 // panel routing, and the watch / action process lifecycle.
 BarWidget {
   id: root
-  moduleName: "luca.obsidian-daily"
+  moduleName: "bibek.obsidian-daily"
 
   function decodeFileUrl(urlString) {
     var path = String(urlString).replace(/^file:\/\//, "")
@@ -169,7 +169,7 @@ BarWidget {
   function saveVaultPath(path) {
     var expanded = Model.expandPath(path, root.homeDir)
     if (expanded === "") return
-    settingsProc.command = ["omarchy", "bar", "set", "luca.obsidian-daily", "vaultPath", expanded]
+    settingsProc.command = ["omarchy", "bar", "set", "bibek.obsidian-daily", "vaultPath", expanded]
     settingsProc.running = true
   }
 

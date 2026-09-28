@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "luca.obsidian-daily",
+  "id": "bibek.obsidian-daily",
   "name": "Obsidian Daily",
-  "version": "1.12.0",
-  "author": "Luca Nerlich",
+  "version": "1.0.0",
+  "author": "Bibek Bhusal",
   "license": "Apache-2.0",
   "description": "View and manage Obsidian daily note todos from the Omarchy bar. Set vaultPath or OBSIDIAN_VAULT_ROOT.",
   "kinds": ["bar-widget"],

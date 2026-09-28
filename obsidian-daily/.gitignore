@@ -2,3 +2,9 @@
 /dist
 node_modules/
 *.swp
+# Locally built backend ELFs (built from source by the install script,
+# never committed): the QML resolves omarchy/bin/obsidian-daily-qs-<arch>.
+/omarchy/bin/obsidian-daily-qs-x86_64
+/omarchy/bin/obsidian-daily-qs-aarch64
+/omarchy/bin/*.sha256
+/omarchy/bin/*.srcid

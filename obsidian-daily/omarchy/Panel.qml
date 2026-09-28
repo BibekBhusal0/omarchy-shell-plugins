@@ -9,7 +9,7 @@ import "Model.js" as Model
 // Native Quattro popup for Obsidian daily note todos (day-switchable).
 Panel {
   id: root
-  moduleName: "luca.obsidian-daily"
+  moduleName: "bibek.obsidian-daily"
   manageIpc: false
 
   property var anchorItem: null

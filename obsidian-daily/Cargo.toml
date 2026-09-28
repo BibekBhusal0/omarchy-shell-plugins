@@ -1,12 +1,12 @@
 [package]
 name = "obsidian-daily-qs"
-version = "1.12.0"
+version = "1.0.0"
 edition = "2024"
 rust-version = "1.98.1"
 license = "Apache-2.0"
 description = "Omarchy Quattro bar widget backend for Obsidian daily notes todos"
 readme = "README.md"
-repository = "https://github.com/LucaNerlich/obsidian-daily-qs"
+repository = "https://github.com/BibekBhusal0/omarchy-shell-plugins"
 keywords = ["omarchy", "obsidian", "daily-notes", "quickshell"]
 categories = ["command-line-utilities"]
 
