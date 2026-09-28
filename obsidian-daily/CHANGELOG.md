@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - Fork
+
+Forked from upstream `1.12.0` as `bibek.obsidian-daily`. Everything below
+this entry is upstream history.
+
+### Added
+
+- Extended checkbox states (`/`, `-`, `>`, `<`, `?`, `!`, `*`, `"`, `l`,
+  `b`, `i`, `I`, `p`, `c`, `f`, `k`, `u`, `d`) with a `cycle` command and a
+  `t` shortcut that walks them.
+- Cascade checking: toggling a parent stamps every subtask, and ancestors
+  recompute from their children (all done → done, all open → open,
+  mixed → half-done).
+- Zone keyboard navigation: arrows/vim keys walk nav buttons, week strip,
+  tools, checkboxes and the add button; `[`/`]` switch days, `{`/`}` indent,
+  `Esc` leaves inputs without closing, `Tab` switches panels.
+
+### Changed
+
+- Bar widget no longer turns red on errors and drops the progress ring.
+
 ## [1.12.0] - 2026-09-21
 
 ### Fixed

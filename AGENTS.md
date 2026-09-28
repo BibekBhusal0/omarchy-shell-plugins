@@ -12,6 +12,7 @@ Monorepo of standalone Omarchy shell plugins. Each folder is its own plugin with
 | `lock/`            | service              | Lock screen with date/time, media, power controls  |
 | `media/`           | bar-widget + service | Media player controls and now-playing info         |
 | `menu/`            | menu (overlay)       | Omarchy menu clone with fuzzy ranking and app grid |
+| `obsidian-daily/`  | bar-widget           | Daily-note todos with states, cascade check, zones |
 | `obsidian-search/` | menu (overlay)       | Fuzzy search across Obsidian vaults                |
 | `readest/`         | menu (overlay)       | Fuzzy search across Readest library                |
 | `ytdl/`            | bar-widget + service | YouTube video downloader with clipboard monitoring |
@@ -105,6 +106,7 @@ To install a plugin from this repo into the live shell:
 - **media**: clone of the built-in `omarchy.media` (manifest id `bibek.media`, `omarchy.clonedFrom` set). The built-in is disabled via `disabledPlugins` so its IPC `media` target doesn't collide. `BarWidget.qml` must look up the service by the clone id (`firstPartyServiceFor("bibek.media")`), not the built-in id.
 - **menu**: clone of the built-in `omarchy.menu` (manifest id `bibek.menu`, `omarchy.clonedFrom` set). The built-in is disabled via `disabledPlugins`; the shell's `resolveEnabledId` then routes every `omarchy.menu` call (all `omarchy-menu toggle <route>` keybindings) to the clone, so no rebinding is needed. Super-tap opens the app grid via `o.bind("SUPER + SUPER_L", ..., "omarchy-shell shell toggle bibek.menu '{\"menu\":\"apps\"}'")` in `~/.config/hypr/bindings.lua`. README documents the takeover.
 - **obsidian-search / readest**: rely on `fd` + `jq` and `FuzzySearch.js`. Obsidian vault path defaults to the first vault in `~/.config/obsidian/obsidian.json`; Readest defaults to the Readest data dir under `~/.var/app/com.bilingify.readest/`. Both are overridable via `vaultPath` / `libraryPath` in the plugin entry of `~/.config/omarchy/shell.json`.
+- **obsidian-daily**: fork of `luca.obsidian-daily` (Apache-2.0, manifest id `bibek.obsidian-daily`, no `homepage` so `publish.sh` skips it). Rust backend (`src/`) + QML frontend (`omarchy/`). Backend ELFs are never committed (`omarchy/bin/obsidian-daily-qs-*` is gitignored); `omarchy-overrides/config/omarchy.sh` rebuilds them from source with `cargo build --release`. Snapshot todos carry a `marker` char alongside `checked`; only ` `, `-`, `/` count as not done. Toggle/cycle cascade (parent stamps subtasks, ancestors recompute bottom-up) in one write. Panel uses zone cursor (`nav`/`week`/`tools`/`todos`/`foot`) over `PanelKeyCatcher`: Tab switches panels even from inputs, Esc blurs inputs instead of closing, `[`/`]` switch days, `{`/`}` indent, `t` cycles states.
 - **ytdl**: yt-dlp video downloader. Service manages downloads via Process objects, monitors clipboard for YouTube URLs when a browser is focused. Download format args must NOT use `bestvideo+bestaudio` style selectors (causes HTTP 403 on YouTube) -- use `b[height<=X]/b` fallback chains or omit format for "best". Browser detection list must include `zen`, `helium`, `glide`. YouTube bot detection is bypassed via `cookiesBrowser`/`extraArgs` settings; Firefox-based browsers (zen, glide) lock their cookie DB while running so the shell `export_cookies()` in the `ytdl` script merges the sqlite+wal (via `PRAGMA wal_checkpoint`) and dedupes with a window function, and the script auto-selects the profile that has a logged-in SID. Helium is Chromium-based (cookies passed via profile dir).
 
 ## Requirements (documented in each plugin README)
@@ -112,6 +114,7 @@ To install a plugin from this repo into the live shell:
 - All plugins require Omarchy quattro.
 - `fd` + `jq` are preinstalled on Omarchy; search plugins list them as preinstalled requirements, not as install steps.
 - focusd requires the `focusd` binary on `$PATH`.
+- obsidian-daily's backend is built from source by the install script (`cargo build --release`); never commit `omarchy/bin/` ELFs.
 
 ## Banners
 

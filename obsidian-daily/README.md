@@ -1,191 +1,102 @@
-# obsidian-daily-qs
+# Omarchy Shell Plugin for Obsidian Daily
 
-[![GitHub Release](https://img.shields.io/github/v/release/LucaNerlich/obsidian-daily-qs)](https://github.com/LucaNerlich/obsidian-daily-qs/releases)
-[![Omarchy marketplace](https://img.shields.io/badge/Omarchy-marketplace-teal)](https://omarchyplugins.com/plugin.html?id=luca.obsidian-daily)
+Today's [Obsidian](https://obsidian.md/) daily-note todos in the Omarchy bar. Shows done/total for today and opens a panel to check, add, carry over and defer items, with extra checkbox states, cascade checking and full keyboard navigation.
 
-Omarchy Quattro bar widget for today's [Obsidian daily note](https://obsidian.md/help/plugins/daily-notes) todos: view open items, add new checkboxes, and toggle them from a bar panel.
+## Features
 
-<img width="1108" height="1472" alt="preview" src="https://github.com/user-attachments/assets/91530fad-7796-4dfe-aebb-4eb24683d2b8" />
+- Bar widget with today's done/total and one-click panel
+- Checkbox states beyond open/done: half-done `[/]`, canceled `[-]`, forwarded `[>]` and more, cycled with `t`
+- Cascade checking: checking a parent checks every subtask, completing all subtasks completes the parent
+- Full keyboard navigation across day buttons, week strip, tools, checkboxes and the add button
+- Week strip day jumping, search, open-only filter, sort orders, carry-over, undo, open in Obsidian
+
+## Differences from upstream
+
+Forked from [LucaNerlich/obsidian-daily-qs](https://github.com/LucaNerlich/obsidian-daily-qs) (`luca.obsidian-daily`, Apache-2.0). Kept as-is: daily-note resolution, templates, archive folder, carry-over, defer, undo, sorting, search, and all bar settings.
+
+Changed in this fork:
+
+- **No bar color or ring.** The widget always renders in the normal bar text color. Errors still surface through the label (`!`) and tooltip.
+- **Extended todo states.** Any single-character marker parses. Only ` ` (open), `-` (canceled) and `/` (half-done) count as not done; everything else counts as done. `t` cycles ` ` → `/` → `x` → `-` → `>` → `<` → `?` → `!` → `*` → `"` → `l` → `b` → `i` → `I` → `p` → `c` → `f` → `k` → `u` → `d` → back to ` `.
+- **Cascade checking.** Toggling a parent stamps the same marker onto every subtask. Each ancestor then recomputes from its direct children: all done → done, all open/canceled → open, anything mixed → half-done. Works at any nesting depth, in one write (one undo).
+- **Zone keyboard navigation.** Up/Down (or `j`/`k`) move across rows, Left/Right (or `h`/`l`) move inside a row. Inside a todo, Left/Right flips between the checkbox (Enter/Space toggles) and the delete button. `[`/`]` switch days, `{`/`}` outdent/indent. `Esc` in any field just leaves the field so keys work again; `Tab`/`Shift-Tab` switches panels even from inside inputs.
 
 ## Requirements
 
-- Omarchy Quattro (Quickshell-based shell) on Linux
-- An Obsidian vault with the Daily notes core plugin configured
-- A supported architecture: x86_64 or aarch64 (arm64)
-- Vault path via the `vaultPath` bar setting **or** `OBSIDIAN_VAULT_ROOT` for the graphical session — see [Set the vault path](#set-the-vault-path)
-
-Daily note location and date format are read from `.obsidian/daily-notes.json` (`folder`, `format`, optional `template`), relative to the vault root. An optional archive location can be configured via the `archiveFolder` bar setting — see [Archived notes](#archived-notes).
-
-## Architecture
-
-- **Rust backend** (`obsidian-daily-qs`): resolves today's note, parses markdown checkboxes, adds/toggles items, streams JSON snapshots. Released as per-architecture static musl binaries (`linux-x86_64`, `linux-aarch64`).
-- **QML frontend** (`omarchy/`): `bar-widget` with a details panel. Left-click opens the panel. Architecture detection runs once at startup via `uname -m`.
-
-```
-obsidian-daily-qs watch ──(JSON lines)──▶ BarWidget ─▶ Panel
-obsidian-daily-qs add|toggle ──(JSON line)──▶ BarWidget
-```
+- Omarchy quattro
+- Obsidian with the Daily notes core plugin configured
+- Rust toolchain (only to build the backend once: `cargo build --release`)
+- `x86_64` or `aarch64` Linux
 
 ## Install
 
-```bash
-omarchy plugin add https://github.com/LucaNerlich/obsidian-daily-qs.git --enable
-```
-
-Update / remove:
+No standalone repo exists yet, so install from this monorepo:
 
 ```bash
-omarchy plugin update luca.obsidian-daily
-omarchy plugin remove luca.obsidian-daily
+ln -sfn ~/Code/omarchy-shell-plugins/obsidian-daily ~/.config/omarchy/plugins/obsidian-daily
+cd ~/Code/omarchy-shell-plugins/obsidian-daily && cargo build --release
+cp target/release/obsidian-daily-qs omarchy/bin/obsidian-daily-qs-$(uname -m)
 ```
 
-If the bar still shows an error right after an update, run `omarchy restart shell` once. Omarchy hot-reloads plugin QML in place; a full shell restart is the reliable way to drop a stale in-memory widget (for example after the 1.7 backend rename).
-
-The plugin bundles statically linked musl builds of its backend for x86_64 and aarch64 (`omarchy/bin/obsidian-daily-qs-<arch>`), plus an unsuffixed `omarchy/bin/obsidian-daily-qs` shim that execs the matching arch binary (so a hot-reloaded pre-1.7 widget keeps working). The widget prefers the arch-specific ELF via `uname -m`. If that cannot start, it tries `obsidian-daily-qs` on `PATH` once (`cargo install --path .`); if both fail, it latches to an error state instead of restarting forever. On unsupported architectures the bar shows `⚠ arch` with a tooltip explaining the problem.
-
-### Set the vault path
-
-Prefer the bar setting (no Hyprland env needed):
+Then register `{"id": "bibek.obsidian-daily"}` in `~/.config/omarchy/shell.json` (plugins array, plus `bar.layout.right` for the widget) and restart the shell:
 
 ```bash
-omarchy bar set luca.obsidian-daily vaultPath '/home/you/Documents/notizen'
+omarchy-restart-shell
 ```
 
-Or set it from the panel when the widget shows the setup empty state.
-
-The backend also accepts `--vault <path>` and still reads `OBSIDIAN_VAULT_ROOT` when `vaultPath` is empty. The Omarchy shell runs as a child of Hyprland, so an `export` in `~/.bashrc` does **not** reach it unless you also set the graphical session env:
-
-**Option A — Hyprland env** (per-session, applies without logging out):
-
-```lua
--- ~/.config/hypr/hyprland.lua
-hl.env("OBSIDIAN_VAULT_ROOT", "/home/you/Documents/notizen")
-```
+Set the vault path once:
 
 ```bash
-hyprctl reload && omarchy restart shell
+omarchy bar set bibek.obsidian-daily vaultPath '/home/you/Documents/vault'
 ```
-
-**Option B — systemd user environment** (applies at next login):
-
-```ini
-# ~/.config/environment.d/obsidian-vault.conf
-OBSIDIAN_VAULT_ROOT=/home/you/Documents/notizen
-```
-
-### Archived notes
-
-If you move old daily notes out of the live daily-notes folder (for example
-into `dailies/_archive/2026/`), tell the widget where they went via the
-`archiveFolder` bar setting:
-
-```bash
-omarchy bar set luca.obsidian-daily archiveFolder 'dailies/_archive/YYYY'
-```
-
-- The value is a folder pattern relative to the vault root, using the same
-  moment-style tokens as the note format (`YYYY`, `YY`, `MMMM`, `MMM`, `MM`,
-  `M`, `dddd`, `ddd`, `DD`, `D`). The formatted note file name is appended,
-  so with `format: "YYYY-MM-DD"` the example above resolves `2026-08-20` to
-  `dailies/_archive/2026/2026-08-20.md`.
-- The live path always wins: when a note exists in both places the live one is
-  used, and new notes are always created in the live folder.
-- Archived days are fully usable: the week strip shows their open/done
-  counts, and toggling, adding, editing, indenting, undo and open-in-Obsidian
-  all work on the archived note in place.
-- Leaving the setting empty keeps the default behavior of only looking in the
-  live daily-notes folder.
-- The backend also accepts the pattern directly as `--archive-folder` for
-  CLI use, e.g. `obsidian-daily-qs status --date 2026-08-19 --archive-folder 'dailies/_archive/YYYY'`.
 
 ## Usage
 
-- **Bar**: Obsidian mark + done/total for today. Left-click opens the panel; middle/right-click opens the note in Obsidian.
-- **Panel**:
-  - List todos; click a row (or move the keyboard cursor) to select it,
-    click its checkbox or press Enter/Space to toggle. Hover a truncated
-    row to see the full text.
-  - Sort order is file order by default, so new todos append to the bottom.
-    Cycle newest-first / uncompleted-first / alphabetical with the sort button next to
-    *Hide done*, or set `sortOrder` (`default`, `newest`, `openFirst`, `alphabetical`).
-    Parent-child hierarchy is preserved in every order.
-  - Nested todos render indented; Shift+Enter adds under the selected row.
-  - New items go under the configured `insertHeading` (or `todoHeading` when
-    `insertHeading` is empty). When both are empty, the built-in `Tasks`/`Todos`
-    section is used, falling back to the first todo list (usually at the top).
-    Spacing is copied from that list, or from recent daily notes when starting
-    a new one.
-  - Right-click a row to delete it or move it to tomorrow (children included).
-    Hovering (or selecting) a row also reveals an inline ✕ delete button.
-  - `e` edits, `x` deletes, `[`/`]` outdent/indent, `u` undoes the last mutation
-    (undoing a defer restores both days; a tomorrow note created by the
-    defer is deleted again).
-  - Week strip jumps between days; ◀ / ● / ▶ also navigate.
-  - Search: `/`; open-only toggle; carry over; open in Obsidian. Carry over
-    shows on today when a previous daily note still holds open todos — it
-    uses the most recent such note within the last 30 days (weekend/vacation
-    gaps), nearest first; repeat to drain older backlog. Opening a
-    missing day creates its note from the configured daily-note template.
-- **Settings** (`omarchy bar set luca.obsidian-daily …`): `vaultPath`, `archiveFolder`, `openOnly`, `sortOrder`, `todoHeading`, `insertHeading`, `hideWhenDone`, `hideWhenEmpty`.
+Left-click opens the panel, middle/right-click opens the note in Obsidian. The panel starts in the add field: type and Enter to add, `Shift+Enter` to nest under the selected todo, `Esc` to drive everything from the keyboard.
+
+Shortcuts: arrows or `h`/`j`/`k`/`l` to move, Enter/Space to activate, `t` to cycle the todo state, `e` to edit, `x` to delete, `{`/`}` to outdent/indent, `[`/`]` for previous/next day, `/` to search, `u` to undo, `Esc` to close (or leave a field first).
+
+## Configuration
+
+Settings live in the plugin entry of `~/.config/omarchy/shell.json` (edits apply live):
 
 ```bash
-omarchy bar set luca.obsidian-daily openOnly true
-omarchy bar set luca.obsidian-daily sortOrder newest
-omarchy bar set luca.obsidian-daily todoHeading Todos
-omarchy bar set luca.obsidian-daily insertHeading Inbox
+omarchy bar set bibek.obsidian-daily openOnly true
+omarchy bar set bibek.obsidian-daily sortOrder newest
+omarchy bar set bibek.obsidian-daily todoHeading Todos
+omarchy bar set bibek.obsidian-daily insertHeading Inbox
 ```
 
-`todoHeading` filters which todos the bar and panel show. `insertHeading`
-names the markdown heading new todos are added under (e.g. `Inbox`); when
-empty it follows `todoHeading`, and when both are empty new todos use the
-built-in `Tasks`/`Todos` placement. Missing headings fall back silently, so
-existing notes keep their behavior.
+- `vaultPath`: vault directory. Overrides `OBSIDIAN_VAULT_ROOT`.
+- `archiveFolder`: folder pattern for moved old notes (e.g. `dailies/_archive/YYYY`).
+- `openOnly`: hide completed checkboxes when the panel opens. Default `false`.
+- `sortOrder`: `default`, `newest`, `openFirst`, `alphabetical`. Default `default`.
+- `todoHeading`: only show todos under this heading. Empty = all todos.
+- `insertHeading`: heading new todos go under. Empty = follow `todoHeading`, then `Tasks`/`Todos`.
+- `hideWhenDone` / `hideWhenEmpty`: conceal the bar widget when done or empty. Default `false`.
 
-## CLI
+## Uninstall
 
 ```bash
-export OBSIDIAN_VAULT_ROOT="/path/to/vault"
-# or: obsidian-daily-qs --vault /path/to/vault …
-obsidian-daily-qs status
-obsidian-daily-qs status --date 2026-08-19 --heading Todos
-obsidian-daily-qs watch
-obsidian-daily-qs add --text "Ship plugin"
-obsidian-daily-qs add --text "Inbox item" --heading Inbox
-obsidian-daily-qs add --text "Nested" --under-line 12
-obsidian-daily-qs toggle --line 12
-obsidian-daily-qs edit --line 12 --text "Renamed" --expect-text "Old"
-obsidian-daily-qs delete --line 12
-obsidian-daily-qs defer --line 12
-obsidian-daily-qs defer --line 12 --heading Inbox
-obsidian-daily-qs indent --line 12
-obsidian-daily-qs outdent --line 12
-obsidian-daily-qs undo
-obsidian-daily-qs week
-obsidian-daily-qs carry-over
-obsidian-daily-qs carry-over --heading Inbox
-obsidian-daily-qs open
+omarchy plugin remove bibek.obsidian-daily
 ```
 
-## Development
+## Credits
 
-```bash
-cargo fmt --all -- --check
-cargo clippy --all-targets -- -D warnings
-cargo test --all-targets
-node omarchy/model.test.mjs
-omarchy plugin validate .
-qmllint -I "$OMARCHY_PATH/shell" omarchy/BarWidget.qml omarchy/Panel.qml
-```
+Backend, panel structure and week/carry-over logic forked from [obsidian-daily-qs](https://github.com/LucaNerlich/obsidian-daily-qs) by Luca Nerlich, licensed under the Apache-2.0 License (see [`LICENSE`](LICENSE)). This fork's modifications (states, cascade checking, keyboard zones, bar cleanup) are under the same license.
 
-`make bundle` rebuilds the musl backends for x86_64 and aarch64 into `omarchy/bin/` (Linux). `make verify-bundle` is the marketplace gate. Any edit under `src/`, `Cargo.toml`, `Cargo.lock`, or `rust-toolchain.toml` requires a fresh `make bundle` in the same change.
+This plugin is licensed under the [Apache-2.0 License](LICENSE).
 
-### Releasing
+## Others
 
-1. Bump `Cargo.toml`, `Cargo.lock`, `manifest.json`, and `CHANGELOG.md`.
-2. Run `make bundle` then `make verify-bundle` on Linux.
-3. Open a PR; wait for the **marketplace bundle** CI job to be green.
-4. Merge, then tag `vX.Y.Z` matching the crate version.
+Here are my other Omarchy plugins:
 
-## License
+- [Focusd](https://github.com/BibekBhusal0/omarchy-focusd) - pomodoro timer with streak, history and daily goal
+- [Obsidian Search](https://github.com/BibekBhusal0/omarchy-obsidian-search) - fuzzy-search your Obsidian vault
+- [Readest](https://github.com/BibekBhusal0/omarchy-readest) - fuzzy-search your Readest library
+- [Youtube Video Downloader](https://github.com/BibekBhusal0/omarchy-ytdl) - video downloads with progress and history
+- [Better Lock](https://github.com/BibekBhusal0/omarchy-better-lock) - lock screen with date/time, media and power controls
+- [Better Media](https://github.com/BibekBhusal0/omarchy-better-media) - MPRIS now-playing with playback controls
+- [Better Menu](https://github.com/BibekBhusal0/omarchy-better-menu) - fuzzy menu with app grid, calculator and web search
 
-Apache-2.0.
+Please give a star if you find them useful!
