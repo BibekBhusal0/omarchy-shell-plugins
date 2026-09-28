@@ -124,9 +124,7 @@ BarWidget {
   })
   readonly property string labelText: Model.labelText(status)
   readonly property string tooltipText: Model.tooltipText(status)
-  readonly property real progress: Model.progressRatio(status)
   readonly property bool conceal: Model.shouldConceal(status, hideWhenDone, hideWhenEmpty)
-  readonly property color urgent: bar ? bar.urgent : Color.urgent
 
   function vaultArgs() {
     var args = []
@@ -598,9 +596,7 @@ BarWidget {
     hasVisualContent: true
     concealed: root.conceal
     fixedWidth: vertical ? -1 : contentRow.implicitWidth + Style.space(16)
-    foreground: root.statusState === "error" ? root.urgent : Color.bar.text
-    activeColor: Color.bar.active
-    active: root.statusState === "error" || root.carryOverCount > 0
+    foreground: Color.bar.text
     horizontalMargin: 8.5
     verticalPadding: 6
     tooltipText: root.tooltipText
@@ -610,43 +606,17 @@ BarWidget {
       else if (buttonCode === Qt.RightButton) root.openInObsidian()
     }
 
-    readonly property color iconColor: button.active && button.useActiveColor
-      ? button.activeColor : button.foreground
+    readonly property color iconColor: button.foreground
 
     Row {
       id: contentRow
       anchors.centerIn: parent
       spacing: Style.space(5)
 
-      Item {
-        width: Style.space(14)
-        height: width
+      ObsidianIcon {
         anchors.verticalCenter: parent.verticalCenter
-
-        // Progress ring behind the mark.
-        Rectangle {
-          anchors.fill: parent
-          radius: width / 2
-          color: "transparent"
-          border.width: 1.5
-          border.color: Qt.rgba(button.iconColor.r, button.iconColor.g, button.iconColor.b, 0.25)
-        }
-        Rectangle {
-          anchors.fill: parent
-          radius: width / 2
-          color: "transparent"
-          border.width: 1.5
-          border.color: button.iconColor
-          // Approximate fill via opacity when progress high; full ring otherwise.
-          opacity: 0.15 + 0.85 * root.progress
-          visible: root.statusState === "ok" && root.exists
-        }
-
-        ObsidianIcon {
-          anchors.centerIn: parent
-          iconSize: Style.space(11)
-          color: button.iconColor
-        }
+        iconSize: Style.space(11)
+        color: button.iconColor
       }
 
       Text {
