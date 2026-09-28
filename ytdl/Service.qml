@@ -291,7 +291,6 @@ Item {
     }
   }
 
-  Component.onCompleted: root.loadPersistedState()
   readonly property string detectScriptPath: Qt.resolvedUrl("scripts/detect-url-mpri").toString().replace(/^file:\/\//, "")
   readonly property string autoDownloadScriptPath: Qt.resolvedUrl("scripts/auto-download.sh").toString().replace(/^file:\/\//, "")
 
@@ -1552,5 +1551,8 @@ Item {
     }
   }
 
-  Component.onCompleted: root.checkInstallation()
+  Component.onCompleted: {
+    root.checkInstallation();
+    root.loadPersistedState();
+  }
 }
