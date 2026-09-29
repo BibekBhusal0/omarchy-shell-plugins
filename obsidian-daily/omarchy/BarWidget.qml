@@ -13,19 +13,18 @@ BarWidget {
   moduleName: "bibek.obsidian-daily"
 
   function decodeFileUrl(urlString) {
-    var path = String(urlString).replace(/^file:\/\//, "")
+    var path = String(urlString).replace(/^file:\/\//, "");
     try {
-      return decodeURIComponent(path)
+      return decodeURIComponent(path);
     } catch (e) {
-      return path
+      return path;
     }
   }
 
   // Architecture detection. Qt.platform.os gives the OS but not the CPU,
   // so ask the kernel via uname(1) once at startup.
   property string hostArch: ""
-  readonly property string bundledBinary: hostArch === "" ? "" : root.decodeFileUrl(
-    Qt.resolvedUrl("bin/obsidian-daily-qs-" + hostArch).toString())
+  readonly property string bundledBinary: hostArch === "" ? "" : root.decodeFileUrl(Qt.resolvedUrl("bin/obsidian-daily-qs-" + hostArch).toString())
   readonly property bool archSupported: hostArch === "x86_64" || hostArch === "aarch64"
 
   // Fallback latch: once both the bundled binary and the PATH binary have
@@ -41,14 +40,18 @@ BarWidget {
   property var pendingActionArgs: []
 
   readonly property string watchBinary: {
-    if (!root.archSupported) return ""
-    if (root.watchBundledFailed && !root.watchFallbackFailed) return root.fallbackBinary
-    return root.bundledBinary
+    if (!root.archSupported)
+      return "";
+    if (root.watchBundledFailed && !root.watchFallbackFailed)
+      return root.fallbackBinary;
+    return root.bundledBinary;
   }
   readonly property string actionBinary: {
-    if (!root.archSupported) return ""
-    if (root.actionBundledFailed && !root.actionFallbackFailed) return root.fallbackBinary
-    return root.bundledBinary
+    if (!root.archSupported)
+      return "";
+    if (root.actionBundledFailed && !root.actionFallbackFailed)
+      return root.fallbackBinary;
+    return root.bundledBinary;
   }
 
   // Actions requested while another one is still running; drained in order
@@ -99,47 +102,48 @@ BarWidget {
   readonly property string archiveFolder: String(setting("archiveFolder", "") || "").trim()
   readonly property bool openOnlyDefault: setting("openOnly", false) === true
   readonly property string sortOrderSetting: {
-    var s = String(setting("sortOrder", "default") || "default")
-    if (s === "alpha") return "alphabetical"
-    return (s === "newest" || s === "openFirst" || s === "alphabetical" || s === "default") ? s : "default"
+    var s = String(setting("sortOrder", "default") || "default");
+    if (s === "alpha")
+      return "alphabetical";
+    return (s === "newest" || s === "openFirst" || s === "alphabetical" || s === "default") ? s : "default";
   }
   readonly property bool hideWhenDone: setting("hideWhenDone", false) === true
   readonly property bool hideWhenEmpty: setting("hideWhenEmpty", false) === true
 
   readonly property var status: ({
-    state: root.statusState,
-    date: root.date,
-    path: root.path,
-    exists: root.exists,
-    openCount: root.openCount,
-    doneCount: root.doneCount,
-    todos: root.todos,
-    error: root.error,
-    errorCode: root.errorCode,
-    obsidianUri: root.obsidianUri,
-    carryOverCount: root.carryOverCount,
-    isToday: root.isToday,
-    templateName: root.templateName,
-    createdFromTemplate: root.createdFromTemplate
-  })
+      "state": root.statusState,
+      "date": root.date,
+      "path": root.path,
+      "exists": root.exists,
+      "openCount": root.openCount,
+      "doneCount": root.doneCount,
+      "todos": root.todos,
+      "error": root.error,
+      "errorCode": root.errorCode,
+      "obsidianUri": root.obsidianUri,
+      "carryOverCount": root.carryOverCount,
+      "isToday": root.isToday,
+      "templateName": root.templateName,
+      "createdFromTemplate": root.createdFromTemplate
+    })
   readonly property string labelText: Model.labelText(status)
   readonly property string tooltipText: Model.tooltipText(status)
   readonly property bool conceal: Model.shouldConceal(status, hideWhenDone, hideWhenEmpty)
 
   function vaultArgs() {
-    var args = []
+    var args = [];
     if (root.vaultPath !== "")
-      args.push("--vault", root.vaultPath)
+      args.push("--vault", root.vaultPath);
     if (root.archiveFolder !== "")
-      args.push("--archive-folder", root.archiveFolder)
-    return args
+      args.push("--archive-folder", root.archiveFolder);
+    return args;
   }
 
   function headingArgs() {
-    var args = []
+    var args = [];
     if (root.todoHeading !== "")
-      args.push("--heading", root.todoHeading)
-    return args
+      args.push("--heading", root.todoHeading);
+    return args;
   }
 
   // Effective insert target: explicit insertHeading wins, otherwise follow
@@ -148,252 +152,282 @@ BarWidget {
   readonly property string effectiveInsertHeading: root.insertHeading !== "" ? root.insertHeading : root.todoHeading
 
   function insertHeadingArgs() {
-    var args = []
+    var args = [];
     if (root.effectiveInsertHeading !== "")
-      args.push("--heading", root.effectiveInsertHeading)
-    return args
+      args.push("--heading", root.effectiveInsertHeading);
+    return args;
   }
 
   function withVault(args) {
-    return root.vaultArgs().concat(args)
+    return root.vaultArgs().concat(args);
   }
 
   function restartWatch() {
-    watchProc.running = false
-    watchRestartTimer.interval = 200
-    watchRestartTimer.restart()
+    watchProc.running = false;
+    watchRestartTimer.interval = 200;
+    watchRestartTimer.restart();
   }
 
   function saveVaultPath(path) {
-    var expanded = Model.expandPath(path, root.homeDir)
-    if (expanded === "") return
-    settingsProc.command = ["omarchy", "bar", "set", "bibek.obsidian-daily", "vaultPath", expanded]
-    settingsProc.running = true
+    var expanded = Model.expandPath(path, root.homeDir);
+    if (expanded === "")
+      return;
+    settingsProc.command = ["omarchy", "bar", "set", "bibek.obsidian-daily", "vaultPath", expanded];
+    settingsProc.running = true;
   }
 
   function open() {
-    if (!panelItem) return
-    if (root.viewDate === "") root.viewDate = Model.todayIso()
-    root.refreshView()
-    panelItem.open()
-    Qt.callLater(function() {
-      if (panelItem && typeof panelItem.focusCapture === "function")
-        panelItem.focusCapture()
-    })
+    if (!panelItem)
+      return;
+    if (root.viewDate === "")
+      root.viewDate = Model.todayIso();
+    root.refreshView();
+    panelItem.open();
+    Qt.callLater(function () {
+        if (panelItem && typeof panelItem.focusCapture === "function")
+          panelItem.focusCapture();
+      });
   }
-  function close() { if (panelItem) panelItem.close() }
+  function close() {
+    if (panelItem)
+      panelItem.close();
+  }
   function toggle() {
-    if (!panelItem) return
-    if (panelItem.opened === true) root.close()
-    else root.open()
+    if (!panelItem)
+      return;
+    if (panelItem.opened === true)
+      root.close();
+    else
+      root.open();
   }
 
   function applyTodayLine(line) {
-    var parsed = Model.parseLine(String(line || ""))
-    if (!parsed) return
-    root.statusState = parsed.state
-    root.date = parsed.date
-    root.path = parsed.path
-    root.exists = parsed.exists === true
-    root.openCount = parsed.openCount
-    root.doneCount = parsed.doneCount
-    root.todos = parsed.todos || []
-    root.error = parsed.error || ""
-    root.errorCode = parsed.errorCode || ""
-    root.obsidianUri = parsed.obsidianUri || ""
-    root.carryOverCount = parsed.carryOverCount || 0
-    root.isToday = parsed.isToday === true
-    root.templateName = parsed.templateName || ""
-    root.createdFromTemplate = parsed.createdFromTemplate === true
+    var parsed = Model.parseLine(String(line || ""));
+    if (!parsed)
+      return;
+    root.statusState = parsed.state;
+    root.date = parsed.date;
+    root.path = parsed.path;
+    root.exists = parsed.exists === true;
+    root.openCount = parsed.openCount;
+    root.doneCount = parsed.doneCount;
+    root.todos = parsed.todos || [];
+    root.error = parsed.error || "";
+    root.errorCode = parsed.errorCode || "";
+    root.obsidianUri = parsed.obsidianUri || "";
+    root.carryOverCount = parsed.carryOverCount || 0;
+    root.isToday = parsed.isToday === true;
+    root.templateName = parsed.templateName || "";
+    root.createdFromTemplate = parsed.createdFromTemplate === true;
     if (root.viewDate === "" || root.viewDate === parsed.date)
-      root.applyViewParsed(parsed)
+      root.applyViewParsed(parsed);
   }
 
   function applyViewParsed(parsed) {
-    if (!parsed) return
-    root.viewStatusState = parsed.state
-    root.viewDate = parsed.date || root.viewDate
-    root.viewPath = parsed.path
-    root.viewExists = parsed.exists === true
-    root.viewOpenCount = parsed.openCount
-    root.viewDoneCount = parsed.doneCount
-    root.viewTodos = parsed.todos || []
-    root.viewError = parsed.error || ""
-    root.viewErrorCode = parsed.errorCode || ""
-    root.viewObsidianUri = parsed.obsidianUri || ""
-    root.viewCarryOverCount = parsed.carryOverCount || 0
-    root.viewIsToday = parsed.isToday === true
-    root.viewTemplateName = parsed.templateName || ""
-    root.viewCreatedFromTemplate = parsed.createdFromTemplate === true
+    if (!parsed)
+      return;
+    root.viewStatusState = parsed.state;
+    root.viewDate = parsed.date || root.viewDate;
+    root.viewPath = parsed.path;
+    root.viewExists = parsed.exists === true;
+    root.viewOpenCount = parsed.openCount;
+    root.viewDoneCount = parsed.doneCount;
+    root.viewTodos = parsed.todos || [];
+    root.viewError = parsed.error || "";
+    root.viewErrorCode = parsed.errorCode || "";
+    root.viewObsidianUri = parsed.obsidianUri || "";
+    root.viewCarryOverCount = parsed.carryOverCount || 0;
+    root.viewIsToday = parsed.isToday === true;
+    root.viewTemplateName = parsed.templateName || "";
+    root.viewCreatedFromTemplate = parsed.createdFromTemplate === true;
   }
 
   function applyViewLine(line) {
-    var parsed = Model.parseLine(String(line || ""))
+    var parsed = Model.parseLine(String(line || ""));
     if (parsed && parsed.date && root.viewDate !== "" && parsed.date !== root.viewDate)
-      return
-    root.applyViewParsed(parsed)
+      return;
+    root.applyViewParsed(parsed);
   }
 
   function runAction(args) {
-    if (!args || !args.length) return
+    if (!args || !args.length)
+      return;
     if (actionProc.running) {
-      root.actionQueue.push(args)
-      return
+      root.actionQueue.push(args);
+      return;
     }
-    var full = root.withVault(args)
-    root.pendingActionArgs = full
-    actionProc.retried = false
-    actionProc.lastError = ""
-    actionProc.command = [root.actionBinary].concat(full)
-    actionProc.running = true
+    var full = root.withVault(args);
+    root.pendingActionArgs = full;
+    actionProc.retried = false;
+    actionProc.lastError = "";
+    actionProc.command = [root.actionBinary].concat(full);
+    actionProc.running = true;
   }
 
   function drainActionQueue() {
-    if (actionProc.running) return
-    if (root.actionQueue.length === 0) return
-    runAction(root.actionQueue.shift())
+    if (actionProc.running)
+      return;
+    if (root.actionQueue.length === 0)
+      return;
+    runAction(root.actionQueue.shift());
   }
 
   function refreshView() {
-    var d = root.viewDate || Model.todayIso()
-    root.viewDate = d
-    root.runAction(["status", "--date", d].concat(root.headingArgs()))
-    root.refreshWeek()
+    var d = root.viewDate || Model.todayIso();
+    root.viewDate = d;
+    root.runAction(["status", "--date", d].concat(root.headingArgs()));
+    root.refreshWeek();
   }
 
   function refreshWeek() {
-    var d = root.viewDate || Model.todayIso()
-    weekProc.command = [root.actionBinary].concat(root.withVault(["week", "--date", d]))
-    weekProc.running = true
+    var d = root.viewDate || Model.todayIso();
+    weekProc.command = [root.actionBinary].concat(root.withVault(["week", "--date", d]));
+    weekProc.running = true;
   }
 
   function shiftView(delta) {
-    var next = Model.shiftDate(root.viewDate || Model.todayIso(), delta)
-    if (next === "") return
-    root.viewDate = next
-    root.refreshView()
+    var next = Model.shiftDate(root.viewDate || Model.todayIso(), delta);
+    if (next === "")
+      return;
+    root.viewDate = next;
+    root.refreshView();
   }
 
   function goToday() {
-    root.viewDate = Model.todayIso()
-    root.refreshView()
+    root.viewDate = Model.todayIso();
+    root.refreshView();
   }
 
   function goToDate(dateStr) {
-    var d = String(dateStr || "")
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return
-    root.viewDate = d
-    root.refreshView()
+    var d = String(dateStr || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d))
+      return;
+    root.viewDate = d;
+    root.refreshView();
   }
 
   function addTodo(text, underLine) {
-    var trimmed = String(text || "").trim()
-    if (trimmed === "") return
-    var d = root.viewDate || Model.todayIso()
-    var args = ["add", "--date", d, "--text", trimmed].concat(root.insertHeadingArgs())
-    var n = Number(underLine)
+    var trimmed = String(text || "").trim();
+    if (trimmed === "")
+      return;
+    var d = root.viewDate || Model.todayIso();
+    var args = ["add", "--date", d, "--text", trimmed].concat(root.insertHeadingArgs());
+    var n = Number(underLine);
     if (isFinite(n) && n >= 1)
-      args.push("--under-line", String(Math.floor(n)))
-    root.runAction(args)
+      args.push("--under-line", String(Math.floor(n)));
+    root.runAction(args);
   }
 
   function toggleTodo(line, text) {
-    var n = Number(line)
-    if (!isFinite(n) || n < 1) return
-    var d = root.viewDate || Model.todayIso()
-    var args = ["toggle", "--date", d, "--line", String(Math.floor(n))]
+    var n = Number(line);
+    if (!isFinite(n) || n < 1)
+      return;
+    var d = root.viewDate || Model.todayIso();
+    var args = ["toggle", "--date", d, "--line", String(Math.floor(n))];
     if (typeof text === "string" && text !== "")
-      args.push("--expect-text", text)
-    root.runAction(args)
+      args.push("--expect-text", text);
+    root.runAction(args);
   }
 
   function cycleTodo(line, text, backward) {
-    var n = Number(line)
-    if (!isFinite(n) || n < 1) return
-    var d = root.viewDate || Model.todayIso()
-    var args = ["cycle", "--date", d, "--line", String(Math.floor(n))]
+    var n = Number(line);
+    if (!isFinite(n) || n < 1)
+      return;
+    var d = root.viewDate || Model.todayIso();
+    var args = ["cycle", "--date", d, "--line", String(Math.floor(n))];
     if (typeof text === "string" && text !== "")
-      args.push("--expect-text", text)
+      args.push("--expect-text", text);
     if (backward === true)
-      args.push("--backward")
-    root.runAction(args)
+      args.push("--backward");
+    root.runAction(args);
   }
 
   function editTodo(line, expectText, newText) {
-    var n = Number(line)
-    if (!isFinite(n) || n < 1) return
-    var trimmed = String(newText || "").trim()
-    if (trimmed === "") return
-    var d = root.viewDate || Model.todayIso()
-    var args = ["edit", "--date", d, "--line", String(Math.floor(n)), "--text", trimmed]
+    var n = Number(line);
+    if (!isFinite(n) || n < 1)
+      return;
+    var trimmed = String(newText || "").trim();
+    if (trimmed === "")
+      return;
+    var d = root.viewDate || Model.todayIso();
+    var args = ["edit", "--date", d, "--line", String(Math.floor(n)), "--text", trimmed];
     if (typeof expectText === "string" && expectText !== "")
-      args.push("--expect-text", expectText)
-    root.runAction(args)
+      args.push("--expect-text", expectText);
+    root.runAction(args);
   }
 
   function deleteTodo(line, text, withChildren) {
-    var n = Number(line)
-    if (!isFinite(n) || n < 1) return
-    var d = root.viewDate || Model.todayIso()
-    var args = ["delete", "--date", d, "--line", String(Math.floor(n))]
+    var n = Number(line);
+    if (!isFinite(n) || n < 1)
+      return;
+    var d = root.viewDate || Model.todayIso();
+    var args = ["delete", "--date", d, "--line", String(Math.floor(n))];
     if (typeof text === "string" && text !== "")
-      args.push("--expect-text", text)
+      args.push("--expect-text", text);
     if (withChildren === true)
-      args.push("--with-children")
-    root.runAction(args)
+      args.push("--with-children");
+    root.runAction(args);
   }
 
   function deferTodo(line, text, withChildren) {
-    var n = Number(line)
-    if (!isFinite(n) || n < 1) return
-    var d = root.viewDate || Model.todayIso()
-    var args = ["defer", "--date", d, "--line", String(Math.floor(n))].concat(root.insertHeadingArgs())
+    var n = Number(line);
+    if (!isFinite(n) || n < 1)
+      return;
+    var d = root.viewDate || Model.todayIso();
+    var args = ["defer", "--date", d, "--line", String(Math.floor(n))].concat(root.insertHeadingArgs());
     if (typeof text === "string" && text !== "")
-      args.push("--expect-text", text)
+      args.push("--expect-text", text);
     if (withChildren === true)
-      args.push("--with-children")
-    root.runAction(args)
+      args.push("--with-children");
+    root.runAction(args);
   }
 
   function indentTodo(line, text, delta) {
-    var n = Number(line)
-    if (!isFinite(n) || n < 1) return
-    var d = root.viewDate || Model.todayIso()
-    var cmd = Number(delta) < 0 ? "outdent" : "indent"
-    var args = [cmd, "--date", d, "--line", String(Math.floor(n))]
+    var n = Number(line);
+    if (!isFinite(n) || n < 1)
+      return;
+    var d = root.viewDate || Model.todayIso();
+    var cmd = Number(delta) < 0 ? "outdent" : "indent";
+    var args = [cmd, "--date", d, "--line", String(Math.floor(n))];
     if (typeof text === "string" && text !== "")
-      args.push("--expect-text", text)
-    root.runAction(args)
+      args.push("--expect-text", text);
+    root.runAction(args);
   }
 
   function undoLast() {
-    root.runAction(["undo"])
+    root.runAction(["undo"]);
   }
 
   function carryOver() {
-    var d = root.viewDate || Model.todayIso()
-    root.runAction(["carry-over", "--date", d].concat(root.insertHeadingArgs()))
+    var d = root.viewDate || Model.todayIso();
+    root.runAction(["carry-over", "--date", d].concat(root.insertHeadingArgs()));
   }
 
   function openInObsidian() {
-    var d = root.viewDate || Model.todayIso()
-    root.runAction(["open", "--date", d])
+    var d = root.viewDate || Model.todayIso();
+    root.runAction(["open", "--date", d]);
   }
 
   function openLink(target) {
-    var t = String(target || "").trim()
-    if (t === "") return
-    var d = root.viewDate || Model.todayIso()
-    root.runAction(["open-link", "--date", d, "--target", t])
+    var t = String(target || "").trim();
+    if (t === "")
+      return;
+    var d = root.viewDate || Model.todayIso();
+    root.runAction(["open-link", "--date", d, "--target", t]);
   }
 
   function injectPanel() {
-    var target = panelItem
-    if (!target) return
-    if ("bar" in target) target.bar = root.bar
-    if ("settings" in target) target.settings = root.settings
-    if ("anchorItem" in target) target.anchorItem = button
-    if ("hostWidget" in target) target.hostWidget = root
+    var target = panelItem;
+    if (!target)
+      return;
+    if ("bar" in target)
+      target.bar = root.bar;
+    if ("settings" in target)
+      target.settings = root.settings;
+    if ("anchorItem" in target)
+      target.anchorItem = button;
+    if ("hostWidget" in target)
+      target.hostWidget = root;
   }
 
   implicitWidth: button.implicitWidth
@@ -401,15 +435,15 @@ BarWidget {
 
   onBarChanged: injectPanel()
   onSettingsChanged: {
-    injectPanel()
-    root.restartWatch()
+    injectPanel();
+    root.restartWatch();
   }
   onVaultPathChanged: root.restartWatch()
   onTodoHeadingChanged: root.restartWatch()
 
   Component.onCompleted: {
-    root.viewDate = Model.todayIso()
-    unameProc.running = true
+    root.viewDate = Model.todayIso();
+    unameProc.running = true;
   }
 
   Loader {
@@ -418,8 +452,8 @@ BarWidget {
     source: Qt.resolvedUrl("Panel.qml")
     visible: false
     onLoaded: {
-      root.injectPanel()
-      Qt.callLater(root.injectPanel)
+      root.injectPanel();
+      Qt.callLater(root.injectPanel);
     }
   }
 
@@ -427,29 +461,29 @@ BarWidget {
     id: unameProc
     command: ["uname", "-m"]
     stdout: SplitParser {
-      onRead: function(line) {
-        var arch = String(line || "").trim()
-        root.hostArch = arch
+      onRead: function (line) {
+        var arch = String(line || "").trim();
+        root.hostArch = arch;
         if (!root.archSupported) {
-          root.statusState = "error"
-          root.errorCode = "bad_arch"
-          root.error = "Unsupported architecture: " + arch
+          root.statusState = "error";
+          root.errorCode = "bad_arch";
+          root.error = "Unsupported architecture: " + arch;
         } else {
-          root.statusState = "ok"
-          root.errorCode = ""
-          root.error = ""
-          watchRestartTimer.interval = 200
-          watchRestartTimer.restart()
+          root.statusState = "ok";
+          root.errorCode = "";
+          root.error = "";
+          watchRestartTimer.interval = 200;
+          watchRestartTimer.restart();
         }
       }
     }
     onRunningChanged: {
       if (!unameProc.running && !root.archSupported && root.hostArch === "") {
         // uname finished but produced no output.
-        root.hostArch = "unknown"
-        root.statusState = "error"
-        root.errorCode = "bad_arch"
-        root.error = "Could not detect system architecture"
+        root.hostArch = "unknown";
+        root.statusState = "error";
+        root.errorCode = "bad_arch";
+        root.error = "Could not detect system architecture";
       }
     }
   }
@@ -461,10 +495,10 @@ BarWidget {
   Process {
     id: weekProc
     stdout: SplitParser {
-      onRead: function(line) {
-        var parsed = Model.parseWeekLine(String(line || ""))
+      onRead: function (line) {
+        var parsed = Model.parseWeekLine(String(line || ""));
         if (parsed && parsed.state === "ok")
-          root.weekDays = parsed.days || []
+          root.weekDays = parsed.days || [];
       }
     }
   }
@@ -476,54 +510,55 @@ BarWidget {
     readonly property int minHealthyRunMs: 10000
     property string lastError: ""
     stdout: SplitParser {
-      onRead: function(line) { root.applyTodayLine(line) }
+      onRead: function (line) {
+        root.applyTodayLine(line);
+      }
     }
     stderr: SplitParser {
-      onRead: function(line) { watchProc.lastError = String(line || "").trim() }
+      onRead: function (line) {
+        watchProc.lastError = String(line || "").trim();
+      }
     }
     onStarted: {
-      watchProc.startedOnce = true
-      watchProc.startedAtMs = Date.now()
-      watchProc.lastError = ""
+      watchProc.startedOnce = true;
+      watchProc.startedAtMs = Date.now();
+      watchProc.lastError = "";
     }
     onExited: {
-      root.statusState = "error"
-      watchRestartTimer.restart()
+      root.statusState = "error";
+      watchRestartTimer.restart();
     }
     onRunningChanged: {
-      if (watchProc.running) return
-      var failedStart = !watchProc.startedOnce
-      var shortLived = !failedStart
-        && (Date.now() - watchProc.startedAtMs) < watchProc.minHealthyRunMs
-      watchProc.startedOnce = false
+      if (watchProc.running)
+        return;
+      var failedStart = !watchProc.startedOnce;
+      var shortLived = !failedStart && (Date.now() - watchProc.startedAtMs) < watchProc.minHealthyRunMs;
+      watchProc.startedOnce = false;
       if (!failedStart && !shortLived) {
         // Graceful backend exit (e.g. signal) — restart without latching.
-        watchProc.lastError = ""
-        watchRestartTimer.interval = 5000
-        watchRestartTimer.restart()
-        return
+        watchProc.lastError = "";
+        watchRestartTimer.interval = 5000;
+        watchRestartTimer.restart();
+        return;
       }
-
-      if (root.statusState !== "error") root.statusState = "error"
-      var isExecError = /exec format error|cannot execute binary file|No such file/i.test(watchProc.lastError)
-      var binaryUsed = root.watchBinary
+      if (root.statusState !== "error")
+        root.statusState = "error";
+      var isExecError = /exec format error|cannot execute binary file|No such file/i.test(watchProc.lastError);
+      var binaryUsed = root.watchBinary;
       if (binaryUsed === root.bundledBinary) {
-        root.watchBundledFailed = true
+        root.watchBundledFailed = true;
       } else if (binaryUsed === root.fallbackBinary) {
-        root.watchFallbackFailed = true
+        root.watchFallbackFailed = true;
       }
-
       if (root.watchBinaryExhausted) {
-        root.errorCode = isExecError ? "exec_error" : "backend_error"
-        root.error = isExecError
-          ? "Backend cannot run on this architecture (" + root.hostArch + ")"
-          : "Backend failed to start"
-        return
+        root.errorCode = isExecError ? "exec_error" : "backend_error";
+        root.error = isExecError ? "Backend cannot run on this architecture (" + root.hostArch + ")" : "Backend failed to start";
+        return;
       }
 
       // Retry with the other candidate on the next restart cycle.
-      watchRestartTimer.interval = 2000
-      watchRestartTimer.restart()
+      watchRestartTimer.interval = 2000;
+      watchRestartTimer.restart();
     }
   }
 
@@ -532,10 +567,12 @@ BarWidget {
     interval: 5000
     repeat: false
     onTriggered: {
-      if (root.watchBinaryExhausted) return
-      if (root.watchBinary === "") return
-      watchProc.command = [root.watchBinary].concat(root.withVault(["watch"].concat(root.headingArgs())))
-      watchProc.running = true
+      if (root.watchBinaryExhausted)
+        return;
+      if (root.watchBinary === "")
+        return;
+      watchProc.command = [root.watchBinary].concat(root.withVault(["watch"].concat(root.headingArgs())));
+      watchProc.running = true;
     }
   }
 
@@ -545,64 +582,62 @@ BarWidget {
     property bool retried: false
     property string lastError: ""
     stdout: SplitParser {
-      onRead: function(line) {
+      onRead: function (line) {
         // Week summaries are handled by weekProc; ignore non-snapshot lines.
         if (String(line || "").indexOf('"days"') !== -1 && String(line || "").indexOf('"todos"') === -1)
-          return
-        root.applyViewLine(line)
-        var parsed = Model.parseLine(String(line || ""))
+          return;
+        root.applyViewLine(line);
+        var parsed = Model.parseLine(String(line || ""));
         if (parsed && parsed.date && parsed.date === Model.todayIso())
-          root.applyTodayLine(line)
+          root.applyTodayLine(line);
         if (parsed && parsed.state === "ok")
-          root.refreshWeek()
+          root.refreshWeek();
       }
     }
     stderr: SplitParser {
-      onRead: function(line) { actionProc.lastError = String(line || "").trim() }
+      onRead: function (line) {
+        actionProc.lastError = String(line || "").trim();
+      }
     }
     onStarted: {
-      actionProc.startedOnce = true
-      actionProc.lastError = ""
+      actionProc.startedOnce = true;
+      actionProc.lastError = "";
     }
     onRunningChanged: {
-      if (actionProc.running) return
-      var failedStart = !actionProc.startedOnce
-      actionProc.startedOnce = false
+      if (actionProc.running)
+        return;
+      var failedStart = !actionProc.startedOnce;
+      actionProc.startedOnce = false;
       if (!failedStart || root.pendingActionArgs.length === 0) {
-        actionProc.lastError = ""
-        root.pendingActionArgs = []
-        root.drainActionQueue()
-        return
+        actionProc.lastError = "";
+        root.pendingActionArgs = [];
+        root.drainActionQueue();
+        return;
       }
-
-      var isExecError = /exec format error|cannot execute binary file|No such file/i.test(actionProc.lastError)
-      var binaryUsed = root.actionBinary
+      var isExecError = /exec format error|cannot execute binary file|No such file/i.test(actionProc.lastError);
+      var binaryUsed = root.actionBinary;
       if (binaryUsed === root.bundledBinary) {
-        root.actionBundledFailed = true
+        root.actionBundledFailed = true;
       } else if (binaryUsed === root.fallbackBinary) {
-        root.actionFallbackFailed = true
+        root.actionFallbackFailed = true;
       }
-
       if (root.actionBinaryExhausted) {
-        root.viewStatusState = "error"
-        root.viewErrorCode = isExecError ? "exec_error" : "backend_error"
-        root.viewError = isExecError
-          ? "Backend cannot run on this architecture (" + root.hostArch + ")"
-          : "Backend failed to start"
-        root.pendingActionArgs = []
-        root.drainActionQueue()
-        return
+        root.viewStatusState = "error";
+        root.viewErrorCode = isExecError ? "exec_error" : "backend_error";
+        root.viewError = isExecError ? "Backend cannot run on this architecture (" + root.hostArch + ")" : "Backend failed to start";
+        root.pendingActionArgs = [];
+        root.drainActionQueue();
+        return;
       }
-
       if (actionProc.retried) {
-        actionProc.retried = false
-        root.pendingActionArgs = []
-        root.drainActionQueue()
-        return
+        actionProc.retried = false;
+        root.pendingActionArgs = [];
+        root.drainActionQueue();
+        return;
       }
-      actionProc.retried = true
-      actionProc.command = [root.actionBinary].concat(root.pendingActionArgs)
-      actionProc.running = true
+      actionProc.retried = true;
+      actionProc.command = [root.actionBinary].concat(root.pendingActionArgs);
+      actionProc.running = true;
     }
   }
 
@@ -619,10 +654,13 @@ BarWidget {
     horizontalMargin: 8.5
     verticalPadding: 6
     tooltipText: root.tooltipText
-    onPressed: function(buttonCode) {
-      if (buttonCode === Qt.LeftButton) root.toggle()
-      else if (buttonCode === Qt.MiddleButton) root.openInObsidian()
-      else if (buttonCode === Qt.RightButton) root.openInObsidian()
+    onPressed: function (buttonCode) {
+      if (buttonCode === Qt.LeftButton)
+        root.toggle();
+      else if (buttonCode === Qt.MiddleButton)
+        root.openInObsidian();
+      else if (buttonCode === Qt.RightButton)
+        root.openInObsidian();
     }
 
     readonly property color iconColor: button.foreground

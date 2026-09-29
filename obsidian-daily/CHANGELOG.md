@@ -51,11 +51,11 @@ this entry is upstream history.
 - Configurable todo sort order: new `sortOrder` bar setting with `default`
   (file order, new todos append to the bottom), `newest` (newest first),
   and `openFirst` (uncompleted first, then newest). An in-panel sort button
-  next to *Hide done* cycles through the orders. Parent-child hierarchy is
+  next to _Hide done_ cycles through the orders. Parent-child hierarchy is
   preserved in every order.
 - Inline delete button: hovering (or selecting) a todo row reveals a ✕
   button that deletes the todo (with children) without opening the context
-  menu. Right-click menu still offers delete and *Do tomorrow*.
+  menu. Right-click menu still offers delete and _Do tomorrow_.
 
 ### Changed
 
