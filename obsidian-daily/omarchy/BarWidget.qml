@@ -380,6 +380,13 @@ BarWidget {
     root.runAction(["open", "--date", d])
   }
 
+  function openLink(target) {
+    var t = String(target || "").trim()
+    if (t === "") return
+    var d = root.viewDate || Model.todayIso()
+    root.runAction(["open-link", "--date", d, "--target", t])
+  }
+
   function injectPanel() {
     var target = panelItem
     if (!target) return

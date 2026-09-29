@@ -5,10 +5,11 @@ Today's [Obsidian](https://obsidian.md/) daily-note todos in the Omarchy bar. Sh
 ## Features
 
 - Bar widget with today's done/total and one-click panel
-- Checkbox states beyond open/done: half-done `[/]`, canceled `[-]`, forwarded `[>]` and more, cycled with `t`
+- Checkbox states beyond open/done: half-done `[/]`, canceled `[-]`, forwarded `[>]` and more, cycled with `;` (`:` goes backward)
 - Cascade checking: checking a parent checks every subtask, completing all subtasks completes the parent
 - Full keyboard navigation across day buttons, week strip, tools, checkboxes and the add button
 - Week strip day jumping, search, open-only filter, sort orders, carry-over, undo, open in Obsidian
+- Clickable links: `[[wikilinks]]`, `[text](path)` and bare URLs open in Obsidian (vault notes) or the browser (http links)
 
 ## Differences from upstream
 
@@ -17,7 +18,7 @@ Forked from [LucaNerlich/obsidian-daily-qs](https://github.com/LucaNerlich/obsid
 Changed in this fork:
 
 - **No bar color or ring.** The widget always renders in the normal bar text color. Errors still surface through the label (`!`) and tooltip.
-- **Extended todo states.** Any single-character marker parses. Only ` ` (open), `-` (canceled) and `/` (half-done) count as not done; everything else counts as done. `t` cycles ` ` → `/` → `x` → `-` → `>` → `<` → `?` → `!` → `*` → `"` → `l` → `b` → `i` → `I` → `p` → `c` → `f` → `k` → `u` → `d` → back to ` `.
+- **Extended todo states.** Any single-character marker parses. Only ` ` (open), `-` (canceled) and `/` (half-done) count as not done; everything else counts as done. `;` cycles ` ` → `/` → `x` → `-` → `>` → `<` → `?` → `!` → `*` → `"` → `l` → `b` → `i` → `I` → `p` → `c` → `f` → `k` → `u` → `d` → back to ` `, `:` walks it backward.
 - **Cascade checking.** Toggling a parent stamps the same marker onto every subtask. Each ancestor then recomputes from its direct children: all done → done, all open/canceled → open, anything mixed → half-done. Works at any nesting depth, in one write (one undo).
 - **Zone keyboard navigation.** Up/Down (or `j`/`k`) move across rows, Left/Right (or `h`/`l`) move inside a row. Inside a todo, Left/Right flips between the checkbox (Enter/Space toggles) and the delete button. `[`/`]` switch days, `{`/`}` outdent/indent. `Esc` in any field just leaves the field so keys work again; `Tab`/`Shift-Tab` switches panels even from inside inputs.
 
@@ -54,7 +55,7 @@ omarchy bar set bibek.obsidian-daily vaultPath '/home/you/Documents/vault'
 
 Left-click opens the panel, middle/right-click opens the note in Obsidian. The panel starts in the add field: type and Enter to add, `Shift+Enter` to nest under the selected todo, `Esc` to drive everything from the keyboard.
 
-Shortcuts: arrows or `h`/`j`/`k`/`l` to move, Enter/Space to activate, `t` to cycle the todo state, `e` to edit, `x` to delete, `{`/`}` to outdent/indent, `[`/`]` for previous/next day, `/` to search, `u` to undo, `Esc` to close (or leave a field first).
+Shortcuts: arrows or `h`/`j`/`k`/`l` to move, Enter/Space to activate, `;`/`:` to cycle the todo state forward/backward, `t` for today, `a`/`+` to add, `e` to edit, `x` to delete, `{`/`}` to outdent/indent, `[`/`]` for previous/next day, `/` to search, `u` to undo, `Esc` to close (or leave a field first).
 
 ## Configuration
 

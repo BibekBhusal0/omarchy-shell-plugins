@@ -237,6 +237,19 @@ Panel {
     watcher.openInObsidian()
   }
 
+  function openTodoLink(link) {
+    var href = String(link || "")
+    if (href === "") return
+    var target = Model.internalLinkTarget(href)
+    if (target !== "") {
+      if (!hasWatcher || typeof watcher.openLink !== "function") return
+      watcher.openLink(target)
+      return
+    }
+    if (/^(https?:|obsidian:)/i.test(href))
+      Qt.openUrlExternally(href)
+  }
+
   function saveVaultPath(path) {
     if (!hasWatcher || typeof watcher.saveVaultPath !== "function") return
     watcher.saveVaultPath(path)
@@ -539,10 +552,14 @@ Panel {
           root.indentSelected(1)
         } else if (t === "u" || t === "U") {
           root.undoLast()
-        } else if (t === "t") {
+        } else if (t === ";") {
           root.cycleSelected()
-        } else if (t === "T") {
+        } else if (t === ":") {
           root.cycleSelectedBackward()
+        } else if (t === "t" || t === "T") {
+          root.goToday()
+        } else if (t === "a" || t === "A" || t === "+") {
+          inputField.forceActiveFocus()
         } else if (t === "e" || t === "E") {
           root.startEdit(root.selectedTodo)
         }
@@ -1012,6 +1029,10 @@ Panel {
                           root.openTodoMenu(todoRow, modelData)
                           return
                         }
+                        if (todoText.hoveredLink !== "") {
+                          root.openTodoLink(todoText.hoveredLink)
+                          return
+                        }
                         if (root.todoMenuOpen) {
                           root.closeTodoMenu()
                           return
@@ -1121,14 +1142,16 @@ Panel {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
                         visible: root.editingLine !== modelData.line
-                        text: modelData.text
-                        textFormat: Text.PlainText
+                        text: Model.richTodoText(modelData.text,
+                          (modelData.checked || modelData.marker === "-") ? root.dim : root.accent)
+                        textFormat: Text.RichText
                         color: (modelData.checked || modelData.marker === "-") ? root.dim : root.foreground
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.body
                         font.strikeout: modelData.marker === "x" || modelData.marker === "X"
                         elide: Text.ElideRight
                         wrapMode: Text.NoWrap
+                        onLinkActivated: function(link) { root.openTodoLink(link) }
                       }
 
                       PanelActionButton {

@@ -356,4 +356,50 @@ test("markerGlyph uses the render-markdown icons", () => {
   assert.equal(Model.markerGlyph("~"), "~");
 });
 
+test("richTodoText leaves plain text alone but escaped", () => {
+  assert.equal(Model.richTodoText("Buy milk & eggs", "#fff"), "Buy milk &amp; eggs");
+  assert.equal(Model.richTodoText("<b>not html</b>", "#fff"), "&lt;b&gt;not html&lt;/b&gt;");
+});
+
+test("richTodoText linkifies wikilinks", () => {
+  var html = Model.richTodoText("Read [[My Note]] today", "#fff");
+  assert.match(html, /<a href="obsidian-daily-link:My%20Note"[^>]*>My Note<\/a>/);
+});
+
+test("richTodoText wikilink alias and section", () => {
+  var html = Model.richTodoText("See [[My Note#Heading|custom]]", "#fff");
+  assert.match(html, />custom<\/a>/);
+  assert.match(html, /href="obsidian-daily-link:My%20Note"/);
+  assert.doesNotMatch(html, /Heading/);
+});
+
+test("richTodoText embed renders as link", () => {
+  var html = Model.richTodoText("![[My Note]]", "#fff");
+  assert.match(html, /<a href="obsidian-daily-link:My%20Note"[^>]*>My Note<\/a>/);
+});
+
+test("richTodoText markdown links", () => {
+  var ext = Model.richTodoText("[docs](https://example.com/a?b=1)", "#fff");
+  assert.match(ext, /<a href="https:\/\/example\.com\/a\?b=1"[^>]*>docs<\/a>/);
+  var local = Model.richTodoText("[plan](../Plans/Q.md)", "#fff");
+  assert.match(local, /<a href="obsidian-daily-link:\.\.%2FPlans%2FQ\.md"[^>]*>plan<\/a>/);
+});
+
+test("richTodoText bare URLs with trailing punctuation", () => {
+  var html = Model.richTodoText("see https://example.com/x, ok", "#fff");
+  assert.match(html, /<a href="https:\/\/example\.com\/x"[^>]*>https:\/\/example\.com\/x<\/a>,/);
+});
+
+test("richTodoText internal round-trip", () => {
+  var html = Model.richTodoText("[[A&B <C>]]", "#fff");
+  var href = html.match(/href="([^"]+)"/)[1];
+  assert.equal(Model.internalLinkTarget(href), "A&B <C>");
+  assert.match(html, />A&amp;B &lt;C&gt;<\/a>/);
+});
+
+test("internalLinkTarget rejects externals", () => {
+  assert.equal(Model.internalLinkTarget("https://example.com"), "");
+  assert.equal(Model.internalLinkTarget(""), "");
+});
+
 console.log("All Model.js tests passed.");

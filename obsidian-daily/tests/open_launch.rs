@@ -67,3 +67,60 @@ fn open_returns_while_desktop_handler_is_still_running() {
     }
     fs::remove_dir_all(&fixture.0).unwrap();
 }
+
+#[test]
+fn open_link_resolves_wikilink_and_launches() {
+    let base = std::env::temp_dir().join(format!("obsidian-open-link-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&base);
+    let vault = base.join("vault");
+    fs::create_dir_all(vault.join("Projects")).unwrap();
+    fs::write(vault.join("2026-09-21.md"), "- [ ] Read [[Foo]]\n").unwrap();
+    fs::write(vault.join("Projects").join("Foo.md"), "# Foo\n").unwrap();
+    let launcher = base.join("xdg-open");
+    fs::write(
+        &launcher,
+        "#!/bin/sh\nprintf '%s' \"$1\" > \"$TEST_DIR/uri\"\n",
+    )
+    .unwrap();
+    fs::set_permissions(&launcher, fs::Permissions::from_mode(0o755)).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_obsidian-daily-qs"))
+        .args(["--vault", vault.to_str().unwrap()])
+        .args(["open-link", "--date", "2026-09-21", "--target", "Foo"])
+        .env("PATH", &base)
+        .env("TEST_DIR", &base)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let snapshot: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(snapshot["state"], "ok");
+    let want = format!(
+        "obsidian://open?path={}",
+        vault.join("Projects").join("Foo.md").display()
+    );
+    assert_eq!(fs::read_to_string(base.join("uri")).unwrap(), want);
+    fs::remove_dir_all(&base).unwrap();
+}
+
+#[test]
+fn open_link_missing_target_is_an_error_snapshot() {
+    let base = std::env::temp_dir().join(format!("obsidian-open-link-miss-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&base);
+    let vault = base.join("vault");
+    fs::create_dir_all(&vault).unwrap();
+    fs::write(vault.join("2026-09-21.md"), "- [ ] Read [[Nope]]\n").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_obsidian-daily-qs"))
+        .args(["--vault", vault.to_str().unwrap()])
+        .args(["open-link", "--date", "2026-09-21", "--target", "Nope"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let snapshot: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(snapshot["state"], "error");
+    fs::remove_dir_all(&base).unwrap();
+}

@@ -11,7 +11,8 @@ use obsidian_daily_qs::status::{Snapshot, WeekSummary};
 use obsidian_daily_qs::watch;
 use obsidian_daily_qs::{
     add_todo_under, carry_over, cycle_todo, cycle_todo_backward, defer_todo, delete_todo, edit_todo,
-    open_in_obsidian, read_snapshot_filtered, set_indent, toggle_todo, undo_last, week_summary,
+    open_in_obsidian, open_link, read_snapshot_filtered, set_indent, toggle_todo, undo_last,
+    week_summary,
 };
 
 #[derive(Parser)]
@@ -161,6 +162,15 @@ enum Command {
         #[arg(long)]
         date: Option<String>,
     },
+    /// Open a wikilink / markdown-link target from a todo in Obsidian
+    OpenLink {
+        /// Raw link destination as written in the note
+        /// (`[[Foo]]` arrives as `Foo`, `[text](../Bar.md)` as `../Bar.md`)
+        #[arg(long)]
+        target: String,
+        #[arg(long)]
+        date: Option<String>,
+    },
 }
 
 fn main() {
@@ -305,6 +315,16 @@ fn main() {
             date,
         )),
         Command::Open { date } => emit(run(vault_arg, archive_arg, open_in_obsidian, date)),
+        Command::OpenLink { date, target } => emit(match Vault::resolve(vault_arg, archive_arg) {
+            Ok(vault) => match parse_date(date) {
+                Ok(d) => match open_link(&vault, d, &target) {
+                    Ok(snap) => snap,
+                    Err(err) => Snapshot::error_with_code(err.to_string(), err.error_code()),
+                },
+                Err(err) => Snapshot::error_with_code(err, "io"),
+            },
+            Err(err) => Snapshot::error_with_code(err.to_string(), err.error_code()),
+        }),
     }
 }
 

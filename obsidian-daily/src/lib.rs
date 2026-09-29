@@ -9,6 +9,7 @@ pub mod undo;
 pub mod watch;
 
 pub use config::{DailyNotesConfig, Vault, VaultError};
+pub use open::open_link;
 pub use status::{DaySummary, Snapshot, State, TodoItem, WeekSummary};
 pub use todos::{
     add_todo, add_todo_under, carry_over, cycle_todo, cycle_todo_backward, defer_todo, delete_todo,

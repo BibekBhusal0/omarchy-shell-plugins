@@ -168,7 +168,7 @@ pub fn read_snapshot(vault: &Vault, date: NaiveDate) -> Result<Snapshot, VaultEr
 /// Resolve the path of `date`'s note: the live daily-notes folder wins, but a
 /// note manually moved into the archive folder configured via
 /// `--archive-folder` / the `archiveFolder` bar setting is still found.
-fn resolved_note_path(
+pub(crate) fn resolved_note_path(
     vault: &Vault,
     config: &DailyNotesConfig,
     date: NaiveDate,
