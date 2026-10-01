@@ -1,6 +1,6 @@
 ## New Features
 
-- Open search scoped to a specific vault: `omarchy-shell shell summon bibek.obsidian-search '{"vaultPath":"/path/to/vault"}'`. Pass an absolute vault path, so you can bind different keys to different vaults.
+- Open search scoped to a specific vault: `omarchy-shell shell summon bibek.obsidian-search '{"vaultPath":"/path/to/vault"}'`. Pass an absolute vault path, so you can bind different keys to different vaults. Paths starting with `~` resolve against your home directory.
 
 ## Fixes
 

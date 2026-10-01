@@ -82,10 +82,19 @@ Item {
       root.open("{}");
   }
 
+  function expandHome(path) {
+    var p = String(path || "");
+    if (p === "~")
+      return Quickshell.env("HOME");
+    if (p.indexOf("~/") === 0)
+      return Quickshell.env("HOME") + p.slice(1);
+    return p;
+  }
+
   function effectiveVaultPath() {
     if (root.payloadVaultPath)
-      return root.payloadVaultPath;
-    return root.cfg("vaultPath", "");
+      return root.expandHome(root.payloadVaultPath);
+    return root.expandHome(root.cfg("vaultPath", ""));
   }
 
   function runSearch() {
@@ -463,8 +472,6 @@ Item {
     var base = root.vaultPathResolved;
     if (!base) {
       base = root.effectiveVaultPath();
-      if (base.indexOf("~/") === 0)
-        base = Quickshell.env("HOME") + base.slice(1);
     }
     if (!base || base.charAt(0) !== "/")
       return "";
