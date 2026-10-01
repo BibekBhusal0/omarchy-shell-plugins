@@ -74,6 +74,29 @@ done
 [[ "$show_templates" == "1" || "$show_templates" == "true" ]] && show_templates=1 || show_templates=0
 
 vault_path="${vault_path/#\~/$home}"
+if [[ -n "$vault_path" && ! -d "$vault_path" && -f "$vault_config" ]]; then
+  want_base="$(basename "$vault_path")"
+  while IFS= read -r cand; do
+    [[ -n "$cand" ]] || continue
+    cand="${cand/#\~/$home}"
+    if [[ "$(basename "$cand")" == "$want_base" && -d "$cand" ]]; then
+      vault_path="$cand"
+      break
+    fi
+  done < <(jq -r '.vaults // {} | to_entries[].value.path // empty' "$vault_config" 2>/dev/null)
+  if [[ ! -d "$vault_path" ]]; then
+    want_lower="${want_base,,}"
+    while IFS= read -r cand; do
+      [[ -n "$cand" ]] || continue
+      cand="${cand/#\~/$home}"
+      cand_base="$(basename "$cand")"
+      if [[ "${cand_base,,}" == "$want_lower" && -d "$cand" ]]; then
+        vault_path="$cand"
+        break
+      fi
+    done < <(jq -r '.vaults // {} | to_entries[].value.path // empty' "$vault_config" 2>/dev/null)
+  fi
+fi
 if [[ -z "$vault_path" ]]; then
   [[ -f "$vault_config" ]] || exit 0
   vault_path="$(jq -r '.vaults | to_entries | .[0].value.path' "$vault_config" 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
