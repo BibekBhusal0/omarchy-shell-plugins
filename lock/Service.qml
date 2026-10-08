@@ -19,6 +19,7 @@ Item {
   readonly property string currentBackgroundLink: stateHome + "/omarchy/current/background"
   readonly property string stateRoot: stateHome + "/omarchy"
   readonly property string shareRoot: "/usr/share/omarchy"
+  readonly property string userBackgroundsRoot: home + "/.config/omarchy/backgrounds"
   readonly property string omarchyBin: "/usr/share/omarchy/bin/omarchy"
   readonly property string systemctlBin: "/usr/bin/systemctl"
   readonly property string sessionLockedBin: "/usr/share/omarchy/bin/omarchy-hyprland-session-locked"
@@ -231,7 +232,7 @@ Item {
     var line = String(raw || "").split("\n")[0].trim();
     if (line === "" || line.charAt(0) !== "/" || line.length > 4096)
       return "";
-    if (line.indexOf(root.stateRoot + "/") !== 0 && line.indexOf(root.shareRoot + "/") !== 0)
+    if (line.indexOf(root.stateRoot + "/") !== 0 && line.indexOf(root.shareRoot + "/") !== 0 && line.indexOf(root.userBackgroundsRoot + "/") !== 0)
       return "";
     return line;
   }
@@ -251,7 +252,7 @@ Item {
     backgroundProc.collectedBytes = 0;
     backgroundProc.overflowed = false;
     backgroundProc.timedOut = false;
-    backgroundProc.command = ["/usr/bin/env", "-i", "/usr/bin/sh", "-c", "p=$(/usr/bin/readlink -f \"$0\" 2>/dev/null); [ -n \"$p\" ] || exit 0; case \"$p\" in \"$1\"/*|\"$2\"/*) ;; *) exit 0;; esac; [ -f \"$p\" ] && [ ! -L \"$p\" ] || exit 0; [ \"$(/usr/bin/stat -c %s \"$p\")\" -le 67108864 ] || exit 0; printf '%s' \"$p\"", root.currentBackgroundLink, root.stateRoot, root.shareRoot];
+    backgroundProc.command = ["/usr/bin/env", "-i", "/usr/bin/sh", "-c", "p=$(/usr/bin/readlink -f \"$0\" 2>/dev/null); [ -n \"$p\" ] || exit 0; case \"$p\" in \"$1\"/*|\"$2\"/*|\"$3\"/*) ;; *) exit 0;; esac; [ -f \"$p\" ] && [ ! -L \"$p\" ] || exit 0; [ \"$(/usr/bin/stat -c %s \"$p\")\" -le 67108864 ] || exit 0; printf '%s' \"$p\"", root.currentBackgroundLink, root.stateRoot, root.shareRoot, root.userBackgroundsRoot];
     backgroundProc.running = true;
     backgroundWatchdog.restart();
   }
