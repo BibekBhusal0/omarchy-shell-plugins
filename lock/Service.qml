@@ -372,6 +372,8 @@ Item {
     if (powerProc.running)
       return;
     powerProc.command = args;
+    powerProc.collected = "";
+    powerProc.collectedBytes = 0;
     powerProc.running = true;
     powerWatchdog.restart();
   }
@@ -869,19 +871,34 @@ Item {
     id: powerProc
     clearEnvironment: true
     environment: ({
-        "PATH": root.fixedPath
+        "PATH": root.fixedPath,
+        "HYPRLAND_INSTANCE_SIGNATURE": null,
+        "XDG_RUNTIME_DIR": null,
+        "DBUS_SESSION_BUS_ADDRESS": null
       })
     stderr: SplitParser {
       onRead: function (data) {
-        powerProc.collectedBytes += String(data + "\n").length;
-        if (powerProc.collectedBytes > root.maxHelperBytes)
+        var chunk = String(data + "\n");
+        if (powerProc.collectedBytes + chunk.length > root.maxHelperBytes) {
+          root.logEvent("power-failed: stderr-overflow");
           root.killProc(powerProc);
+          return;
+        }
+        powerProc.collected += chunk;
+        powerProc.collectedBytes += chunk.length;
       }
     }
+    property string collected: ""
     property int collectedBytes: 0
-    onExited: {
+    onExited: function (exitCode) {
       powerWatchdog.stop();
+      var err = String(powerProc.collected);
+      powerProc.collected = "";
       powerProc.collectedBytes = 0;
+      if (exitCode !== 0)
+        root.logEvent("power-failed: exit=" + exitCode + (err !== "" ? " err=" + err.slice(0, 200) : ""));
+      else if (err !== "")
+        root.logEvent("power-stderr: " + err.slice(0, 200));
     }
   }
 
