@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "shared" as FocusdShared
 
 Item {
   id: root
@@ -348,8 +349,13 @@ Item {
   }
 
   Component.onCompleted: {
+    FocusdShared.ServiceBridge.service = root;
     root.poll();
     root.checkVersion();
     root.loadConfig();
+  }
+  Component.onDestruction: {
+    if (FocusdShared.ServiceBridge.service === root)
+      FocusdShared.ServiceBridge.service = null;
   }
 }
