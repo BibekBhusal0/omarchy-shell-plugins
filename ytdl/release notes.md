@@ -1,3 +1,2 @@
 Fixes
-
-- Route the full paste key family through the capped helper, so keys like XF86Paste never reach native paste.
+- Send download history to the save helper over stdin, so URLs, titles and paths never appear in a command line.
