@@ -1099,7 +1099,7 @@ Panel {
                 implicitHeight: todoInner.implicitHeight + Style.space(8)
                 foreground: root.foreground
                 accent: root.accent
-                hasCursor: root.selectedIndex === index || todoRow.hovered
+                hasCursor: (root.cursorZone === "todos" && root.selectedIndex === index) || todoRow.hovered
                 current: false
 
                 MouseArea {
@@ -1125,7 +1125,7 @@ Panel {
                     }
                   }
                   onDoubleClicked: {
-                    root.selectedIndex = index;
+                    root.setCursor("todos", index);
                     root.closeTodoMenu();
                     root.startEdit(modelData);
                   }
@@ -1239,7 +1239,7 @@ Panel {
                     id: deleteButton
                     Layout.alignment: Qt.AlignVCenter
                     property bool isHovered: false
-                    visible: (todoRow.hovered || isHovered || root.selectedIndex === index) && root.editingLine !== modelData.line
+                    visible: (todoRow.hovered || isHovered || (root.cursorZone === "todos" && root.selectedIndex === index)) && root.editingLine !== modelData.line
                     iconText: "\u2715"
                     tooltipText: "Delete todo"
                     foreground: root.dim
