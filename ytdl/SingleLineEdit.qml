@@ -18,7 +18,7 @@ FocusScope {
   property alias font: field.font
   readonly property bool hovered: hoverMouse.containsMouse
 
-  signal accepted()
+  signal accepted
   signal pasteRequested(bool primary)
 
   function clearFocus() {
