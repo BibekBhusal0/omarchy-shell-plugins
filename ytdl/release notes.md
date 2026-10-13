@@ -1,3 +1,2 @@
 Fixes
-
-- Cap title and playlist helper output before it accumulates, killing the producer on overflow.
+- Cap title and playlist output in the helper itself, so oversized bytes never reach the shell.
