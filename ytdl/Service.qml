@@ -918,31 +918,31 @@ Item {
       pruneProc.overflowed = false;
       if (!text)
         return;
-        try {
-          var missing = JSON.parse(text);
-          if (!Array.isArray(missing) || missing.length === 0)
-            return;
-          var missingMap = {};
-          for (var i = 0; i < missing.length; i++)
-            missingMap[missing[i]] = true;
-          var pruned = [];
-          var changed = false;
-          for (var j = 0; j < root.history.length; j++) {
-            var it = root.history[j];
-            if (it.filepath && missingMap[it.filepath]) {
-              changed = true;
-              continue;
-            }
-            pruned.push(it);
+      try {
+        var missing = JSON.parse(text);
+        if (!Array.isArray(missing) || missing.length === 0)
+          return;
+        var missingMap = {};
+        for (var i = 0; i < missing.length; i++)
+          missingMap[missing[i]] = true;
+        var pruned = [];
+        var changed = false;
+        for (var j = 0; j < root.history.length; j++) {
+          var it = root.history[j];
+          if (it.filepath && missingMap[it.filepath]) {
+            changed = true;
+            continue;
           }
-          if (changed) {
-            root.history = pruned;
-            root.persistHistory();
-            root.historyUpdated();
-          }
-        } catch (e) {
+          pruned.push(it);
         }
+        if (changed) {
+          root.history = pruned;
+          root.persistHistory();
+          root.historyUpdated();
+        }
+      } catch (e) {
       }
+    }
   }
 
   function removeById(arr, id) {
