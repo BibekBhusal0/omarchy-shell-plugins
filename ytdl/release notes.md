@@ -1,3 +1,2 @@
 Fixes
-
-- Cap title and playlist output in the helper itself, so oversized bytes never reach the shell.
+- Bound download status lines, error buffers, and failure diagnostics so a hostile page cannot exhaust shell memory mid-download.
