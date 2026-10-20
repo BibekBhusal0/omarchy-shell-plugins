@@ -1713,7 +1713,7 @@ Item {
             opacity: root.filterText ? 1 : 0.58
             font.family: root.fontFamily
             font.pixelSize: Style.font.heading
-            elide: Text.ElideRight
+            elide: root.filterText ? Text.ElideLeft : Text.ElideRight
           }
         }
 
