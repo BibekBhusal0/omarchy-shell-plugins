@@ -15,7 +15,7 @@ fn checkbox_re() -> Regex {
     // Any single marker character counts (` ` open, `x` done, `/` half-done,
     // `-` canceled, plus extended states like `>`, `?`, `!`). Only ` `, `-`
     // and `/` count as not done; everything else counts as done.
-    Regex::new(r"^(\s*)([-*+])\s+\[([^\]])\](\s+)(.*)$").expect("checkbox regex")
+    Regex::new(r"^(\s*)([-*+])\s+\[([^\]])\](\s+)(\S.*)$").expect("checkbox regex")
 }
 
 fn tasks_heading_re() -> Regex {
@@ -1769,6 +1769,13 @@ mod tests {
         assert!(todos[2].checked);
         assert_eq!(todos[3].line, 7);
         assert_eq!(todos[3].text, "indented");
+    }
+
+    #[test]
+    fn ignores_todos_without_a_body() {
+        let todos = parse_todos("- [ ] real\n- [ ] \n- [x] \n- [/] \n- [-] \n");
+        assert_eq!(todos.len(), 1);
+        assert_eq!(todos[0].text, "real");
     }
 
     #[test]
