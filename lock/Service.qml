@@ -76,7 +76,7 @@ Item {
   readonly property bool locked: lockRequested || sessionLock.locked || sessionLock.secure
 
   function currentlyLocked() {
-    return lockRequested || sessionLock.locked || sessionLock.secure
+    return lockRequested || sessionLock.locked || sessionLock.secure;
   }
   readonly property bool authenticating: authenticatingPassword || fingerprintAuthenticating
   readonly property bool fingerprintUnavailable: FingerprintModel.isUnavailable(fingerprintProbeStreak) || (fingerprintConfigured && (!fingerprintAttemptReachedDevice || fingerprintAttemptFastError) && FingerprintModel.isUnavailable(fingerprintUnreachedStreak))
