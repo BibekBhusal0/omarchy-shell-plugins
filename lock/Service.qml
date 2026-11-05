@@ -4,6 +4,8 @@ import Quickshell.Io
 import Quickshell.Services.Pam
 import Quickshell.Wayland
 import qs.Commons
+import qs.Commons as Commons
+import "FingerprintModel.js" as FingerprintModel
 
 Item {
   id: root
@@ -43,20 +45,41 @@ Item {
   property bool fingerprintAuthenticating: false
   property bool passwordPamConfigured: false
   property bool fingerprintConfigured: false
+  property int fingerprintUnreachedStreak: 0
+  property bool fingerprintAttemptReachedDevice: false
+  property bool fingerprintAttemptFastError: false
+  property double fingerprintAttemptPromptedAtMs: 0
+  property double fingerprintLastNudgeMs: 0
+  property double fingerprintLastSettleMs: 0
+  property double fingerprintResumedAtMs: 0
+  property int fingerprintProbeStreak: 0
+  property bool fingerprintPaused: false
+  property bool fingerprintSleptWhilePaused: false
+  property double fingerprintRetryDueMs: 0
+  property int fingerprintRetryBackoffMs: 0
+  property int knownScreenCount: 0
   property bool previewVisible: false
   property string enteredPassword: ""
   property string pendingPassword: ""
   property string failureMessage: ""
   property int failedAttempts: 0
   property string backgroundPath: ""
+  property string videoPosterPath: ""
   property int backgroundVersion: 0
+  property string backgroundSignature: ""
   property string lastEvent: "init"
   property string lastEventAt: ""
+  readonly property bool videoBackground: Util.isVideoPath(backgroundPath)
   property bool strandedLock: false
   property bool strandedLockResolved: false
 
   readonly property bool locked: lockRequested || sessionLock.locked || sessionLock.secure
+
+  function currentlyLocked() {
+    return lockRequested || sessionLock.locked || sessionLock.secure
+  }
   readonly property bool authenticating: authenticatingPassword || fingerprintAuthenticating
+  readonly property bool fingerprintUnavailable: FingerprintModel.isUnavailable(fingerprintProbeStreak) || (fingerprintConfigured && (!fingerprintAttemptReachedDevice || fingerprintAttemptFastError) && FingerprintModel.isUnavailable(fingerprintUnreachedStreak))
 
   property var fileConfig: ({})
   function parseFileConfig(raw) {
