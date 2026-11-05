@@ -39,6 +39,21 @@ Omarchy quattro. No extra dependencies.
 omarchy plugin add https://github.com/BibekBhusal0/omarchy-better-menu.git --enable
 ```
 
+**Important**: If you have `omarchy.dock` disabled, the apps menu won't work by default because the built-in config tries to open the dock. Override this by creating `~/.config/omarchy/extensions/omarchy-menu.jsonc`:
+
+```json
+{
+  "apps": {
+    "icon": "󰀻",
+    "label": "Apps",
+    "aliases": ["app", "applications"],
+    "provider": "apps"
+  }
+}
+```
+
+This removes the dock action and shows apps in the menu itself. This is the setting I recommend because it has keyboard shortcuts for moving up/down/left/right with Ctrl+k/j/h/l.
+
 ## Open All Apps with the Super key
 
 To open the app grid with a tap of the Super key, add to `~/.config/hypr/bindings.lua`:

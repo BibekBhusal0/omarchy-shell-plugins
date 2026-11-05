@@ -457,6 +457,14 @@ Item {
     root.itemOrder = mergedMenu.itemOrder;
     root.rowsLoaded = true;
     root.evaluateGuards();
+    
+    // If there's a pending open request, execute it now that configs are loaded
+    if (root.pendingInitialMenu && root.pendingInitialMenu !== "root" && !root.opened) {
+      var menu = root.pendingInitialMenu;
+      root.pendingInitialMenu = "root";
+      root.openRoute(menu);
+    }
+    
     if (root.opened) {
       root.rebuildDisplay();
       if (!root.dmenuActive) {
