@@ -149,8 +149,8 @@ Item {
     Quickshell.execDetached([root.fallbackBase() + "/bin/omarchy-remove-launcher-entry", id, String(label || id)]);
   }
   function refreshAppsIfLoaded() {
-    if (root.providersLoaded["apps"])
-      root.mergeAppRows();
+    root.providersLoaded["apps"] = true;
+    root.mergeAppRows();
   }
   function loadFallbackHides(rawText) {
     var next = ({});
@@ -288,7 +288,7 @@ Item {
     var full = rows * root.gridCellHeight + (rows - 1) * root.rowSpacing;
     return Math.min(full, root.availableRowsHeight());
   }
-  property int cardWidth: Math.min(root.dmenuActive ? Style.space(root.dmenuWidth) : ((root.activeMenu === "trigger.capture.screenrecord" || root.activeMenu === "style.font") ? Style.space(520) : (root.activeMenu === "apps" ? Style.space(640) : Style.space(300))), panel.width - Style.gapsOut * 2)
+  property int cardWidth: Math.min(root.dmenuActive ? Style.space(root.dmenuWidth) : ((root.activeMenu === "trigger.capture.screenrecord" || root.activeMenu === "appearance.font" || root.activeMenu === "update.kernel") ? Style.space(520) : (root.activeMenu === "apps" ? Style.space(640) : Style.space(300))), panel.width - Style.gapsOut * 2)
   property int visibleRowsHeight: root.dmenuActive ? dmenuRowListHeight(layoutSerial, displayModel.count, filterText) : (root.isAppsGrid ? root.gridRowsHeight() : rowListHeight(layoutSerial, displayModel.count, filterText, searchDivider))
   property int cardHeight: root.dmenuActive ? Math.min(contentMargin * 2 + headerHeight + (mode === "input" ? 0 : contentSpacing + visibleRowsHeight), panel.height - Style.gapsOut * 2) : Math.min(contentMargin * 2 + headerHeight + contentSpacing + visibleRowsHeight, panel.height - Style.gapsOut * 2)
 
