@@ -492,7 +492,7 @@ Item {
       return ["obsidian", row.action];
     var kind = row.kind || "Note";
     var forcedObsidian = kind === "Canvas" || kind === "Base" || kind === "Daily Note" || kind === "Daily Pin" || kind === "Template";
-    var opener = mode === "omawrite" ? "omawrite" : mode === "neovim" ? "nvim" : root.cfg("opener", "") || "obsidian";
+    var opener = mode === "omawrite" ? "omawrite" : mode === "neovim" ? "nvim" : mode === "hype" ? "hype" : root.cfg("opener", "") || "obsidian";
     var lowered = String(opener).toLowerCase();
     if (!forcedObsidian) {
       var abs = root.absPathFor(row.rel);
@@ -500,6 +500,8 @@ Item {
         return [];
       if (lowered === "omawrite")
         return ["omawrite", abs];
+      if (lowered === "hype")
+        return ["hype", "open", abs];
       if (lowered === "neovim" || lowered === "nvim" || lowered === "vim")
         return ["omarchy", "launch", "tui", "--app-id=nvim-obsidian", "nvim", abs];
       if (lowered !== "obsidian")
@@ -742,6 +744,12 @@ Item {
           } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_N) {
             if (root.cursorActive)
               root.activateIndex(root.selectedIndex, "neovim");
+            else if (displayModel.count > 0)
+              root.cursorActive = true;
+            event.accepted = true;
+          } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_H) {
+            if (root.cursorActive)
+              root.activateIndex(root.selectedIndex, "hype");
             else if (displayModel.count > 0)
               root.cursorActive = true;
             event.accepted = true;

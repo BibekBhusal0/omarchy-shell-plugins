@@ -12,7 +12,7 @@ A beautiful [Obsidian](https://obsidian.md/) vault search menu. Type to filter n
 - Today's daily note pinned on top, opened or created with one Enter
 - Support for bases and canvas files as well
 - Create a missing note directly from the menu
-- Open notes in Obsidian, omawrite, Neovim, or any command you configure
+- Open notes in Obsidian, omawrite, Neovim, Hype, or any command you configure
 
 ## Requirements
 
@@ -40,7 +40,7 @@ o.bind("SUPER", "O", "exec, omarchy-shell shell summon bibek.obsidian-search")
 
 Type to filter, Enter opens the selected note, Escape closes. A query that matches nothing creates `query.md` in the vault root. With an empty query the first row is always today's daily note, opened via Obsidian's `obsidian://daily` URI (it creates the note when missing). Typing `daily` or `today` keeps that row pinned on top.
 
-Shortcuts: Up/Down, Ctrl+K/Ctrl+J, or Ctrl+P/Ctrl+N to move, PageUp/PageDown to jump, Enter to open with the configured opener. Alt+O to force-open the selected note in Obsidian, Alt+W to open it in omawrite, Alt+N to open it in Neovim.
+Shortcuts: Up/Down, Ctrl+K/Ctrl+J, or Ctrl+P/Ctrl+N to move, PageUp/PageDown to jump, Enter to open with the configured opener. Alt+O to force-open the selected note in Obsidian, Alt+W to open it in omawrite, Alt+N to open it in Neovim, Alt+H to open it in Hype.
 
 ## Where notes open
 
@@ -51,7 +51,7 @@ Regular notes open in your configured opener (Obsidian by default). Everything e
 - Bases
 - Templates
 
-So Alt+W and Alt+N only change anything for regular notes. Creating a missing note also follows the opener: Obsidian creates it for you by default, while an external opener gets an empty file created first and then opened in that app.
+So Alt+W, Alt+N and Alt+H only change anything for regular notes. Creating a missing note also follows the opener: Obsidian creates it for you by default, while an external opener gets an empty file created first and then opened in that app.
 
 ## Configuration
 
@@ -71,7 +71,7 @@ Override settings in `~/.config/omarchy/obsidian-search.json` (watched live, so 
 - `vaultPath`: vault directory. Defaults to the first vault in the Obsidian config.
 - `showDailyNotes`: show daily notes in results. Default `true`. Today's-note pin is always shown regardless.
 - `showTemplates`: also list files under the templates folder. Default `false`.
-- `opener`: how notes open with Enter. Default `"obsidian"`. Use `"omawrite"` to edit in omawrite, `"neovim"` (or `"nvim"`) to edit in Neovim inside a terminal, or any other command that takes a file path (for example `"code"` or `"xdg-open"`).
+- `opener`: how notes open with Enter. Default `"obsidian"`. Use `"omawrite"` to edit in omawrite, `"neovim"` (or `"nvim"`) to edit in Neovim inside a terminal, `"hype"` to open in Hype, or any other command that takes a file path (for example `"code"` or `"xdg-open"`).
 
 ## Uninstall
 
