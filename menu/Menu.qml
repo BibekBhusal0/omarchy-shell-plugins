@@ -89,6 +89,9 @@ Item {
   property var fallbackHiddenIds: ({})
   property string fallbackConfiguredHides: ""
   property string searchEngineRaw: ""
+  property string defaultAgentRaw: ""
+  property string agentDirectoryRaw: ""
+  property bool sendToAgentEnabled: true
 
   function fallbackBase() {
     var base = String(root.omarchyPath || "");
@@ -202,6 +205,55 @@ Item {
     return template.replace("%s", encodeURIComponent(query).replace(/'/g, "%27"));
   }
 
+  function configBool(value, fallback) {
+    if (typeof value === "boolean")
+      return value;
+    var text = String(value === undefined || value === null ? "" : value).trim().toLowerCase();
+    if (text === "true" || text === "1")
+      return true;
+    if (text === "false" || text === "0")
+      return false;
+    return fallback;
+  }
+
+  // The default agent's own row in the shipped menu carries the label and icon
+  // Omarchy uses for it, so the bottom row matches the Setup > Defaults entry
+  // instead of hardcoding a second copy of the agent list.
+  function agentEntry() {
+    var id = String(root.defaultAgentRaw || "").trim();
+    return id ? root.item("setup.default.agent." + id) : null;
+  }
+  function agentName() {
+    var entry = root.agentEntry();
+    var fallback = String(root.defaultAgentRaw || "").trim();
+    return entry && entry.label ? entry.label : fallback;
+  }
+
+  // Blank or "~" means the home directory. Relative paths hang off home so
+  // the setting stays portable across machines.
+  function agentDirectory() {
+    var raw = String(root.agentDirectoryRaw || "").trim();
+    var home = Quickshell.env("HOME");
+    if (raw.length === 0 || raw === "~")
+      return home;
+    if (raw.indexOf("~/") === 0)
+      return home + raw.slice(1);
+    if (raw.charAt(0) === "/")
+      return raw;
+    return home + "/" + raw;
+  }
+  function agentCommand(query) {
+    var home = Quickshell.env("HOME");
+    var dir = root.agentDirectory();
+    var command = "cd " + Util.shellQuote(dir) + " 2>/dev/null || cd " + Util.shellQuote(home) + "; ";
+    // omarchy-agent moves a launch whose PWD is exactly $HOME into ~/Work.
+    // A start directory of home has to stay home, and $HOME/ names the same
+    // place without matching that check.
+    command += "if [ \"$PWD\" = " + Util.shellQuote(home) + " ]; then export PWD=" + Util.shellQuote(home + "/") + "; fi; ";
+    command += "omarchy agent prompt " + Util.shellQuote(query);
+    return command;
+  }
+
   FileView {
     id: fallbackHidesFile
     path: root.fallbackBase() + "/default/omarchy/launcher.hides"
@@ -237,13 +289,20 @@ Item {
   }
   function loadEngineConfig(rawText) {
     var value = "";
+    var agentDirectory = "";
+    var sendToAgent = true;
     try {
       var parsed = JSON.parse(String(rawText || ""));
       if (parsed && typeof parsed.searchEngine === "string")
         value = parsed.searchEngine.trim();
+      if (parsed && typeof parsed.agentDirectory === "string")
+        agentDirectory = parsed.agentDirectory.trim();
+      sendToAgent = root.configBool(parsed && parsed.sendToAgent, true);
     } catch (e) {
     }
     root.searchEngineRaw = value;
+    root.agentDirectoryRaw = agentDirectory;
+    root.sendToAgentEnabled = sendToAgent;
   }
   property bool deleteConfirmOpen: false
   property var deleteTarget: null
@@ -889,6 +948,26 @@ Item {
             "score": 1e15,
             "section": ""
           });
+        if (root.sendToAgentEnabled && root.defaultAgentRaw) {
+          var agent = root.agentEntry();
+          rows.push({
+              "itemId": "agent.prompt",
+              "kind": "action",
+              "icon": agent ? agent.icon : "󰚩",
+              "iconFont": agent && agent.iconFont ? agent.iconFont : "omarchy",
+              "appIcon": "",
+              "appId": "",
+              "label": "Send to " + root.agentName(),
+              "target": "",
+              "detail": "'" + query + "'",
+              "path": "",
+              "childCount": 0,
+              "action": root.agentCommand(query),
+              "provider": "",
+              "score": 1e15,
+              "section": ""
+            });
+        }
       }
     } else {
       for (var j = 0; j < root.itemOrder.length; j++) {
@@ -1312,6 +1391,9 @@ Item {
         "kind": "engine",
         "path": Quickshell.env("HOME") + "/.config/omarchy/menu.json"
       }, {
+        "kind": "agent",
+        "path": Quickshell.env("HOME") + "/.config/omarchy/defaults/agent"
+      }, {
         "kind": "default",
         "path": root.defaultMenuPath
       }, {
@@ -1342,6 +1424,13 @@ Item {
         return;
       root.engineRaw = engineText;
       root.loadEngineConfig(root.engineRaw);
+      return;
+    }
+    if (kind === "agent") {
+      var agentId = ok ? String(raw || "").trim() : "";
+      if (agentId === root.defaultAgentRaw)
+        return;
+      root.defaultAgentRaw = agentId;
       return;
     }
     if (!ok) {

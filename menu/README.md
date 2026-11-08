@@ -10,6 +10,7 @@ Clone of the built-in `omarchy.menu` with subsequence fuzzy ranking, an app grid
 - **App grid.** The Apps menu renders as an icon grid in the style of `super-apps` instead of a list. In grid mode Up/Down jump a full row, Left/Right step one cell, PageUp/PageDown jump three rows. Everywhere else the list behavior is unchanged.
 - **Calculator.** Typing a math expression (numbers with `+ - * / % ^` and parentheses, e.g. `2*(3+4)^2`) shows the result as the top row, but only in the root menu. Enter copies it to the clipboard.
 - **Web search row.** Any query in the root menu appends a `Search <engine>` row at the bottom with the query and host as its detail. Enter opens it in the browser.
+- **Send to agent row.** When a default agent is set (`omarchy default agent`), any query also appends a `Send to <agent>` row below the web search row. Enter launches that agent with the query as its prompt. The row is on by default and can be turned off with `sendToAgent` in the config below.
 - **Extended keymap.** Ctrl+J / Ctrl+K and Ctrl+N / Ctrl+P move one row, Ctrl+H / Ctrl+L move left and right, Home / End jump to the first / last result. Everything else matches the built-in menu: Up/Down move, PageUp/PageDown jump 6, Enter (or Right in list mode) activates, Esc clears the filter first and closes on the second press, Backspace goes back when the filter is empty.
 
 ## Search engine
@@ -23,6 +24,19 @@ The web search row reads `~/.config/omarchy/menu.json` (watched live, so edits a
 ```
 
 `searchEngine` is either a preset name (`google`, `duckduckgo`, `bing`, `brave`) or a full URL containing `%s` for the query. Missing, empty or unknown values fall back to Google.
+
+## Send to agent
+
+The same file controls the agent row. It is enabled by default, and the agent is whatever `omarchy default agent` reports (read from `~/.config/omarchy/defaults/agent`), so no agent name is hardcoded. With no default agent set, the row does not appear.
+
+```json
+{
+  "sendToAgent": true,
+  "agentDirectory": "~/Code/my-project"
+}
+```
+
+`sendToAgent` set to `false` hides the row. `agentDirectory` is where the agent starts; it defaults to `~`, accepts `~/...` and absolute paths, and relative values resolve under your home directory. Selecting the row runs `omarchy agent prompt "<query>"` from that directory.
 
 ## Notes
 
