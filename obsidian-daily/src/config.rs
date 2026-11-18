@@ -81,7 +81,7 @@ impl std::fmt::Display for VaultError {
         match self {
             Self::MissingEnv => write!(
                 f,
-                "{VAULT_ENV} is not set (or pass --vault / set vaultPath in bar settings)"
+                "{VAULT_ENV} is not set, no vault in ~/.config/obsidian/obsidian.json, and no --vault / vaultPath passed"
             ),
             Self::EmptyEnv => write!(f, "vault path is empty"),
             Self::NotADirectory(p) => write!(f, "vault root is not a directory: {}", p.display()),
@@ -102,16 +102,33 @@ impl VaultError {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct ObsidianConfig {
+    #[serde(default)]
+    vaults: std::collections::BTreeMap<String, ObsidianVaultEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ObsidianVaultEntry {
+    #[serde(default)]
+    path: Option<String>,
+    #[serde(default)]
+    open: Option<bool>,
+    #[serde(default)]
+    ts: Option<i64>,
+}
+
 impl Vault {
     /// Resolve vault from an optional CLI `--vault` path, else
-    /// `OBSIDIAN_VAULT_ROOT`, plus an optional `--archive-folder` pattern.
+    /// `OBSIDIAN_VAULT_ROOT`, else the active/default vault in
+    /// `~/.config/obsidian/obsidian.json`, plus an optional `--archive-folder` pattern.
     pub fn resolve(
         cli_vault: Option<PathBuf>,
         cli_archive: Option<String>,
     ) -> Result<Self, VaultError> {
         let vault = match cli_vault {
             Some(path) => Self::from_path(path)?,
-            None => Self::from_env()?,
+            None => Self::from_env().or_else(|_| Self::from_obsidian_config())?,
         };
         Ok(Self {
             archive: cli_archive
@@ -119,6 +136,53 @@ impl Vault {
                 .filter(|s| !s.is_empty()),
             ..vault
         })
+    }
+
+    pub fn from_obsidian_config() -> Result<Self, VaultError> {
+        let home = env::var("HOME").map_err(|_| VaultError::MissingEnv)?;
+        let config_path = PathBuf::from(home.clone())
+            .join(".config")
+            .join("obsidian")
+            .join("obsidian.json");
+        if !config_path.exists() {
+            return Err(VaultError::MissingEnv);
+        }
+
+        let raw = fs::read_to_string(&config_path)
+            .map_err(|e| VaultError::Io(format!("failed to read {}: {e}", config_path.display())))?;
+        let parsed: ObsidianConfig = serde_json::from_str(&raw)
+            .map_err(|e| VaultError::Io(format!("failed to parse {}: {e}", config_path.display())))?;
+
+        // 1. Prefer vault with open == true and a valid existing directory
+        // 2. Otherwise pick vault with highest ts
+        // 3. Fallback to any valid vault path
+        let mut entries: Vec<ObsidianVaultEntry> = parsed.vaults.into_values().collect();
+        entries.sort_by_key(|e| std::cmp::Reverse((e.open.unwrap_or(false), e.ts.unwrap_or(0))));
+
+        for entry in entries {
+            if let Some(raw_path) = entry.path {
+                let trimmed = raw_path.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                let path_str = if trimmed == "~" {
+                    home.clone()
+                } else if let Some(stripped) = trimmed.strip_prefix("~/") {
+                    format!("{}/{}", home, stripped)
+                } else {
+                    trimmed.to_string()
+                };
+                let pb = PathBuf::from(path_str);
+                if pb.is_dir() {
+                    return Ok(Self {
+                        root: pb,
+                        archive: None,
+                    });
+                }
+            }
+        }
+
+        Err(VaultError::MissingEnv)
     }
 
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, VaultError> {
@@ -607,5 +671,45 @@ mod tests {
         assert!(err.to_string().contains("escapes vault root"), "err: {err}");
         let _ = fs::remove_dir_all(root);
         let _ = fs::remove_dir_all(outside);
+    }
+
+    #[test]
+    fn resolves_from_obsidian_config_when_env_and_cli_missing() {
+        let root = tmp_vault("obsidian-json-vault");
+        let fake_home = std::env::temp_dir().join(format!(
+            "obsidian-home-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let obs_dir = fake_home.join(".config").join("obsidian");
+        fs::create_dir_all(&obs_dir).unwrap();
+        let config_content = format!(
+            r#"{{"vaults":{{"abc":{{"path":"{}","open":true,"ts":1000}}}}}}"#,
+            root.display()
+        );
+        fs::write(obs_dir.join("obsidian.json"), config_content).unwrap();
+
+        let old_home = env::var("HOME").ok();
+        unsafe {
+            env::set_var("HOME", &fake_home);
+        }
+
+        let res = Vault::from_obsidian_config();
+
+        unsafe {
+            if let Some(h) = old_home {
+                env::set_var("HOME", h);
+            } else {
+                env::remove_var("HOME");
+            }
+        }
+
+        let _ = fs::remove_dir_all(&fake_home);
+        let _ = fs::remove_dir_all(&root);
+
+        assert!(res.is_ok(), "failed to resolve: {:?}", res.err());
     }
 }
